@@ -9,6 +9,7 @@ import PurchaseChecklist from "./components/PurchaseChecklist";
 import StatusBadge from "./components/StatusBadge";
 import PaymentChooser from "./components/PaymentChooser";
 import StarRating from "./components/StarRating";
+import Modal from "./components/Modal";
 import { isChatAvailable, isRateable } from "./orderStatus";
 
 const POLL_MS = 5000;
@@ -67,6 +68,11 @@ function OrderDetail({ orderId, onBack, onTopUpWallet }) {
   const [rating, setRating] = useState(null);
   const [draftStars, setDraftStars] = useState(0);
   const [draftComment, setDraftComment] = useState("");
+  // Dismissing the rating pop-up (without submitting) just closes it for
+  // this viewing - it isn't persisted, so reopening the order later will
+  // prompt again as long as it's still unrated. Never true once a real
+  // rating exists (handleSubmitRating below never needs to touch this).
+  const [ratingPromptDismissed, setRatingPromptDismissed] = useState(false);
   // Lazy init from the URL - true only when we've just landed back from
   // Paystack for THIS payment, so the effect below has something to verify.
   const [verifyingPayment, setVerifyingPayment] = useState(() => pendingCheckoutRef() !== null);
@@ -293,9 +299,9 @@ function OrderDetail({ orderId, onBack, onTopUpWallet }) {
     try {
       const result = await api.seeAnotherAgent(orderId);
       if (result.outcome === "only_option") {
-        setAssignmentNotice(`No other agents available — ${proposedAgent?.full_name || "this agent"} is your only option.`);
+        setAssignmentNotice(`No other agents available in this market — ${proposedAgent?.full_name || "this agent"} is your only option.`);
       } else if (result.outcome === "none") {
-        setAssignmentNotice("No agents available right now. Please try again shortly.");
+        setAssignmentNotice("No agents available for this market right now.");
       } else {
         setAssignmentNotice("");
       }
@@ -401,36 +407,40 @@ function OrderDetail({ orderId, onBack, onTopUpWallet }) {
         <p className="mb-4 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p>
       )}
 
-      <div className="space-y-4">
-        {/* Propose->accept: shown only while the order is awaiting the
-            customer's decision on the proposed agent. No photo infrastructure
-            exists in this app, so only name/phone are shown. */}
-        {order.status === "proposed" && (
-          <Card className={assignmentNotice ? "border-2 border-amber-400 bg-amber-50/60" : ""}>
-            <p className="mb-2 font-bold text-slate-900">Your shopping agent</p>
-            {proposedAgent ? (
-              <>
-                <p className="mb-1 text-slate-800">
-                  <span className="font-semibold">{proposedAgent.full_name || "Unnamed agent"}</span>
-                </p>
-                <p className="mb-3 text-sm text-slate-500">{proposedAgent.phone}</p>
-              </>
-            ) : (
-              <p className="mb-3 text-sm text-slate-500">Looking for an available agent…</p>
-            )}
-            {assignmentNotice && (
-              <p className="mb-3 text-sm text-amber-700">{assignmentNotice}</p>
-            )}
-            <div className="flex gap-2">
-              <Button onClick={handleAcceptAgent} busy={busy} disabled={!proposedAgent} className="flex-1">
-                Accept
-              </Button>
-              <Button variant="neutral" onClick={handleSeeAnother} busy={busy} disabled={!proposedAgent} className="flex-1">
-                See another
-              </Button>
-            </div>
-          </Card>
+      {/* Propose->accept, as a focused modal: blurs the page and demands a
+          decision (Accept / See another) rather than sitting inline as one
+          card among several. Only opens once any required deposit is
+          already paid (#8 - deposit before assignment) - while a deposit is
+          still owed, the deposit card further down is the only thing shown;
+          the agent stays hidden until it's cleared. No `onClose` on
+          purpose: this can only be resolved via Accept or See another, not
+          dismissed. No photo infrastructure exists in this app, so only
+          name/phone are shown. */}
+      <Modal open={order.status === "proposed" && !needsDeposit} title="Your shopping agent">
+        {proposedAgent ? (
+          <>
+            <p className="mb-1 text-slate-800">
+              <span className="font-semibold">{proposedAgent.full_name || "Unnamed agent"}</span>
+            </p>
+            <p className="mb-3 text-sm text-slate-500">{proposedAgent.phone}</p>
+          </>
+        ) : (
+          <p className="mb-3 text-sm text-slate-500">Looking for an available agent…</p>
         )}
+        {assignmentNotice && (
+          <p className="mb-3 rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-700">{assignmentNotice}</p>
+        )}
+        <div className="flex gap-2">
+          <Button onClick={handleAcceptAgent} busy={busy} disabled={!proposedAgent} className="flex-1">
+            Accept
+          </Button>
+          <Button variant="neutral" onClick={handleSeeAnother} busy={busy} disabled={!proposedAgent} className="flex-1">
+            See another
+          </Button>
+        </div>
+      </Modal>
+
+      <div className="space-y-4">
 
         {/* #5: per-item overage - persistent, must-respond, one card per
             pending item so several overages at once are never hidden behind
@@ -472,15 +482,21 @@ function OrderDetail({ orderId, onBack, onTopUpWallet }) {
           );
         })}
 
-        {/* Prominent: shopping can't start until this is paid (agent's
-            start-shopping 402s otherwise) - this is the whole point of the gate. */}
+        {/* Prominent: while proposed, this is the ONLY thing shown - the
+            agent-selection modal above stays closed until it's paid (#8:
+            deposit before assignment). Once agent_assigned, it's still here
+            in case it's somehow still unpaid (shopping can't start until it
+            is - agent's start-shopping 402s otherwise). */}
         {needsDeposit && (
           <div className="rounded-xl border-2 border-brand-orange bg-white p-4 shadow-sm">
             <p className="mb-3 text-slate-800">
               <b className="text-slate-900">Deposit required:</b>{" "}
               {depositPct >= 99
-                ? "full payment upfront (a previous order wasn't paid) before shopping can start."
-                : `${depositPct}% upfront before shopping can start.`}
+                ? "full payment upfront (a previous order wasn't paid) "
+                : `${depositPct}% upfront `}
+              {order.status === "proposed"
+                ? "before you can see and accept your shopping agent."
+                : "before shopping can start."}
             </p>
             <PaymentChooser
               amountDue={Number(order.deposit_amount)}
@@ -679,40 +695,44 @@ function OrderDetail({ orderId, onBack, onTopUpWallet }) {
         )}
 
         {/* #7: agent rating - customer feedback only, once the order is
-            genuinely finished. Never feeds assignment or agent pay. */}
-        {isRateable(order.status) && (
+            genuinely finished. Never feeds assignment or agent pay. Once
+            submitted, just a small read-only display here - the pop-up
+            prompt (below, outside this list) is only for COLLECTING one. */}
+        {isRateable(order.status) && rating && (
           <Card>
-            {rating ? (
-              <>
-                <p className="mb-2 font-bold text-slate-900">Your rating</p>
-                <StarRating value={rating.stars} readOnly size={22} />
-                {rating.comment && <p className="mt-2 text-sm text-slate-600">{rating.comment}</p>}
-              </>
-            ) : (
-              <>
-                <p className="mb-2 font-bold text-slate-900">Rate your agent</p>
-                <StarRating value={draftStars} onChange={setDraftStars} />
-                <textarea
-                  value={draftComment}
-                  onChange={(e) => setDraftComment(e.target.value)}
-                  placeholder="Optional comment"
-                  rows={3}
-                  className="mt-3 w-full rounded-xl border border-slate-300 px-4 py-3 text-base text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-brand-orange focus:border-brand-orange"
-                />
-                <Button
-                  onClick={handleSubmitRating}
-                  busy={busy}
-                  disabled={draftStars === 0}
-                  fullWidth
-                  className="mt-3"
-                >
-                  Submit rating
-                </Button>
-              </>
-            )}
+            <p className="mb-2 font-bold text-slate-900">Your rating</p>
+            <StarRating value={rating.stars} readOnly size={22} />
+            {rating.comment && <p className="mt-2 text-sm text-slate-600">{rating.comment}</p>}
           </Card>
         )}
       </div>
+
+      {/* #7: the rating pop-up itself - a prompt, not an inline section.
+          Feedback only, so it's freely dismissible (onClose) rather than
+          forced like the agent-selection modal above. */}
+      <Modal
+        open={isRateable(order.status) && !rating && !ratingPromptDismissed}
+        onClose={() => setRatingPromptDismissed(true)}
+        title="Rate your agent"
+      >
+        <StarRating value={draftStars} onChange={setDraftStars} />
+        <textarea
+          value={draftComment}
+          onChange={(e) => setDraftComment(e.target.value)}
+          placeholder="Optional comment"
+          rows={3}
+          className="mt-3 w-full rounded-xl border border-slate-300 px-4 py-3 text-base text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-brand-orange focus:border-brand-orange"
+        />
+        <Button
+          onClick={handleSubmitRating}
+          busy={busy}
+          disabled={draftStars === 0}
+          fullWidth
+          className="mt-3"
+        >
+          Submit rating
+        </Button>
+      </Modal>
     </div>
   );
 }

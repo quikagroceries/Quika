@@ -59,8 +59,12 @@ async def get_summary(db: AsyncSession, *, user_id: uuid.UUID) -> dict:
     )
     earnings_total = sum((o.agent_share for o in paid_orders), start=Decimal("0.00"))
 
-    # The same three buckets Home groups its task list into (see the agent
+    # The same two buckets Home groups its task list into (see the agent
     # Home screen) — surfaced here as counts only, for the dashboard summary.
+    # No "waiting on customer" bucket: since the deposit gate now sits on
+    # accept_proposal (orders.service.accept_proposal), an agent is never
+    # assigned to an order until any required deposit is already paid - an
+    # AGENT_ASSIGNED order with an unpaid deposit can no longer exist.
     active_result = await db.execute(
         select(Order).where(
             Order.agent_id == user_id,
@@ -68,16 +72,7 @@ async def get_summary(db: AsyncSession, *, user_id: uuid.UUID) -> dict:
         )
     )
     active_orders = list(active_result.scalars().all())
-    ready = [
-        o for o in active_orders
-        if o.status is OrderStatus.AGENT_ASSIGNED
-        and (o.deposit_amount <= 0 or o.deposit_paid_at is not None)
-    ]
-    waiting = [
-        o for o in active_orders
-        if o.status is OrderStatus.AGENT_ASSIGNED
-        and o.deposit_amount > 0 and o.deposit_paid_at is None
-    ]
+    ready = [o for o in active_orders if o.status is OrderStatus.AGENT_ASSIGNED]
     in_progress = [o for o in active_orders if o.status is OrderStatus.SHOPPING]
 
     return {
@@ -86,7 +81,6 @@ async def get_summary(db: AsyncSession, *, user_id: uuid.UUID) -> dict:
         "earnings_total": earnings_total,
         "ready_to_shop_count": len(ready),
         "in_progress_count": len(in_progress),
-        "waiting_on_customer_count": len(waiting),
         "is_available": agent.is_available,
         "on_duty": agent.on_duty,
         "completed_orders": paid_orders[:50],

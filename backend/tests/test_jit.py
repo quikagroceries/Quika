@@ -70,7 +70,7 @@ async def test_transfer_becomes_the_price(client, db_session_factory, monkeypatc
 
     # Agent pays a vendor 3000 for the pepper. The item price BECOMES 3000.
     r = await client.post(f"/jit/orders/{oid}/pay-vendor", headers=agent_h, json={
-        "account_number": "9012345678", "bank_code": "999992",
+        "account_number": "9012345678", "bank_code": "999992", "photo_ref": "https://example.com/receipt.jpg",
         "items": [{"item_id": items[0]["id"], "price": "3000.00"}],
     })
     assert r.status_code == 200, r.text
@@ -113,7 +113,7 @@ async def test_authorization_cap_blocks_overspend(client, db_session_factory, mo
 
     # Try to pay more than the cap in one go
     r = await client.post(f"/jit/orders/{oid}/pay-vendor", headers=agent_h, json={
-        "account_number": "9012345678", "bank_code": "999992",
+        "account_number": "9012345678", "bank_code": "999992", "photo_ref": "https://example.com/receipt.jpg",
         "items": [{"item_id": items[0]["id"], "price": "20000.00"}],
     })
     assert r.status_code == 402, "over-cap transfer must be rejected"
@@ -136,13 +136,13 @@ async def test_customer_raises_cap_then_transfer_allowed(client, db_session_fact
 
     # spend most of the cap
     r = await client.post(f"/jit/orders/{oid}/pay-vendor", headers=agent_h, json={
-        "account_number": "9012345678", "bank_code": "999992",
+        "account_number": "9012345678", "bank_code": "999992", "photo_ref": "https://example.com/receipt.jpg",
         "items": [{"item_id": items[0]["id"], "price": "3000.00"}]})
     assert r.status_code == 200, r.text
 
     # next transfer would exceed the 5000 cap (3000 + 3000 = 6000)
     r = await client.post(f"/jit/orders/{oid}/pay-vendor", headers=agent_h, json={
-        "account_number": "9012345678", "bank_code": "999992",
+        "account_number": "9012345678", "bank_code": "999992", "photo_ref": "https://example.com/receipt.jpg",
         "items": [{"item_id": items[1]["id"], "price": "3000.00"}]})
     assert r.status_code == 402
 
@@ -154,7 +154,7 @@ async def test_customer_raises_cap_then_transfer_allowed(client, db_session_fact
 
     # now the transfer goes through
     r = await client.post(f"/jit/orders/{oid}/pay-vendor", headers=agent_h, json={
-        "account_number": "9012345678", "bank_code": "999992",
+        "account_number": "9012345678", "bank_code": "999992", "photo_ref": "https://example.com/receipt.jpg",
         "items": [{"item_id": items[1]["id"], "price": "3000.00"}]})
     assert r.status_code == 200, r.text
 
@@ -171,7 +171,7 @@ async def test_per_transfer_safety_cap(client, db_session_factory, monkeypatch):
     await client.post(f"/jit/orders/{oid}/authorization/raise", headers=admin_h,
                       json={"extra": "1000000.00"})
     r = await client.post(f"/jit/orders/{oid}/pay-vendor", headers=agent_h, json={
-        "account_number": "9012345678", "bank_code": "999992",
+        "account_number": "9012345678", "bank_code": "999992", "photo_ref": "https://example.com/receipt.jpg",
         "items": [{"item_id": items[0]["id"], "price": "150000.00"}]})
     assert r.status_code == 400, "over the per-transfer safety cap"
 
@@ -187,7 +187,7 @@ async def test_emtl_debits_pool_on_large_transfer(client, db_session_factory, mo
 
     # 15000 transfer -> pool drops by 15000 + 50 EMTL
     r = await client.post(f"/jit/orders/{oid}/pay-vendor", headers=agent_h, json={
-        "account_number": "9012345678", "bank_code": "999992",
+        "account_number": "9012345678", "bank_code": "999992", "photo_ref": "https://example.com/receipt.jpg",
         "items": [{"item_id": items[0]["id"], "price": "15000.00"}]})
     assert r.status_code == 200, r.text
 
@@ -205,7 +205,7 @@ async def test_purchase_photos_exposed_to_participants_only(client, db_session_f
     oid, items = await _order_shopping(client, admin_h, agent_h, market_id, listed="5000.00")
 
     r = await client.post(f"/jit/orders/{oid}/pay-vendor", headers=agent_h, json={
-        "account_number": "9012345678", "bank_code": "999992",
+        "account_number": "9012345678", "bank_code": "999992", "photo_ref": "https://example.com/receipt.jpg",
         "items": [{"item_id": items[0]["id"], "price": "3000.00"}],
         "photo_ref": "https://cdn.example.com/receipts/stall1.jpg"})
     assert r.status_code == 200, r.text
@@ -250,7 +250,7 @@ async def test_items_keep_their_own_typed_price_not_an_even_split(client, db_ses
     # stall) with three DIFFERENT agent-typed prices summing to 4000 - an
     # even split would wrongly give each item 1333.33.
     r = await client.post(f"/jit/orders/{oid}/pay-vendor", headers=agent_h, json={
-        "account_number": "9012345678", "bank_code": "999992",
+        "account_number": "9012345678", "bank_code": "999992", "photo_ref": "https://example.com/receipt.jpg",
         "items": [
             {"item_id": items[0]["id"], "price": "2000.00"},
             {"item_id": items[1]["id"], "price": "1500.00"},
@@ -284,6 +284,93 @@ async def test_pay_vendor_rejects_item_not_on_order(client, db_session_factory, 
     oid, items = await _order_shopping(client, admin_h, agent_h, market_id, listed="5000.00")
 
     r = await client.post(f"/jit/orders/{oid}/pay-vendor", headers=agent_h, json={
-        "account_number": "9012345678", "bank_code": "999992",
+        "account_number": "9012345678", "bank_code": "999992", "photo_ref": "https://example.com/receipt.jpg",
         "items": [{"item_id": str(uuid.uuid4()), "price": "1000.00"}]})
     assert r.status_code == 400, "an item id that isn't on the order must be rejected"
+
+
+# ---------- Purchase photo required (per transfer) ----------
+
+@pytest.mark.asyncio
+async def test_transfer_never_blocked_on_missing_photo(client, db_session_factory, monkeypatch):
+    """The money side of the "required" policy: pay-vendor must succeed with
+    NO photo at all - a slow/failed upload in a weak-signal market must
+    never hold up a real transfer."""
+    admin_h, agent_h, market_id, agent_uid, _ = await _setup(client, db_session_factory, monkeypatch)
+    oid, items = await _order_shopping(client, admin_h, agent_h, market_id, listed="5000.00")
+
+    r = await client.post(f"/jit/orders/{oid}/pay-vendor", headers=agent_h, json={
+        "account_number": "9012345678", "bank_code": "999992",
+        "items": [{"item_id": items[0]["id"], "price": "1500.00"}]})
+    assert r.status_code == 200, r.text
+    assert r.json()["photo_ref"] is None
+
+
+@pytest.mark.asyncio
+async def test_finish_shopping_blocked_until_photo_attached(client, db_session_factory, monkeypatch):
+    """The enforcement side: finish-shopping refuses while any successful
+    transfer is still missing its photo, and succeeds the moment the agent
+    attaches one via the deferred attach-photo endpoint."""
+    admin_h, agent_h, market_id, agent_uid, _ = await _setup(client, db_session_factory, monkeypatch)
+    oid, items = await _order_shopping(client, admin_h, agent_h, market_id, listed="5000.00")
+
+    r = await client.post(f"/jit/orders/{oid}/pay-vendor", headers=agent_h, json={
+        "account_number": "9012345678", "bank_code": "999992",
+        "items": [{"item_id": items[0]["id"], "price": "1500.00"}]})
+    assert r.status_code == 200, r.text
+    transfer_id = r.json()["id"]
+
+    r = await client.post(f"/orders/{oid}/finish-shopping", headers=agent_h)
+    assert r.status_code == 409, "must refuse to finish while a purchase has no photo"
+
+    r = await client.post(
+        f"/jit/orders/{oid}/purchases/{transfer_id}/photo", headers=agent_h,
+        json={"photo_ref": "https://cdn.example.com/receipts/late.jpg"},
+    )
+    assert r.status_code == 200, r.text
+    assert r.json()["photo_ref"] == "https://cdn.example.com/receipts/late.jpg"
+
+    r = await client.post(f"/orders/{oid}/finish-shopping", headers=agent_h)
+    assert r.status_code == 200, r.text
+
+    print("Finish-shopping is correctly blocked until every purchase has a photo, never the transfer itself.")
+
+
+@pytest.mark.asyncio
+async def test_finish_shopping_blocked_reports_every_missing_purchase(client, db_session_factory, monkeypatch):
+    """Multiple stalls, only one photographed - finishing must still be
+    refused (not satisfied by partial coverage)."""
+    admin_h, agent_h, market_id, agent_uid, _ = await _setup(client, db_session_factory, monkeypatch)
+    oid, items = await _order_shopping(client, admin_h, agent_h, market_id, listed="5000.00")
+
+    r = await client.post(f"/jit/orders/{oid}/pay-vendor", headers=agent_h, json={
+        "account_number": "9012345678", "bank_code": "999992", "photo_ref": "https://example.com/receipt.jpg",
+        "items": [{"item_id": items[0]["id"], "price": "1500.00"}]})
+    assert r.status_code == 200, r.text
+
+    r = await client.post(f"/jit/orders/{oid}/pay-vendor", headers=agent_h, json={
+        "account_number": "8023456789", "bank_code": "999992",
+        "items": [{"item_id": items[1]["id"], "price": "1000.00"}]})
+    assert r.status_code == 200, r.text
+
+    r = await client.post(f"/orders/{oid}/finish-shopping", headers=agent_h)
+    assert r.status_code == 409, "one un-photographed purchase must still block finishing"
+
+
+@pytest.mark.asyncio
+async def test_only_assigned_agent_can_attach_photo(client, db_session_factory, monkeypatch):
+    admin_h, agent_h, market_id, agent_uid, _ = await _setup(client, db_session_factory, monkeypatch)
+    oid, items = await _order_shopping(client, admin_h, agent_h, market_id, listed="5000.00")
+
+    r = await client.post(f"/jit/orders/{oid}/pay-vendor", headers=agent_h, json={
+        "account_number": "9012345678", "bank_code": "999992",
+        "items": [{"item_id": items[0]["id"], "price": "1500.00"}]})
+    transfer_id = r.json()["id"]
+
+    stranger_token = await _login(client, "+2348010000099")
+    stranger_h = {"Authorization": f"Bearer {stranger_token}"}
+    r = await client.post(
+        f"/jit/orders/{oid}/purchases/{transfer_id}/photo", headers=stranger_h,
+        json={"photo_ref": "https://cdn.example.com/receipts/late.jpg"},
+    )
+    assert r.status_code == 403

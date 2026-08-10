@@ -36,8 +36,12 @@ async def _make_agent(client, db_session_factory, phone, market_id):
 
 @pytest.mark.asyncio
 async def test_agent_summary_counts_tasks_by_bucket(client, db_session_factory):
-    """Ready to shop / in progress / waiting on customer - the same three
-    buckets Home groups into - surfaced here as counts."""
+    """Ready to shop / in progress - the same two buckets Home groups into -
+    surfaced here as counts. No "waiting on customer" bucket: the deposit
+    gate now sits on accept-agent (see test_deposit_required_before_accept
+    in test_orders.py), so an agent is never assigned to, and never sees, an
+    order with an unpaid deposit - every order counted here is already paid
+    for (or never needed a deposit at all)."""
     from app.core.enums import LedgerDirection
     from app.float import service as float_service
 
@@ -70,16 +74,16 @@ async def test_agent_summary_counts_tasks_by_bucket(client, db_session_factory):
     body = r.json()
     assert body["ready_to_shop_count"] == 1
     assert body["in_progress_count"] == 0
-    assert body["waiting_on_customer_count"] == 0
     assert body["is_available"] is True
     assert body["on_duty"] is True
 
-    # Order 2: big enough to need a deposit, unpaid -> waiting on customer,
-    # NOT ready to shop even though it's also agent_assigned. Needs its own
-    # agent (this one is no longer available once busy) - reuse the pool by
-    # checking a second agent covers the market? Simpler: this agent is still
-    # AGENT_ASSIGNED (not SHOPPING yet) on order 1, so is_available is still
-    # True and they'll auto-assign to order 2 as well.
+    # Order 2: big enough to need a deposit - the customer pays it BEFORE
+    # accepting (the new gate), so it lands as ready-to-shop too, exactly
+    # like order 1. Needs its own agent (this one is no longer available
+    # once busy) - reuse the pool by checking a second agent covers the
+    # market? Simpler: this agent is still AGENT_ASSIGNED (not SHOPPING yet)
+    # on order 1, so is_available is still True and they'll auto-assign to
+    # order 2 as well.
     cust2_token = await _login(client, "+2348050000003")
     cust2_h = {"Authorization": f"Bearer {cust2_token}"}
     r = await client.post("/orders", headers=cust2_h, json={
@@ -87,16 +91,26 @@ async def test_agent_summary_counts_tasks_by_bucket(client, db_session_factory):
         "items": [{"description": "bulk rice bags"}],
     })
     assert r.json()["proposed_agent_id"] == str(agent_id)
-    assert Decimal(r.json()["deposit_amount"]) > 0
+    deposit = Decimal(r.json()["deposit_amount"])
+    assert deposit > 0
     oid2_created = r.json()["id"]
+
+    from app.wallet import service as wallet_service
+    from app.auth.models import User
+    async with db_session_factory() as s:
+        cust2 = (await s.execute(select(User).where(User.phone == "+2348050000003"))).scalar_one()
+        await wallet_service.credit(s, cust2.id, deposit, note="test fund")
+        await s.commit()
+    r = await client.post(f"/payments/orders/{oid2_created}/deposit/pay-from-wallet", headers=cust2_h)
+    assert r.status_code == 200, r.text
+
     r = await client.post(f"/orders/{oid2_created}/accept-agent", headers=cust2_h)
     assert r.status_code == 200, r.text
     assert r.json()["agent_id"] == str(agent_id)
 
     r = await client.get("/agent/summary", headers=agent_h)
     body = r.json()
-    assert body["ready_to_shop_count"] == 1
-    assert body["waiting_on_customer_count"] == 1
+    assert body["ready_to_shop_count"] == 2
 
     # Start shopping order 1 -> moves to in_progress, still not double-counted.
     oid1 = None
@@ -110,9 +124,8 @@ async def test_agent_summary_counts_tasks_by_bucket(client, db_session_factory):
 
     r = await client.get("/agent/summary", headers=agent_h)
     body = r.json()
-    assert body["ready_to_shop_count"] == 0
+    assert body["ready_to_shop_count"] == 1
     assert body["in_progress_count"] == 1
-    assert body["waiting_on_customer_count"] == 1
 
 
 @pytest.mark.asyncio
@@ -153,7 +166,7 @@ async def test_agent_earnings_reflect_paid_orders_with_correct_share(client, db_
     r = await client.get(f"/orders/{oid}", headers=agent_h)
     item_id = r.json()["items"][0]["id"]
     r = await client.post(f"/jit/orders/{oid}/pay-vendor", headers=agent_h, json={
-        "account_number": "9012345678", "bank_code": "999992",
+        "account_number": "9012345678", "bank_code": "999992", "photo_ref": "https://example.com/receipt.jpg",
         "items": [{"item_id": item_id, "price": "500.00"}]})
     assert r.status_code == 200, r.text
     r = await client.post(f"/orders/{oid}/finish-shopping", headers=agent_h)

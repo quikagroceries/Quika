@@ -29,7 +29,6 @@ class AgentSummaryOut(BaseModel):
     earnings_total: Decimal
     ready_to_shop_count: int
     in_progress_count: int
-    waiting_on_customer_count: int
     is_available: bool
     on_duty: bool
     completed_orders: list[CompletedOrderOut]

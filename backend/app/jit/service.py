@@ -50,6 +50,52 @@ async def list_purchases(
     return list(result.scalars().all())
 
 
+async def purchases_missing_photos(
+    db: AsyncSession, *, order_id: uuid.UUID
+) -> list[VendorTransfer]:
+    """Successful transfers with no proof-of-purchase photo attached yet.
+
+    Backs the "required" half of the purchase-photo policy: the transfer
+    itself is never blocked on a photo (see pay_vendor - photo_ref stays
+    optional there, since a slow/failed upload in a weak-signal market must
+    never hold up real money moving), but finish_shopping refuses to close
+    out the order while any successful purchase is still missing one - the
+    money moves immediately, the accountability catches up before the order
+    can be considered done.
+    """
+    purchases = await list_purchases(db, order_id=order_id)
+    return [t for t in purchases if not t.photo_ref]
+
+
+async def attach_photo(
+    db: AsyncSession,
+    *,
+    order: Order,
+    agent_id: uuid.UUID,
+    transfer_id: uuid.UUID,
+    photo_ref: str,
+) -> VendorTransfer:
+    """Agent attaches (or replaces) a purchase photo on an already-completed
+    transfer - the deferred half of the "required" photo policy. Never
+    blocks anything by itself; finish_shopping is what actually enforces
+    every purchase has one before the order can close out.
+    """
+    if order.agent_id != agent_id:
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "Not the assigned agent")
+    result = await db.execute(
+        select(VendorTransfer).where(
+            VendorTransfer.id == transfer_id,
+            VendorTransfer.order_id == order.id,
+        )
+    )
+    transfer = result.scalar_one_or_none()
+    if transfer is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Purchase not found on this order")
+    transfer.photo_ref = photo_ref
+    await db.flush()
+    return transfer
+
+
 async def get_or_create_authorization(
     db: AsyncSession, order: Order
 ) -> SpendingAuthorization:

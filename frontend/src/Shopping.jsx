@@ -21,14 +21,23 @@ function Shopping({ orderId, onBack }) {
   // evenly across items. Keyed by item id so toggling a checkbox off/on
   // doesn't lose whatever was already typed for the others.
   const [itemPrices, setItemPrices] = useState({});
-  // #6: one best-effort proof-of-purchase photo per stall transfer - never
-  // required, never blocks the transfer or the money (see handlePay below).
+  // One proof-of-purchase photo per stall transfer. Never blocks the
+  // transfer/the money itself at pay time (see handlePay below) - but it IS
+  // required before finish-shopping (see `purchases`/missingPhotos below),
+  // so a skipped one just needs attaching later, not before paying.
   const [photoUrl, setPhotoUrl] = useState(null);
   const [photoUploading, setPhotoUploading] = useState(false);
+  // Successful vendor transfers for this order, loaded once shopping starts -
+  // drives the missing-photo list below and the finish-shopping gate.
+  const [purchases, setPurchases] = useState([]);
+  // Which purchase (by transfer id) currently has a photo picker open and
+  // mid-upload - lets each row show its own busy state independently.
+  const [attachingPhotoFor, setAttachingPhotoFor] = useState(null);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);         // disables buttons mid-request
   const loadedRef = useRef(false); // has the FIRST load ever succeeded?
   const photoInputRef = useRef(null);
+  const attachPhotoInputRef = useRef(null);
 
   // Reload the order from the server. Used both for the initial load and for
   // periodic polling below, so changes the customer makes (e.g. approving a
@@ -36,7 +45,7 @@ function Shopping({ orderId, onBack }) {
   // a background poll failing shouldn't blank out an already-working screen,
   // so a load failure only surfaces if nothing has ever loaded successfully.
   //
-  // Deliberately never fetches the order's spending authorization (#4) - the
+  // Deliberately never fetches the order's spending authorization - the
   // agent must not see the total cap or any customer-total figure, only
   // per-item context (each item's own listed_price, shown in the list below).
   async function refresh() {
@@ -45,8 +54,18 @@ function Shopping({ orderId, onBack }) {
       setOrder(fresh);
       loadedRef.current = true;
       setError("");
+      if (fresh.status === "shopping") await loadPurchases();
     } catch {
       if (!loadedRef.current) setError("Could not load the order.");
+    }
+  }
+
+  // Backs the missing-photo list and the finish-shopping gate below.
+  async function loadPurchases() {
+    try {
+      setPurchases(await api.getPurchases(orderId));
+    } catch {
+      // best-effort - a failed poll shouldn't blank out an already-shown list
     }
   }
 
@@ -118,6 +137,31 @@ function Shopping({ orderId, onBack }) {
     }
   }
 
+  // Attach a photo to an ALREADY-completed transfer, after the fact -
+  // required before finish-shopping (see the missing-photo list below), but
+  // the transfer itself was never blocked on it.
+  function openAttachPhotoPicker(transferId) {
+    setAttachingPhotoFor(transferId);
+    attachPhotoInputRef.current?.click();
+  }
+
+  async function handleAttachPhotoChange(e) {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    const transferId = attachingPhotoFor;
+    if (!file || !transferId) { setAttachingPhotoFor(null); return; }
+    setError("");
+    try {
+      const url = await api.uploadPurchasePhoto(file);
+      await api.attachPurchasePhoto(orderId, transferId, url);
+      await loadPurchases();
+    } catch (e2) {
+      setError("Could not attach photo: " + e2.message);
+    } finally {
+      setAttachingPhotoFor(null);
+    }
+  }
+
   async function handlePay() {
     setError(""); setBusy(true);
     try {
@@ -126,10 +170,11 @@ function Shopping({ orderId, onBack }) {
         bank_code: bankCode,
         // Each selected item keeps its own typed price - the transfer
         // amount is derived server-side as their sum, never a separate
-        // free-typed total (#8: no even-split fabrication).
+        // free-typed total (no even-split fabrication).
         items: selected.map((id) => ({ item_id: id, price: itemPrices[id] })),
-        // #6: one proof-of-purchase photo per transfer, if one was
-        // uploaded - never required.
+        // One proof-of-purchase photo per transfer, if one was uploaded
+        // right away - never required at pay time (see handleAttachPhotoChange
+        // above for attaching one later if this is skipped).
         photo_ref: photoUrl || undefined,
       });
       // Reset the stall form and reload to show items now bought.
@@ -221,6 +266,10 @@ function Shopping({ orderId, onBack }) {
     Number(itemPrices[it.id]) > Number(it.listed_price) &&
     it.overage_decision !== "approved";
   const anyOverage = selectedItems.some(isOverage);
+  // Purchase-photo required (per transfer): the transfer itself was never
+  // blocked on this, but finish-shopping refuses while any successful
+  // purchase is still missing one - this drives that list and the gate.
+  const missingPhotoPurchases = purchases.filter((p) => !p.photo_ref);
 
   return (
     <div>
@@ -470,18 +519,65 @@ function Shopping({ orderId, onBack }) {
               </div>
           )}
 
+          {/* Purchase photo required (per transfer): the transfer already
+              fired - this is just the accountability catch-up before
+              finishing can happen. Never shown for a stall that already has
+              one. */}
+          {isShopping && missingPhotoPurchases.length > 0 && (
+            <div className="mt-6 rounded-xl border-2 border-amber-400 bg-amber-50 p-4">
+              <p className="mb-1 font-bold text-amber-800">
+                {missingPhotoPurchases.length} purchase{missingPhotoPurchases.length === 1 ? "" : "s"} need{missingPhotoPurchases.length === 1 ? "s" : ""} a photo
+              </p>
+              <p className="mb-3 text-sm text-amber-700">
+                Money already moved for these - just attach proof before finishing.
+              </p>
+              <div className="space-y-2">
+                {missingPhotoPurchases.map((p) => (
+                  <div key={p.id} className="flex items-center justify-between rounded-lg bg-white px-3 py-2">
+                    <span className="text-sm font-semibold text-slate-700">₦{p.amount} — {p.account_number}</span>
+                    <Button
+                      variant="neutral"
+                      onClick={() => openAttachPhotoPicker(p.id)}
+                      disabled={attachingPhotoFor === p.id}
+                      busy={attachingPhotoFor === p.id}
+                      className="shrink-0 px-3 py-1.5 text-sm"
+                    >
+                      Add photo
+                    </Button>
+                  </div>
+                ))}
+              </div>
+              <input
+                ref={attachPhotoInputRef}
+                type="file"
+                accept="image/*"
+                capture="environment"
+                onChange={handleAttachPhotoChange}
+                className="hidden"
+              />
+            </div>
+          )}
+
           {/* Finish — the other dominant action, visually distinct (green) from
               Pay vendor so the two can't be confused mid-shop. */}
           {isShopping && (
-            <Button
-              variant="secondary"
-              onClick={handleFinish}
-              busy={busy}
-              fullWidth
-              className="mt-6 text-lg"
-            >
-              Finish shopping
-            </Button>
+            <>
+              <Button
+                variant="secondary"
+                onClick={handleFinish}
+                busy={busy}
+                disabled={missingPhotoPurchases.length > 0}
+                fullWidth
+                className="mt-6 text-lg"
+              >
+                Finish shopping
+              </Button>
+              {missingPhotoPurchases.length > 0 && (
+                <p className="mt-2 text-center text-xs text-amber-700">
+                  Attach the photo(s) above first.
+                </p>
+              )}
+            </>
           )}
       </div>
     </div>

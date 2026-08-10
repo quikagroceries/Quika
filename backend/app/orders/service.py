@@ -263,6 +263,15 @@ async def accept_proposal(
     moves from PROPOSED to AGENT_ASSIGNED (besides an admin's manual
     override). This is the moment the agent actually gains access to the
     order at all.
+
+    The deposit gate: if this order requires a deposit, it must be paid
+    BEFORE acceptance, not just before shopping starts (see start_shopping's
+    own deposit check, kept as defense-in-depth). This means an agent is
+    never assigned to - and never sees on their dashboard - an order the
+    customer hasn't committed real money to yet, closing the window where an
+    agent could be waiting on a customer who never pays. deposit payment
+    itself has no status gate (see payments.service.pay_deposit_from_wallet),
+    so it's always payable during PROPOSED, before this is ever called.
     """
     order = await _load(db, order_id)
     if order.customer_id != customer_id:
@@ -270,6 +279,11 @@ async def accept_proposal(
     if order.status is not OrderStatus.PROPOSED or order.proposed_agent_id is None:
         raise HTTPException(
             status.HTTP_409_CONFLICT, "This order has no pending agent proposal"
+        )
+    if order.deposit_amount > 0 and order.deposit_paid_at is None:
+        raise HTTPException(
+            status.HTTP_402_PAYMENT_REQUIRED,
+            "Pay the deposit before accepting an agent",
         )
     order.agent_id = order.proposed_agent_id
     order.proposed_agent_id = None
@@ -374,6 +388,20 @@ async def finish_shopping(
     if order.agent_id != agent_id:
         raise HTTPException(
             status.HTTP_403_FORBIDDEN, "Not the assigned agent for this order"
+        )
+
+    # Purchase-photo policy: every successful vendor transfer needs a proof
+    # photo before shopping can be marked done. The transfer itself was never
+    # blocked on this (see jit.service.pay_vendor - photo_ref stays optional
+    # there, so a slow/failed upload in a weak-signal market never holds up
+    # real money moving); this is where it's actually enforced.
+    from app.jit import service as jit_service
+    missing = await jit_service.purchases_missing_photos(db, order_id=order.id)
+    if missing:
+        raise HTTPException(
+            status.HTTP_409_CONFLICT,
+            f"Attach a purchase photo for {len(missing)} stall purchase(s) "
+            "before finishing shopping.",
         )
 
     # Any item still flagged 'unavailable' means the customer never answered —

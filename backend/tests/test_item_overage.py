@@ -113,7 +113,7 @@ async def test_agent_keeps_shopping_other_items_while_overage_pending(client, db
 
     # Rice is untouched by the pending overage - agent pays for it normally.
     r = await client.post(f"/jit/orders/{oid}/pay-vendor", headers=agent_h, json={
-        "account_number": "9012345678", "bank_code": "999992",
+        "account_number": "9012345678", "bank_code": "999992", "photo_ref": "https://example.com/receipt.jpg",
         "items": [{"item_id": rice_id, "price": "2000.00"}]})
     assert r.status_code == 200, r.text
 
@@ -143,7 +143,7 @@ async def test_customer_approves_overage_then_agent_pays(client, db_session_fact
 
     # Now the agent can actually pay for it.
     r = await client.post(f"/jit/orders/{oid}/pay-vendor", headers=agent_h, json={
-        "account_number": "9012345678", "bank_code": "999992",
+        "account_number": "9012345678", "bank_code": "999992", "photo_ref": "https://example.com/receipt.jpg",
         "items": [{"item_id": item_id, "price": "1500.00"}]})
     assert r.status_code == 200, r.text
 
@@ -166,7 +166,7 @@ async def test_customer_declines_overage_item_stays_unbought(client, db_session_
 
     # Buy the other item and finish - pepper stays skipped, not in the total.
     await client.post(f"/jit/orders/{oid}/pay-vendor", headers=agent_h, json={
-        "account_number": "9012345678", "bank_code": "999992",
+        "account_number": "9012345678", "bank_code": "999992", "photo_ref": "https://example.com/receipt.jpg",
         "items": [{"item_id": rice_id, "price": "2000.00"}]})
     r = await client.post(f"/orders/{oid}/finish-shopping", headers=agent_h)
     assert r.status_code == 200, r.text
@@ -190,7 +190,7 @@ async def test_unanswered_overage_is_skipped_not_bought_at_finish(client, db_ses
     await client.post(f"/orders/{oid}/items/{pepper_id}/request-overage",
                        headers=agent_h, json={"price": "1500.00"})
     await client.post(f"/jit/orders/{oid}/pay-vendor", headers=agent_h, json={
-        "account_number": "9012345678", "bank_code": "999992",
+        "account_number": "9012345678", "bank_code": "999992", "photo_ref": "https://example.com/receipt.jpg",
         "items": [{"item_id": rice_id, "price": "2000.00"}]})
 
     # No customer response at all.

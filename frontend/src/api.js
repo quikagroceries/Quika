@@ -138,6 +138,12 @@ export const api = {
   getAuthorization: (id) => request(`/jit/orders/${id}/authorization`),
   // Purchase receipts (amount + photo) per stall - proof of goods bought.
   getPurchases: (id) => request(`/jit/orders/${id}/purchases`),
+  // Attach/replace a purchase photo after the fact - required before
+  // finish-shopping, but never blocks the transfer itself.
+  attachPurchasePhoto: (id, transferId, photoRef) =>
+    request(`/jit/orders/${id}/purchases/${transferId}/photo`, {
+      method: "POST", body: { photo_ref: photoRef },
+    }),
 
   // --- delivery ---
   packOrder: (id) => request(`/delivery/orders/${id}/pack`, { method: "POST" }),

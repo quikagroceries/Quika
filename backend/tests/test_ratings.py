@@ -65,7 +65,7 @@ async def _completed_order(client, db_session_factory, monkeypatch):
     r = await client.post(f"/orders/{oid}/start-shopping", headers=agent_h)
     item_id = r.json()["items"][0]["id"]
     await client.post(f"/jit/orders/{oid}/pay-vendor", headers=agent_h, json={
-        "account_number": "9012345678", "bank_code": "999992",
+        "account_number": "9012345678", "bank_code": "999992", "photo_ref": "https://example.com/receipt.jpg",
         "items": [{"item_id": item_id, "price": "1500.00"}]})
     await client.post(f"/orders/{oid}/finish-shopping", headers=agent_h)
     r = await client.post(f"/payments/orders/{oid}/pay-from-wallet", headers=cust_h)

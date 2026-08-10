@@ -38,6 +38,10 @@ class VendorTransferOut(BaseModel):
     photo_ref: str | None
 
 
+class AttachPhotoIn(BaseModel):
+    photo_ref: str = Field(..., min_length=1)
+
+
 class RaiseCapIn(BaseModel):
     extra: Decimal = Field(..., gt=0, examples=["500.00"])
 

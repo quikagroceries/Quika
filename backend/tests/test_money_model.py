@@ -105,7 +105,7 @@ async def test_overtime_shopping_raises_fee_and_agent_share(client, db_session_f
         await s.commit()
 
     await client.post(f"/jit/orders/{oid}/pay-vendor", headers=agent_h, json={
-        "account_number": "9012345678", "bank_code": "999992",
+        "account_number": "9012345678", "bank_code": "999992", "photo_ref": "https://example.com/receipt.jpg",
         "items": [{"item_id": item_id, "price": "500.00"}]})
     r = await client.post(f"/orders/{oid}/finish-shopping", headers=agent_h)
     assert r.status_code == 200, r.text
@@ -323,7 +323,7 @@ async def test_lapsed_balance_payment_forfeits_deposit(client, db_session_factor
     r = await client.post(f"/orders/{oid}/start-shopping", headers=agent_h)
     item_id = r.json()["items"][0]["id"]
     await client.post(f"/jit/orders/{oid}/pay-vendor", headers=agent_h, json={
-        "account_number": "9012345678", "bank_code": "999992",
+        "account_number": "9012345678", "bank_code": "999992", "photo_ref": "https://example.com/receipt.jpg",
         "items": [{"item_id": item_id, "price": "78000.00"}]})
     r = await client.post(f"/orders/{oid}/finish-shopping", headers=agent_h)
     assert r.status_code == 200, r.text
@@ -386,7 +386,7 @@ async def test_partial_shortfall_credits_wallet(client, db_session_factory, monk
 
     # Only ONE cheap item was actually available
     await client.post(f"/jit/orders/{oid}/pay-vendor", headers=agent_h, json={
-        "account_number": "9012345678", "bank_code": "999992",
+        "account_number": "9012345678", "bank_code": "999992", "photo_ref": "https://example.com/receipt.jpg",
         "items": [{"item_id": items[0]["id"], "price": "2000.00"}]})
     r = await client.post(f"/orders/{oid}/finish-shopping", headers=agent_h)
     final = r.json()
@@ -422,7 +422,7 @@ async def test_bargained_list_shows_real_prices(client, db_session_factory, monk
 
     # agent bargained pepper down to 450; second item unavailable
     await client.post(f"/jit/orders/{oid}/pay-vendor", headers=agent_h, json={
-        "account_number": "9012345678", "bank_code": "999992",
+        "account_number": "9012345678", "bank_code": "999992", "photo_ref": "https://example.com/receipt.jpg",
         "items": [{"item_id": items[0]["id"], "price": "450.00"}]})
     await client.post(f"/orders/{oid}/finish-shopping", headers=agent_h)
 
@@ -466,7 +466,7 @@ async def test_pay_from_wallet(client, db_session_factory, monkeypatch):
     r = await client.post(f"/orders/{oid}/start-shopping", headers=agent_h)
     items = r.json()["items"]
     await client.post(f"/jit/orders/{oid}/pay-vendor", headers=agent_h, json={
-        "account_number": "9012345678", "bank_code": "999992",
+        "account_number": "9012345678", "bank_code": "999992", "photo_ref": "https://example.com/receipt.jpg",
         "items": [{"item_id": items[0]["id"], "price": "1500.00"}]})
     r = await client.post(f"/orders/{oid}/finish-shopping", headers=agent_h)
     grand = Decimal(r.json()["grand_total"])  # 1500 + 2000 + 3600 = 7100
@@ -499,7 +499,7 @@ async def test_wallet_insufficient_balance_rejected(client, db_session_factory, 
     r = await client.post(f"/orders/{oid}/start-shopping", headers=agent_h)
     items = r.json()["items"]
     await client.post(f"/jit/orders/{oid}/pay-vendor", headers=agent_h, json={
-        "account_number": "9012345678", "bank_code": "999992",
+        "account_number": "9012345678", "bank_code": "999992", "photo_ref": "https://example.com/receipt.jpg",
         "items": [{"item_id": items[0]["id"], "price": "1500.00"}]})
     await client.post(f"/orders/{oid}/finish-shopping", headers=agent_h)
 

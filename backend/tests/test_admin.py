@@ -35,7 +35,7 @@ async def _drive_order_to_paid(
     r = await client.post(f"/orders/{oid}/start-shopping", headers=agent_h)
     item_id = r.json()["items"][0]["id"]
     r = await client.post(f"/jit/orders/{oid}/pay-vendor", headers=agent_h, json={
-        "account_number": "9012345678", "bank_code": "999992",
+        "account_number": "9012345678", "bank_code": "999992", "photo_ref": "https://example.com/receipt.jpg",
         "items": [{"item_id": item_id, "price": goods_total}],
     })
     assert r.status_code == 200, r.text
@@ -232,7 +232,7 @@ async def test_admin_sees_forfeited_deposits_as_losses(client, db_session_factor
     r = await client.post(f"/orders/{oid}/start-shopping", headers=agent_h)
     item_id = r.json()["items"][0]["id"]
     await client.post(f"/jit/orders/{oid}/pay-vendor", headers=agent_h, json={
-        "account_number": "9012345678", "bank_code": "999992",
+        "account_number": "9012345678", "bank_code": "999992", "photo_ref": "https://example.com/receipt.jpg",
         "items": [{"item_id": item_id, "price": "78000.00"}]})
     await client.post(f"/orders/{oid}/finish-shopping", headers=agent_h)
 

@@ -18,15 +18,14 @@ const NAV_ITEMS = [
   { key: "settings", label: "Settings", icon: "settings" },
 ];
 
-// The three buckets Home groups its task list into, by urgency:
-//   ready to shop (top) -> in progress -> waiting on customer (bottom,
-// not actionable). Mirrors the same grouping app/agent/service.py's
-// get_summary uses for its task counts.
+// The two buckets Home groups its task list into, by urgency: ready to shop
+// (top) -> in progress. Mirrors the same grouping app/agent/service.py's
+// get_summary uses for its task counts. No "waiting on customer" bucket:
+// the deposit-before-assignment gate (orders.service.accept_proposal) means
+// an agent is never assigned to an order with an unpaid deposit in the
+// first place - every agent_assigned order is already ready to shop.
 function isReadyToShop(o) {
-  return o.status === "agent_assigned" && (Number(o.deposit_amount) <= 0 || !!o.deposit_paid_at);
-}
-function isWaitingOnCustomer(o) {
-  return o.status === "agent_assigned" && Number(o.deposit_amount) > 0 && !o.deposit_paid_at;
+  return o.status === "agent_assigned";
 }
 function isInProgress(o) {
   return o.status === "shopping";
@@ -42,7 +41,6 @@ function isNeedsAttention(o) {
 const TONE_STYLES = {
   ready: "border-brand-orange",
   progress: "border-brand-green",
-  waiting: "border-slate-200 opacity-70",
   attention: "border-red-400",
 };
 
@@ -61,9 +59,6 @@ function TaskCard({ order, marketName, onClick, tone }) {
         {order.items ? order.items.length : 0} item{order.items && order.items.length === 1 ? "" : "s"}
       </div>
       <div className="mt-1 text-base font-semibold text-slate-700">{marketName || "—"}</div>
-      {tone === "waiting" && (
-        <div className="mt-2 text-sm font-semibold text-amber-700">Waiting on the customer's deposit</div>
-      )}
       {tone === "attention" && (
         <div className="mt-2 text-sm font-semibold text-red-600">
           Balance wasn't paid — please return these goods to the market/vendor.
@@ -172,7 +167,6 @@ function Orders({ user, onLogout, onUserUpdated, roleSwitch }) {
   const actionable = orders.filter((o) => o.status === "agent_assigned" || o.status === "shopping");
   const readyToShop = actionable.filter(isReadyToShop);
   const inProgress = actionable.filter(isInProgress);
-  const waiting = actionable.filter(isWaitingOnCustomer);
   const needsAttention = orders.filter(isNeedsAttention);
   const noTasks = !loading && actionable.length === 0 && needsAttention.length === 0;
   const visibleOrders = filterOrders(orders, statusFilter);
@@ -257,7 +251,7 @@ function Orders({ user, onLogout, onUserUpdated, roleSwitch }) {
                 </Card>
               </div>
 
-              <div className="mt-4 grid grid-cols-3 gap-3 text-center">
+              <div className="mt-4 grid grid-cols-2 gap-3 text-center">
                 <Card className="py-3">
                   <div className="text-xl font-extrabold text-slate-900">{summary.ready_to_shop_count}</div>
                   <div className="text-xs text-slate-500">Ready to shop</div>
@@ -265,10 +259,6 @@ function Orders({ user, onLogout, onUserUpdated, roleSwitch }) {
                 <Card className="py-3">
                   <div className="text-xl font-extrabold text-slate-900">{summary.in_progress_count}</div>
                   <div className="text-xs text-slate-500">In progress</div>
-                </Card>
-                <Card className="py-3">
-                  <div className="text-xl font-extrabold text-slate-900">{summary.waiting_on_customer_count}</div>
-                  <div className="text-xs text-slate-500">Waiting</div>
                 </Card>
               </div>
 
@@ -348,14 +338,6 @@ function Orders({ user, onLogout, onUserUpdated, roleSwitch }) {
             subtitle="You're actively shopping these."
             orders={inProgress}
             tone="progress"
-            marketName={marketName}
-            onOpen={setOpenOrderId}
-          />
-          <TaskSection
-            title="Waiting on customer"
-            subtitle="Assigned, but the deposit isn't paid yet — nothing to do until it is."
-            orders={waiting}
-            tone="waiting"
             marketName={marketName}
             onOpen={setOpenOrderId}
           />

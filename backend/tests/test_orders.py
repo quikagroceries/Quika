@@ -112,7 +112,7 @@ async def test_full_order_lifecycle(client, db_session_factory, seed_float, monk
         f"/jit/orders/{order_id}/pay-vendor",
         headers=agent_headers,
         json={
-            "account_number": "9012345678", "bank_code": "999992",
+            "account_number": "9012345678", "bank_code": "999992", "photo_ref": "https://example.com/receipt.jpg",
             "items": [{"item_id": items[0]["id"], "price": "500.00"}],
         },
     )
@@ -121,7 +121,7 @@ async def test_full_order_lifecycle(client, db_session_factory, seed_float, monk
         f"/jit/orders/{order_id}/pay-vendor",
         headers=agent_headers,
         json={
-            "account_number": "9012345678", "bank_code": "999992",
+            "account_number": "9012345678", "bank_code": "999992", "photo_ref": "https://example.com/receipt.jpg",
             "items": [{"item_id": items[1]["id"], "price": "1000.00"}],
         },
     )

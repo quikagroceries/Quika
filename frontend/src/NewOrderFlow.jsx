@@ -46,17 +46,21 @@ function NewOrderFlow({ user, markets, marketsLoading, onCancel, onOrderPlaced }
     setStep("address");
   }
 
+  // Deliberately no aggregate total in this message: it's sent into the
+  // order's shared chat thread, which the agent eventually reads once they
+  // accept (see Chat.jsx - it renders whatever text is stored, verbatim,
+  // with no per-participant filtering). Per-item prices are fine to include
+  // (the agent already sees each item's own listed_price directly in
+  // Shopping.jsx), but the summed goods total is exactly the customer-total
+  // figure the agent must never see (#4/#6) - including it here would leak
+  // it right back in through the one surface that isn't gated on that rule.
   function summarize(list) {
     const lines = list.items.map((it, i) => {
       const qty = it.quantity ? ` x${it.quantity}` : "";
       const price = it.listed_price != null ? ` — ₦${it.listed_price}${qty}` : "";
       return `${i + 1}. ${it.description}${price}`;
     });
-    return [
-      "Market list",
-      ...lines,
-      `Goods total: ₦${Number(list.goodsTotal).toFixed(2)}`,
-    ].join("\n");
+    return ["Market list", ...lines].join("\n");
   }
 
   async function handlePlaceOrder() {

@@ -68,7 +68,7 @@ async def test_nonpayment_sets_must_prepay(client, db_session_factory, monkeypat
     r = await client.post(f"/orders/{oid}/start-shopping", headers=agent_h)
     item_id = r.json()["items"][0]["id"]
     await client.post(f"/jit/orders/{oid}/pay-vendor", headers=agent_h, json={
-        "account_number": "9012345678", "bank_code": "999992",
+        "account_number": "9012345678", "bank_code": "999992", "photo_ref": "https://example.com/receipt.jpg",
         "items": [{"item_id": item_id, "price": "1500.00"}]})
     await client.post(f"/orders/{oid}/finish-shopping", headers=agent_h)
 
@@ -153,15 +153,16 @@ async def test_payment_clears_must_prepay(client, db_session_factory, monkeypatc
         "items": [{"description": "pepper"}]})
     oid = r.json()["id"]
     deposit = Decimal(r.json()["deposit_amount"])
-    r = await client.post(f"/orders/{oid}/accept-agent", headers=admin_h)
-    assert r.status_code == 200, r.text
-    # pay the (full) deposit
+    # Pay the (full) deposit BEFORE accepting - the deposit-before-assignment
+    # gate (orders.service.accept_proposal) refuses acceptance otherwise.
     r = await client.post(f"/payments/orders/{oid}/deposit/pay-from-wallet", headers=admin_h)
+    assert r.status_code == 200, r.text
+    r = await client.post(f"/orders/{oid}/accept-agent", headers=admin_h)
     assert r.status_code == 200, r.text
     r = await client.post(f"/orders/{oid}/start-shopping", headers=agent_h)
     item_id = r.json()["items"][0]["id"]
     await client.post(f"/jit/orders/{oid}/pay-vendor", headers=agent_h, json={
-        "account_number": "9012345678", "bank_code": "999992",
+        "account_number": "9012345678", "bank_code": "999992", "photo_ref": "https://example.com/receipt.jpg",
         "items": [{"item_id": item_id, "price": "1500.00"}]})
     await client.post(f"/orders/{oid}/finish-shopping", headers=agent_h)
     await client.post(f"/payments/orders/{oid}/pay-from-wallet", headers=admin_h)
@@ -222,7 +223,7 @@ async def test_item_unavailable_no_answer_falls_back(client, db_session_factory,
     items = r.json()["items"]
     # buy pepper, flag spice unavailable, customer never answers
     await client.post(f"/jit/orders/{oid}/pay-vendor", headers=agent_h, json={
-        "account_number": "9012345678", "bank_code": "999992",
+        "account_number": "9012345678", "bank_code": "999992", "photo_ref": "https://example.com/receipt.jpg",
         "items": [{"item_id": items[0]["id"], "price": "500.00"}]})
     await client.post(f"/orders/{oid}/items/{items[1]['id']}/unavailable", headers=agent_h)
 

@@ -11,7 +11,7 @@ from app.core.security import get_current_user, require_role
 from app.jit import service
 from app.jit.models import SpendingAuthorization
 from app.jit.schemas import (
-    AuthorizationOut, PayVendorIn, RaiseCapIn, VendorTransferOut,
+    AttachPhotoIn, AuthorizationOut, PayVendorIn, RaiseCapIn, VendorTransferOut,
 )
 from app.orders.service import _load, load_order_for_participant
 
@@ -46,6 +46,23 @@ async def pay_vendor(
         seller_id=body.seller_id, photo_ref=body.photo_ref,
     )
     return transfer
+
+
+@router.post("/orders/{order_id}/purchases/{transfer_id}/photo", response_model=VendorTransferOut)
+async def attach_photo(
+    order_id: uuid.UUID,
+    transfer_id: uuid.UUID,
+    body: AttachPhotoIn,
+    db: AsyncSession = Depends(get_db),
+    agent: User = Depends(require_role(UserRole.AGENT)),
+) -> VendorTransferOut:
+    """Attach (or replace) a purchase photo on an already-completed transfer -
+    required before finish-shopping, but never blocks the payment itself."""
+    order = await _load(db, order_id)
+    return await service.attach_photo(
+        db, order=order, agent_id=agent.id,
+        transfer_id=transfer_id, photo_ref=body.photo_ref,
+    )
 
 
 @router.get("/orders/{order_id}/authorization", response_model=AuthorizationOut)

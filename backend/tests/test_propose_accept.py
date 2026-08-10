@@ -276,3 +276,52 @@ async def test_only_the_order_customer_can_accept_or_see_another(client, db_sess
     assert r.status_code == 403
 
     print("Only the order's own customer may accept or reject a proposed agent.")
+
+
+@pytest.mark.asyncio
+async def test_deposit_required_before_accept(client, db_session_factory):
+    """Deposit-before-assignment: a large order needs a deposit, and
+    accept-agent must refuse until it's paid - the agent is never assigned
+    to (and never sees) an order the customer hasn't committed real money
+    to. Paying the deposit unblocks acceptance immediately after."""
+    from app.wallet import service as wallet_service
+
+    market_id = uuid.uuid4()
+    token, agent_id = await _make_agent(client, db_session_factory, "+2348060000070", market_id)
+    cust_token = await _login(client, "+2348060000071")
+    cust_h = {"Authorization": f"Bearer {cust_token}"}
+
+    r = await client.post("/orders", headers=cust_h, json={
+        "market_id": str(market_id), "listed_items_total": "78000.00",
+        "items": [{"description": "bulk rice bags"}],
+    })
+    assert r.status_code == 201, r.text
+    oid = r.json()["id"]
+    deposit = Decimal(r.json()["deposit_amount"])
+    assert deposit > 0, "this order should require a deposit"
+    assert r.json()["status"] == "proposed"
+
+    # Deposit unpaid -> accept is refused, not silently allowed.
+    r = await client.post(f"/orders/{oid}/accept-agent", headers=cust_h)
+    assert r.status_code == 402, r.text
+    r = await client.get(f"/orders/{oid}", headers=cust_h)
+    assert r.json()["status"] == "proposed", "must stay proposed, not assigned, until the deposit is paid"
+    assert r.json()["agent_id"] is None
+
+    # Deposit is payable even while still just proposed (no status gate on
+    # the payment itself) - fund the wallet and pay it.
+    async with db_session_factory() as s:
+        from app.auth.models import User
+        cust = (await s.execute(select(User).where(User.phone == "+2348060000071"))).scalar_one()
+        await wallet_service.credit(s, cust.id, deposit, note="test fund")
+        await s.commit()
+    r = await client.post(f"/payments/orders/{oid}/deposit/pay-from-wallet", headers=cust_h)
+    assert r.status_code == 200, r.text
+
+    # Now acceptance succeeds.
+    r = await client.post(f"/orders/{oid}/accept-agent", headers=cust_h)
+    assert r.status_code == 200, r.text
+    assert r.json()["status"] == "agent_assigned"
+    assert r.json()["agent_id"] == str(agent_id)
+
+    print("Deposit must be paid before an agent can be accepted.")
