@@ -45,7 +45,7 @@ async def start_checkout(
 ) -> dict:
     """Customer-initiated. Creates a Paystack transaction for the grand total.
 
-    origin (the frontend's own URL, e.g. http://localhost:5173) becomes the
+    origin (the frontend's own URL, e.g. http://localhost:3000) becomes the
     Paystack callback_url so the browser actually lands back on this app -
     see paystack.initialize_transaction's docstring for what happens without
     one. The reference is tagged onto that URL so the screen the customer
@@ -73,7 +73,11 @@ async def start_checkout(
 
     # Email is optional on our user model; Paystack requires one, so fall back.
     email = f"{customer.phone.lstrip('+')}@quika.com"
-    callback_url = f"{origin}/?order_ref={reference}" if origin else None
+    # Deep-link back to the order page so Next.js can verify without a
+    # localStorage "pending order" handoff.
+    callback_url = (
+        f"{origin}/orders/{order.id}?order_ref={reference}" if origin else None
+    )
     data = await paystack.initialize_transaction(
         email=email, amount_naira=order.grand_total, reference=reference,
         callback_url=callback_url,
@@ -281,7 +285,7 @@ async def init_wallet_funding(
     db.add(txn)
     await db.flush()
     email = f"{customer.phone.lstrip('+')}@quika.com"
-    callback_url = f"{origin}/?funded={reference}" if origin else None
+    callback_url = f"{origin}/wallet?funded={reference}" if origin else None
     data = await paystack.initialize_transaction(
         email=email, amount_naira=amount, reference=reference,
         callback_url=callback_url,
@@ -418,7 +422,9 @@ async def init_deposit_checkout(
     db.add(txn)
     await db.flush()
     email = f"{customer.phone.lstrip('+')}@quika.com"
-    callback_url = f"{origin}/?order_deposit_ref={reference}" if origin else None
+    callback_url = (
+        f"{origin}/orders/{order.id}?order_deposit_ref={reference}" if origin else None
+    )
     data = await paystack.initialize_transaction(
         email=email, amount_naira=order.deposit_amount, reference=reference,
         callback_url=callback_url,

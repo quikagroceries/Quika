@@ -143,7 +143,9 @@ async def test_checkout_verify_on_return_pays_and_is_idempotent(client, db_sessi
     from app.orders.models import Order
 
     async def fake_init(*, email, amount_naira, reference, callback_url=None):
-        assert callback_url == f"http://localhost:5173/?order_ref={reference}"
+        assert callback_url is not None
+        assert "/orders/" in callback_url
+        assert callback_url.endswith(f"?order_ref={reference}")
         return {"authorization_url": f"https://paystack.test/{reference}", "reference": reference}
     monkeypatch.setattr("app.payments.paystack.initialize_transaction", fake_init)
 
@@ -219,7 +221,9 @@ async def test_deposit_checkout_verify_on_return(client, db_session_factory, mon
     from app.float import service as float_service
 
     async def fake_init(*, email, amount_naira, reference, callback_url=None):
-        assert callback_url == f"http://localhost:5173/?order_deposit_ref={reference}"
+        assert callback_url is not None
+        assert "/orders/" in callback_url
+        assert callback_url.endswith(f"?order_deposit_ref={reference}")
         return {"authorization_url": f"https://paystack.test/{reference}", "reference": reference}
     monkeypatch.setattr("app.payments.paystack.initialize_transaction", fake_init)
 

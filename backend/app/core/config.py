@@ -26,7 +26,7 @@ class Settings(BaseSettings):
     # CORS — comma-separated origins allowed to call this API. Defaults to
     # the local Vite dev server; a real deployment must set this to the
     # frontend's actual origin(s), or the browser will block every request.
-    allowed_origins: str = "http://localhost:5173"
+    allowed_origins: str = "http://localhost:3003,http://localhost:3000,http://localhost:5173"
 
     @property
     def allowed_origins_list(self) -> list[str]:
