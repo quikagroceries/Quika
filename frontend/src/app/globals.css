@@ -10,6 +10,46 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
+/* Warm market atmosphere — soft color fields + fine grain */
+.market-atmosphere {
+  background-color: #efe6d9;
+  background-image:
+    radial-gradient(ellipse 80% 55% at 0% 0%, rgba(232, 84, 30, 0.14), transparent 55%),
+    radial-gradient(ellipse 70% 50% at 100% 8%, rgba(14, 122, 60, 0.12), transparent 50%),
+    radial-gradient(ellipse 60% 45% at 70% 100%, rgba(242, 183, 5, 0.14), transparent 55%),
+    linear-gradient(180deg, #f4ebe0 0%, #efe6d9 40%, #e8dcc9 100%);
+}
+
+.market-grain {
+  position: relative;
+}
+
+.market-grain::before {
+  content: "";
+  pointer-events: none;
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  opacity: 0.035;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+.section-wash-green {
+  background:
+    radial-gradient(ellipse 70% 80% at 10% 20%, rgba(14, 122, 60, 0.08), transparent 55%),
+    radial-gradient(ellipse 50% 60% at 90% 80%, rgba(242, 183, 5, 0.1), transparent 50%),
+    #f3ebe0;
+}
+
+.section-wash-how {
+  background:
+    linear-gradient(180deg, #efe6d9 0%, #f7f1e7 45%, #efe6d9 100%);
+}
+
+.panel-orange-rich {
+  background: linear-gradient(145deg, #f06a32 0%, #e8541e 42%, #c94416 100%);
+}
+
 /* Meal-Monkey-style jagged section edges */
 .edge-torn-top {
   --c: #211a14;
@@ -23,15 +63,25 @@ body {
 
 .wave-divider {
   display: block;
+  position: relative;
   width: 100%;
   height: 48px;
   line-height: 0;
 }
 
-.wave-divider svg {
-  width: 100%;
-  height: 100%;
-  display: block;
+/* Solid CSS wave — mask on a bg-* layer (avoids SVG fill stretch banding) */
+.wave-divider__scallop {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1200 48' preserveAspectRatio='none'%3E%3Cpath fill='black' d='M0 24 Q50 0 100 24 T200 24 T300 24 T400 24 T500 24 T600 24 T700 24 T800 24 T900 24 T1000 24 T1100 24 T1200 24 V48 H0Z'/%3E%3C/svg%3E");
+  mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1200 48' preserveAspectRatio='none'%3E%3Cpath fill='black' d='M0 24 Q50 0 100 24 T200 24 T300 24 T400 24 T500 24 T600 24 T700 24 T800 24 T900 24 T1000 24 T1100 24 T1200 24 V48 H0Z'/%3E%3C/svg%3E");
+  -webkit-mask-size: 100% 100%;
+  mask-size: 100% 100%;
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+  -webkit-mask-position: center;
+  mask-position: center;
 }
 
 .ring-segment {
@@ -45,6 +95,17 @@ body {
 
 .dashed-ring {
   border: 2px dashed currentColor;
+}
+
+/* Open-app CTA — angled slab (phone sits outside / overflows) */
+.app-cta-slab {
+  clip-path: polygon(0 10%, 94% 0, 100% 14%, 100% 86%, 94% 100%, 0 90%);
+}
+
+@media (min-width: 1024px) {
+  .app-cta-slab {
+    clip-path: polygon(0 12%, 96% 0, 100% 16%, 100% 84%, 96% 100%, 0 88%);
+  }
 }
 
 @keyframes float-y {
