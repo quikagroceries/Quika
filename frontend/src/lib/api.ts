@@ -30,7 +30,7 @@ async function request(path: string, { method = "GET", body }: { method?: string
     body: body ? JSON.stringify(body) : undefined,
   });
   if (!res.ok) {
-    if (res.status === 401) onUnauthorized?.();
+    if (res.status === 401 && token) onUnauthorized?.();
     const detail = await res.text();
     throw new Error(`${res.status}: ${detail}`);
   }
@@ -79,7 +79,12 @@ export const api = {
   createOrder: (body) => request("/orders", { method: "POST", body }),
   deleteOrder: (id) => request(`/orders/${id}`, { method: "DELETE" }),
   cancelOrder: (id) => request(`/orders/${id}/cancel`, { method: "POST" }),
-  getMarkets: () => request("/markets"),
+  getMarkets: (params?: { venue_type?: string }) => {
+    const q = params?.venue_type ? `?venue_type=${encodeURIComponent(params.venue_type)}` : "";
+    return request(`/markets${q}`);
+  },
+  getShopActivity: () => request("/markets/activity"),
+  getMarketVendors: (marketId: string) => request(`/markets/${marketId}/vendors`),
   payBalance: (id) =>
     request(`/payments/orders/${id}/pay-from-wallet`, { method: "POST" }),
   payDeposit: (id) =>

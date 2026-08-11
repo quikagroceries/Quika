@@ -23,8 +23,8 @@ const VARIANTS = {
     "hover:bg-brand-green/5 active:bg-brand-green/10 focus-visible:ring-brand-green",
   // Neutral ("ghost"): Cancel, Back, Log out, Dismiss — anything low-emphasis.
   neutral:
-    "bg-slate-100 text-slate-700 hover:bg-slate-200 " +
-    "active:bg-slate-300 focus-visible:ring-slate-400",
+    "bg-[#f0eeeb] text-ink hover:bg-[#e8e4df] " +
+    "active:bg-[#ddd6cb] focus-visible:ring-ink/30",
 };
 
 function Spinner() {

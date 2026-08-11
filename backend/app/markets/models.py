@@ -5,6 +5,7 @@ from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.core.database import Base
+from app.core.enums import VenueType
 
 
 class Market(Base):
@@ -17,6 +18,13 @@ class Market(Base):
     city: Mapped[str] = mapped_column(String(80))
     state: Mapped[str] = mapped_column(String(80))
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
+    # local_market | supermarket — see VenueType
+    venue_type: Mapped[str] = mapped_column(
+        String(32),
+        default=VenueType.LOCAL_MARKET.value,
+        server_default=VenueType.LOCAL_MARKET.value,
+        index=True,
+    )
     # Pickup point for courier quotes. Geocoded once from the market name.
     latitude: Mapped[float | None] = mapped_column(Float, nullable=True)
     longitude: Mapped[float | None] = mapped_column(Float, nullable=True)

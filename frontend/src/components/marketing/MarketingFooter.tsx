@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { type MouseEvent } from "react";
-import { BoltMark } from "@/components/marketing/BoltBasket";
+import OpenQuikaCta from "@/components/marketing/OpenQuikaCta";
 import { Reveal, Stagger, StaggerItem } from "@/components/marketing/motion";
 import { QUIKA_LOGO_CACHE_KEY, QUIKA_LOGO_DATA_URI } from "@/components/marketing/logoData";
 import { hashFromHref, scrollToSection } from "@/lib/scrollToSection";
@@ -51,13 +51,7 @@ export default function MarketingFooter() {
           <p className="mt-5 max-w-xs text-sm leading-relaxed text-white/60">
             Real market shopping for Nigerian open-air markets — agents, transfers, and delivery home.
           </p>
-          <Link
-            href="/login"
-            className="mt-6 inline-flex items-center gap-2 rounded-full bg-brand-green py-1.5 pl-1.5 pr-4 text-white transition hover:bg-brand-green/90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gold"
-          >
-            <BoltMark className="h-10 w-10" iconClassName="h-[48%] w-[48%]" />
-            <span className="text-sm font-bold">Open Quika</span>
-          </Link>
+          <OpenQuikaCta alwaysShowLabel className="mt-6 pr-4" />
         </StaggerItem>
 
         <StaggerItem y={28} scale={0.98}>
@@ -65,7 +59,8 @@ export default function MarketingFooter() {
           <ul className="mt-5 space-y-3">
             {[
               { href: "/#how", label: "How It Works" },
-              { href: "/markets", label: "Markets" },
+              { href: "/#faq", label: "FAQ" },
+              { href: "/#action", label: "Choose a market" },
               { href: "/#customers", label: "Waitlist" },
             ].map((l) => (
               <li key={l.label}>

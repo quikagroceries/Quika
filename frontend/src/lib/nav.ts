@@ -5,6 +5,16 @@ export const CUSTOMER_NAV = [
   { key: "settings", label: "Settings", icon: "settings", href: "/settings" },
 ];
 
+/** Account-only links — used in shop header menu (not a permanent shop rail). */
+export const ACCOUNT_NAV = [
+  { key: "history", label: "History", icon: "clock", href: "/history" },
+  { key: "wallet", label: "Wallet", icon: "wallet", href: "/wallet" },
+  { key: "settings", label: "Settings", icon: "settings", href: "/settings" },
+];
+
+/** @deprecated Guests must not get a sidebar on /shop — use ShopShell instead. */
+export const GUEST_NAV: typeof CUSTOMER_NAV = [];
+
 export const AGENT_NAV = [
   { key: "home", label: "Home", icon: "basket", href: "/agent" },
   { key: "history", label: "History", icon: "clock", href: "/agent/history" },

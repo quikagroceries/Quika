@@ -6,7 +6,8 @@ services:
       POSTGRES_PASSWORD: quika
       POSTGRES_DB: quika
     ports:
-      - "5432:5432"
+      # Host 5433 — 5432 is often taken by other local Postgres containers
+      - "5433:5432"
     volumes:
       - quika_pgdata:/var/lib/postgresql/data
     healthcheck:

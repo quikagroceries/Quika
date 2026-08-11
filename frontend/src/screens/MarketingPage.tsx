@@ -12,14 +12,99 @@ import {
   type MotionValue,
 } from "framer-motion";
 import { BoltMark } from "@/components/marketing/BoltBasket";
+import MarketShopPicker from "@/components/marketing/MarketShopPicker";
 import MarketingFooter from "@/components/marketing/MarketingFooter";
 import MarketingHeader from "@/components/marketing/MarketingHeader";
 import { FoodScatter, SoftCircles } from "@/components/marketing/MarketDecor";
 import Wave from "@/components/marketing/Wave";
+import { DIRECTORY_MARKETS } from "@/lib/marketDirectory";
 import { hashFromHref, scrollToSection } from "@/lib/scrollToSection";
 
 const PILOT = "our first pilot market";
 const EASE = [0.22, 1, 0.36, 1] as const;
+
+const FAQS = [
+  {
+    q: "What is Quika?",
+    a: "Quika is a remote personal shopper for Nigerian open-air markets. You send a free-text list, a local agent shops the stalls, pays by transfer, and a courier brings the haul to your door.",
+  },
+  {
+    q: "How do free-text lists work?",
+    a: "Write your list the way you’d tell a neighbour — “₦500 of pepper,” “2 wraps of beans.” There’s no supermarket catalogue. Your agent bargains and shops what you asked for.",
+  },
+  {
+    q: "How do I pay?",
+    a: "You deposit wallet balance or bank transfer before shopping starts. That locks the run. The final bill lands in the app with photos; float recycles through the system.",
+  },
+  {
+    q: "Does the agent carry cash?",
+    a: "No. Agents pay vendors by bank transfer with photo proof. There’s no unauthorized cash on the run — that’s a core Quika rule.",
+  },
+  {
+    q: "When can I start ordering?",
+    a: `We’re opening carefully with ${PILOT}. Join the waitlist and we’ll tell you when shopping opens in your area.`,
+  },
+  {
+    q: "Can I become a Quika agent?",
+    a: "Yes — if you already know a market’s stalls and prices. Apply on the For Agents page. You’ll accept proposed runs, shop, transfer-pay, and earn on completed deliveries.",
+  },
+  {
+    q: "What if something’s wrong with my order?",
+    a: "Every run leaves a trail: your list, transfers, and photos. Confirm delivery when it arrives, or raise an issue against that trail. Read Trust & Safety for the full picture.",
+  },
+] as const;
+
+function FaqAccordion() {
+  const [open, setOpen] = useState<number | null>(0);
+  const reduceMotion = useReducedMotion();
+
+  return (
+    <div className="divide-y divide-ink/10 border-y border-ink/10">
+      {FAQS.map((item, i) => {
+        const isOpen = open === i;
+        return (
+          <div key={item.q}>
+            <button
+              type="button"
+              aria-expanded={isOpen}
+              onClick={() => setOpen(isOpen ? null : i)}
+              className="flex w-full items-start justify-between gap-6 py-5 text-left transition hover:text-brand-orange focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gold sm:py-6"
+            >
+              <span className="font-display text-lg font-bold tracking-tight text-ink sm:text-xl">
+                {item.q}
+              </span>
+              <span
+                className={
+                  "mt-1 flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-ink/15 text-ink transition " +
+                  (isOpen ? "rotate-45 border-brand-orange text-brand-orange" : "")
+                }
+                aria-hidden
+              >
+                <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2.4">
+                  <path d="M12 5v14M5 12h14" strokeLinecap="round" />
+                </svg>
+              </span>
+            </button>
+            <motion.div
+              initial={false}
+              animate={
+                reduceMotion
+                  ? { height: isOpen ? "auto" : 0, opacity: isOpen ? 1 : 0 }
+                  : { height: isOpen ? "auto" : 0, opacity: isOpen ? 1 : 0 }
+              }
+              transition={{ duration: 0.35, ease: EASE }}
+              className="overflow-hidden"
+            >
+              <p className="max-w-2xl pb-6 text-base leading-relaxed text-ink/60 sm:pb-7">
+                {item.a}
+              </p>
+            </motion.div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
 
 /** Scroll-triggered reveal — fade + direction + optional scale */
 function Reveal({
@@ -258,12 +343,31 @@ function HeroPortrait() {
 function WaitlistInline({ inputId = "waitlist-email" }: { inputId?: string }) {
   const [email, setEmail] = useState("");
   const [sent, setSent] = useState(false);
+  const [marketLabel, setMarketLabel] = useState(PILOT);
+
+  useEffect(() => {
+    function syncMarket() {
+      const id = new URLSearchParams(window.location.search).get("market");
+      if (!id) return;
+      const match = DIRECTORY_MARKETS.find((m) => m.id === id);
+      if (match) setMarketLabel(match.name);
+    }
+    syncMarket();
+    window.addEventListener("quika-market-change", syncMarket);
+    window.addEventListener("popstate", syncMarket);
+    return () => {
+      window.removeEventListener("quika-market-change", syncMarket);
+      window.removeEventListener("popstate", syncMarket);
+    };
+  }, []);
 
   function submit(e: FormEvent) {
     e.preventDefault();
     if (!email.trim()) return;
-    const subject = encodeURIComponent(`Quika waitlist — ${PILOT}`);
-    const body = encodeURIComponent(`Join waitlist for ${PILOT}.\n\nEmail: ${email.trim()}\n`);
+    const subject = encodeURIComponent(`Quika waitlist — ${marketLabel}`);
+    const body = encodeURIComponent(
+      `Join waitlist for ${marketLabel}.\n\nEmail: ${email.trim()}\n`
+    );
     window.location.href = `mailto:hello@quika.ng?subject=${subject}&body=${body}`;
     setSent(true);
   }
@@ -281,7 +385,7 @@ function WaitlistInline({ inputId = "waitlist-email" }: { inputId?: string }) {
         required
         value={email}
         onChange={(e) => setEmail(e.target.value)}
-        placeholder="Join waitlist with email…"
+        placeholder={`Waitlist for ${marketLabel}…`}
         className="min-h-[52px] flex-1 bg-transparent px-5 text-sm text-ink outline-none placeholder:text-ink/40"
       />
       <button
@@ -306,62 +410,11 @@ function handleInPageAnchor(e: MouseEvent<HTMLAnchorElement>) {
   window.history.pushState(null, "", `/#${hash}`);
 }
 
-/** Meal Monkey–style hero CTAs: green primary + play “How to order” */
+/** Market-first entry — same control as the orange shop band. */
 function HeroCtas() {
-  const reduceMotion = useReducedMotion();
-
   return (
-    <div className="flex flex-wrap items-center gap-5 sm:gap-7">
-      <a
-        href="#customers"
-        onClick={handleInPageAnchor}
-        className="inline-flex min-h-[48px] items-center gap-3 rounded-full bg-brand-green py-2.5 pl-4 pr-6 text-white shadow-[0_10px_24px_rgba(14,122,60,0.28)] transition hover:bg-brand-green/90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gold"
-      >
-        <svg viewBox="0 0 24 24" className="h-[1.15rem] w-[1.15rem] shrink-0" fill="none" stroke="currentColor" strokeWidth="2.4" aria-hidden>
-          <circle cx="11" cy="11" r="7" />
-          <path d="m20 20-3.5-3.5" strokeLinecap="round" />
-        </svg>
-        <span aria-hidden className="h-5 w-px shrink-0 bg-white/35" />
-        <span className="text-sm font-semibold tracking-tight">Start shopping</span>
-      </a>
-
-      <a
-        href="#how"
-        onClick={handleInPageAnchor}
-        className="group inline-flex items-center gap-3 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gold"
-      >
-        <span className="relative flex h-[3.25rem] w-[3.25rem] shrink-0 items-center justify-center">
-          <motion.svg
-            viewBox="0 0 52 52"
-            className="pointer-events-none absolute inset-0 h-full w-full"
-            aria-hidden
-            animate={reduceMotion ? undefined : { rotate: 360 }}
-            transition={
-              reduceMotion
-                ? undefined
-                : { duration: 14, ease: "linear", repeat: Infinity }
-            }
-          >
-            <circle
-              cx="26"
-              cy="26"
-              r="22"
-              fill="none"
-              stroke="#E8541E"
-              strokeWidth="5"
-              strokeLinecap="round"
-              strokeDasharray="92 140"
-              transform="rotate(118 26 26)"
-            />
-          </motion.svg>
-          <span className="relative z-[1] flex h-10 w-10 items-center justify-center rounded-full bg-white shadow-[0_8px_20px_rgba(33,26,20,0.14)] transition group-hover:scale-105">
-            <svg viewBox="0 0 24 24" className="ml-0.5 h-3.5 w-3.5 text-ink" fill="currentColor" aria-hidden>
-              <path d="M8 5.5v13l11-6.5L8 5.5Z" />
-            </svg>
-          </span>
-        </span>
-        <span className="text-sm font-semibold text-ink">How to order</span>
-      </a>
+    <div className="max-w-xl">
+      <MarketShopPicker inputId="hero-market-picker" />
     </div>
   );
 }
@@ -739,7 +792,7 @@ export default function MarketingPage() {
               <HeroCtas />
             </motion.div>
             <p className="mt-2 text-xs font-medium text-ink/40">
-              Pre-pilot · Join the waitlist to start your first list
+              Pre-pilot · Pilot markets open Quika; others join the waitlist
             </p>
           </motion.div>
 
@@ -790,42 +843,27 @@ export default function MarketingPage() {
         </div>
       </section>
 
-      {/* ORANGE APP — phone vertically centered on the right */}
+      {/* ORANGE — pick your market (product model is market-first, not address-first) */}
       <section id="action" className="relative z-[2] scroll-mt-28 overflow-visible px-4 pb-16 pt-24 sm:px-6 sm:pb-20 sm:pt-28">
         <Reveal className="relative z-[1] mx-auto max-w-6xl" y={36}>
           <div className="relative text-white">
             <div className="app-cta-slab relative z-0 bg-brand-orange px-7 py-12 sm:px-10 sm:py-14 lg:flex lg:min-h-[360px] lg:items-center lg:px-14 lg:py-16 lg:pr-[42%]">
               <div className="max-w-xl">
                 <p className="text-sm font-semibold uppercase tracking-wide text-white/70">
-                  Live prototype
+                  Shop a market
                 </p>
                 <h2 className="mt-2 font-display text-3xl font-extrabold leading-tight tracking-tight sm:text-4xl">
-                  Open the working{" "}
+                  Enter the market you{" "}
                   <span className="underline decoration-gold decoration-4 underline-offset-4">
-                    Quika app
+                    buy from
                   </span>
                 </h2>
                 <p className="mt-4 max-w-md text-base text-white/80 sm:text-lg">
-                  The prototype is live — place lists, chat with your agent, and track packing to delivery.
+                  Quika is built around specific open-air markets — not delivery zones. Pick yours to open the app or join the waitlist.
                 </p>
-                <Stagger className="mt-8 flex flex-wrap gap-3" stagger={0.1} delay={0.1}>
-                  <StaggerItem y={16} scale={0.94}>
-                    <Link
-                      href="/login"
-                      className="inline-flex min-h-[48px] items-center rounded-full bg-white px-6 font-display text-sm font-bold text-brand-orange transition hover:bg-white/90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-gold"
-                    >
-                      Open Quika
-                    </Link>
-                  </StaggerItem>
-                  <StaggerItem y={16} scale={0.94}>
-                    <Link
-                      href="/markets"
-                      className="inline-flex min-h-[48px] items-center rounded-full border-2 border-white/50 px-6 font-display text-sm font-bold text-white transition hover:bg-white/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-gold"
-                    >
-                      Browse markets
-                    </Link>
-                  </StaggerItem>
-                </Stagger>
+                <div className="mt-8">
+                  <MarketShopPicker inputId="action-market-picker" tone="inverse" />
+                </div>
               </div>
             </div>
 
@@ -834,7 +872,7 @@ export default function MarketingPage() {
               y={48}
               scale={0.92}
               delay={0.12}
-              className="relative z-10 mx-auto -mt-28 w-[220px] sm:-mt-36 sm:w-[250px] lg:absolute lg:right-2 lg:top-1/2 lg:mt-0 lg:w-[280px] lg:-translate-y-[62%] lg:translate-x-2"
+              className="relative z-10 mx-auto -mt-40 w-[220px] sm:-mt-48 sm:w-[250px] lg:absolute lg:right-2 lg:top-1/2 lg:mt-0 lg:w-[280px] lg:-translate-y-[74%] lg:translate-x-2"
             >
               <div className="origin-center rotate-[-6deg] sm:rotate-[-7deg]">
                 <AppPhoneSlot className="w-full" />
@@ -848,12 +886,12 @@ export default function MarketingPage() {
       <section id="categories" className="relative z-[1] scroll-mt-28 overflow-hidden bg-canvas px-4 py-20 sm:px-6">
         <div className="relative z-[1] mx-auto max-w-6xl text-center">
           <Reveal y={28}>
-            <p className="text-sm font-semibold uppercase tracking-wide text-brand-green">Markets</p>
+            <p className="text-sm font-semibold uppercase tracking-wide text-brand-green">Baskets</p>
             <h2 className="mt-2 font-display text-3xl font-extrabold tracking-tight sm:text-4xl">
               Our <span className="text-brand-orange">best shopped</span> categories.
             </h2>
             <p className="mx-auto mt-3 max-w-lg text-ink/55">
-              Real market baskets — not supermarket aisles.
+              Real market baskets — not supermarket aisles. Pick your market above to start a list.
             </p>
           </Reveal>
 
@@ -864,7 +902,11 @@ export default function MarketingPage() {
               { img: "/quika-cat-pantry.jpg", title: "Pantry & provisions", ring: "text-gold", bg: "bg-gold/20" },
             ].map((c) => (
               <StaggerItem key={c.title} y={56} scale={0.88}>
-                <Link href="/markets" className="group flex flex-col items-center focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-gold">
+                <a
+                  href="#action"
+                  onClick={handleInPageAnchor}
+                  className="group flex flex-col items-center focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-gold"
+                >
                   <div className={"relative flex h-52 w-52 items-center justify-center rounded-full sm:h-56 sm:w-56 " + c.bg}>
                     <motion.div
                       className={"absolute inset-3 rounded-full dashed-ring " + c.ring}
@@ -881,9 +923,9 @@ export default function MarketingPage() {
                   </div>
                   <h3 className="mt-6 font-display text-xl font-bold text-ink">{c.title}</h3>
                   <span className="mt-2 text-sm font-bold text-brand-orange group-hover:underline">
-                    Browse markets &gt;
+                    Choose your market &gt;
                   </span>
-                </Link>
+                </a>
               </StaggerItem>
             ))}
           </Stagger>
@@ -1052,8 +1094,34 @@ export default function MarketingPage() {
         </Stagger>
       </section>
 
+      {/* FAQ */}
+      <section id="faq" className="relative z-[1] scroll-mt-28 bg-canvas px-4 py-20 sm:px-6 sm:py-28">
+        <div className="mx-auto grid max-w-6xl gap-12 lg:grid-cols-[0.85fr_1.15fr] lg:gap-16">
+          <Reveal y={28} className="lg:pt-2">
+            <p className="text-sm font-semibold uppercase tracking-wide text-brand-green">FAQ</p>
+            <h2 className="mt-2 font-display text-3xl font-extrabold tracking-tight sm:text-5xl">
+              Questions,{" "}
+              <span className="text-brand-orange">answered</span>.
+            </h2>
+            <p className="mt-4 max-w-md text-base text-ink/60 sm:text-lg">
+              How lists, money, and agents work on Quika — before you join the waitlist.
+            </p>
+            <a
+              href="mailto:hello@quika.ng?subject=Quika%20question"
+              className="mt-6 inline-flex text-sm font-bold text-brand-orange hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gold"
+            >
+              Still curious? Email us →
+            </a>
+          </Reveal>
+
+          <Reveal y={36} delay={0.08}>
+            <FaqAccordion />
+          </Reveal>
+        </div>
+      </section>
+
       {/* GREEN CLOSE — one solid green band; wave uses fill-brand-green */}
-      <div className="relative mt-10 overflow-hidden bg-brand-green">
+      <div className="relative mt-4 overflow-hidden bg-brand-green">
         <Wave from="bg-canvas" to="bg-brand-green" />
         <FoodScatter tone="green" />
         <SoftCircles tone="green" />
@@ -1071,19 +1139,20 @@ export default function MarketingPage() {
               <Stagger className="mt-8 flex flex-wrap gap-3" stagger={0.1} delay={0.1}>
                 <StaggerItem y={16} scale={0.94}>
                   <Link
-                    href="/markets"
+                    href="/shop"
                     className="inline-flex min-h-[48px] items-center rounded-full bg-white px-6 font-display text-sm font-bold text-brand-green transition hover:bg-white/90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-gold"
-                  >
-                    Browse markets
-                  </Link>
-                </StaggerItem>
-                <StaggerItem y={16} scale={0.94}>
-                  <Link
-                    href="/login"
-                    className="inline-flex min-h-[48px] items-center rounded-full border-2 border-white/50 px-6 font-display text-sm font-bold text-white transition hover:bg-white/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-gold"
                   >
                     Open Quika
                   </Link>
+                </StaggerItem>
+                <StaggerItem y={16} scale={0.94}>
+                  <a
+                    href="#action"
+                    onClick={handleInPageAnchor}
+                    className="inline-flex min-h-[48px] items-center rounded-full border-2 border-white/50 px-6 font-display text-sm font-bold text-white transition hover:bg-white/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-gold"
+                  >
+                    Choose a market
+                  </a>
                 </StaggerItem>
               </Stagger>
             </Reveal>

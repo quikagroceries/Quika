@@ -28,6 +28,18 @@ module.exports = {
       },
       borderRadius: {
         "2xl": "1rem",
+        shop: "1.25rem", // shop cards / panels
+        "shop-lg": "1.5rem",
+      },
+      spacing: {
+        // Shop rhythm — use these for consistent section/card padding
+        "shop-1": "0.5rem",
+        "shop-2": "0.75rem",
+        "shop-3": "1rem",
+        "shop-4": "1.25rem",
+        "shop-5": "1.5rem",
+        "shop-6": "2rem",
+        "shop-8": "3rem",
       },
       keyframes: {
         "splash-in": {

@@ -62,6 +62,27 @@ async def get_current_user(
     return user
 
 
+async def get_current_user_optional(
+    creds: HTTPAuthorizationCredentials | None = Depends(bearer_scheme),
+    db: AsyncSession = Depends(get_db),
+) -> User | None:
+    """Like get_current_user, but returns None when no/invalid token (public routes)."""
+    if creds is None:
+        return None
+    try:
+        payload = jwt.decode(
+            creds.credentials, settings.jwt_secret, algorithms=[settings.jwt_algorithm]
+        )
+        user_id = payload.get("sub")
+        if user_id is None:
+            return None
+    except JWTError:
+        return None
+
+    result = await db.execute(select(User).where(User.id == uuid.UUID(user_id)))
+    return result.scalar_one_or_none()
+
+
 def require_role(*roles: UserRole):
     """Dependency factory: gate an endpoint to specific roles."""
 

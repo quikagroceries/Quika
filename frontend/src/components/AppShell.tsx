@@ -6,19 +6,19 @@ import MobileHeader from "./MobileHeader";
 import MobileDrawer from "./MobileDrawer";
 import PageContainer from "./PageContainer";
 
-// navItems: [{ key, label, icon, href }]
-// activeKey matches item.key for highlight
-function AppShell({ navItems, activeKey, user, onLogout, roleSwitch, children }: any) {
+/** Account / agent / admin shell — sidebar nav. Shop uses ShopShell instead. */
+function AppShell({ navItems, activeKey, user, onLogout, roleSwitch, guest = false, children }: any) {
   const [drawerOpen, setDrawerOpen] = useState(false);
 
   return (
-    <div className="min-h-screen bg-slate-50 md:flex">
+    <div className="min-h-screen bg-canvas md:flex">
       <Sidebar
         navItems={navItems}
         activeKey={activeKey}
         user={user}
         onLogout={onLogout}
         roleSwitch={roleSwitch}
+        guest={guest}
       />
 
       <div className="flex min-w-0 flex-1 flex-col">
@@ -31,6 +31,7 @@ function AppShell({ navItems, activeKey, user, onLogout, roleSwitch, children }:
           user={user}
           onLogout={onLogout}
           roleSwitch={roleSwitch}
+          guest={guest}
         />
         <PageContainer>{children}</PageContainer>
       </div>

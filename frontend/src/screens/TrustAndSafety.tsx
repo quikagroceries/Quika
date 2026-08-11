@@ -94,7 +94,7 @@ export default function TrustAndSafety() {
             <Stagger className="mt-8 flex flex-wrap gap-3" stagger={0.1} delay={0.28} immediate>
               <StaggerItem y={14} scale={0.96}>
                 <Link
-                  href="/login"
+                  href="/shop"
                   className="inline-flex min-h-[48px] items-center rounded-full bg-brand-green px-6 text-sm font-bold text-white transition hover:bg-brand-green/90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gold"
                 >
                   Open Quika
@@ -217,7 +217,7 @@ export default function TrustAndSafety() {
             </p>
             <div className="mt-6 flex flex-wrap gap-3">
               <Link
-                href="/login"
+                href="/shop"
                 className="inline-flex min-h-[48px] items-center rounded-full bg-white px-6 text-sm font-bold text-brand-orange transition hover:bg-white/90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-gold"
               >
                 Open Quika

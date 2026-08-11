@@ -1,20 +1,23 @@
 import uuid
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth.models import User
 from app.core.database import get_db
 from app.core.enums import UserRole
-from app.core.security import get_current_user, require_role
+from app.core.security import get_current_user, get_current_user_optional, require_role
 from app.markets import service
 from app.markets.models import Market
+from app.jit.models import Seller
 from app.markets.schemas import (
     AgentStatusOut,
     CreateMarketIn,
     MarketOut,
     SetDutyIn,
+    ShopActivityOut,
     UpdateMarketIn,
+    VendorOut,
 )
 
 router = APIRouter()
@@ -28,6 +31,7 @@ async def create_market(
 ) -> Market:
     return await service.create_market(
         db, name=body.name, city=body.city, state=body.state,
+        venue_type=body.venue_type,
         latitude=body.latitude, longitude=body.longitude,
     )
 
@@ -45,10 +49,32 @@ async def update_market(
 @router.get("", response_model=list[MarketOut])
 async def list_markets(
     active_only: bool = True,
+    venue_type: str | None = None,
     db: AsyncSession = Depends(get_db),
-    user: User = Depends(get_current_user),
+    user: User | None = Depends(get_current_user_optional),
 ) -> list[Market]:
-    return await service.list_markets(db, active_only=active_only)
+    """Active markets are public (guest browse). Listing inactive markets
+    requires an authenticated admin.
+    """
+    if not active_only:
+        if user is None or user.role != UserRole.ADMIN:
+            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Not authenticated")
+    return await service.list_markets(db, active_only=active_only, venue_type=venue_type)
+
+
+@router.get("/activity", response_model=ShopActivityOut)
+async def shop_activity(db: AsyncSession = Depends(get_db)) -> dict:
+    """Public pulse for the shop hero — agents on duty + venue counts."""
+    return await service.shop_activity(db)
+
+
+@router.get("/{market_id}/vendors", response_model=list[VendorOut])
+async def list_vendors(
+    market_id: uuid.UUID,
+    db: AsyncSession = Depends(get_db),
+) -> list[Seller]:
+    """Public stall list for a market — guest shop browse."""
+    return await service.list_vendors(db, market_id=market_id)
 
 
 @router.get("/agents/me", response_model=AgentStatusOut)

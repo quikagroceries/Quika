@@ -3,7 +3,7 @@
 import { useEffect, useState, type MouseEvent } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { BoltMark } from "@/components/marketing/BoltBasket";
+import OpenQuikaCta from "@/components/marketing/OpenQuikaCta";
 import { QUIKA_LOGO_CACHE_KEY, QUIKA_LOGO_DATA_URI } from "@/components/marketing/logoData";
 import { hashFromHref, scrollToSection } from "@/lib/scrollToSection";
 
@@ -13,7 +13,6 @@ type NavItem =
 
 const NAV_ITEMS: NavItem[] = [
   { kind: "anchor", id: "how", label: "How It Works", href: "/#how" },
-  { kind: "route", id: "markets", label: "Markets", href: "/markets" },
   { kind: "route", id: "for-agents", label: "For Agents", href: "/for-agents" },
   { kind: "route", id: "about", label: "About Us", href: "/about" },
   { kind: "route", id: "trust", label: "Trust & Safety", href: "/trust-and-safety" },
@@ -154,7 +153,7 @@ export default function MarketingHeader() {
         </Link>
 
         <nav
-          className="absolute left-1/2 top-1/2 hidden -translate-x-1/2 -translate-y-1/2 items-center gap-8 lg:gap-10 md:flex"
+          className="absolute left-1/2 top-1/2 hidden -translate-x-1/2 -translate-y-1/2 items-center gap-8 md:flex lg:gap-10"
           aria-label="Primary"
         >
           {NAV_ITEMS.map((item) => (
@@ -163,13 +162,7 @@ export default function MarketingHeader() {
         </nav>
 
         <div className="relative z-[1] flex items-center gap-2">
-          <Link
-            href="/login"
-            className="flex items-center gap-2 rounded-full bg-brand-green py-1 pl-1 pr-3 text-white transition hover:bg-brand-green/90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gold"
-          >
-            <BoltMark className="h-9 w-9" iconClassName="h-[48%] w-[48%]" />
-            <span className="hidden text-sm font-bold sm:inline">Open Quika</span>
-          </Link>
+          <OpenQuikaCta label="Start Shopping" />
 
           <button
             type="button"
@@ -208,13 +201,12 @@ export default function MarketingHeader() {
                 onClick={() => setMenuOpen(false)}
               />
             ))}
-            <Link
-              href="/login"
+            <OpenQuikaCta
+              label="Start Shopping"
+              className="mt-2 min-h-[44px] justify-center self-stretch pr-4"
+              alwaysShowLabel
               onClick={() => setMenuOpen(false)}
-              className="mt-2 inline-flex min-h-[44px] items-center justify-center rounded-full bg-brand-green px-4 text-sm font-bold text-white"
-            >
-              Open Quika
-            </Link>
+            />
           </nav>
         </div>
       )}

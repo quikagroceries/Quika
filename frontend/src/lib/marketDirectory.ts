@@ -1,4 +1,9 @@
-/** Public market directory — pre-pilot curated list (API markets require auth). */
+/** Public market directory — marketing + shop enrichment (slugs map onto API markets). */
+
+export type VenueType = "local_market" | "supermarket";
+
+export type FoodCategory = "produce" | "provisions" | "protein" | "spices";
+
 export type DirectoryMarket = {
   id: string;
   name: string;
@@ -6,6 +11,12 @@ export type DirectoryMarket = {
   state: string;
   status: "pilot" | "coming_soon";
   blurb: string;
+  venueType: VenueType;
+  categories: FoodCategory[];
+  /**
+   * Cover imagery used on marketing + shop browse cards.
+   * Atmospheric / category photography — not claimed as venue storefront shots.
+   */
   image: string;
 };
 
@@ -17,6 +28,8 @@ export const DIRECTORY_MARKETS: DirectoryMarket[] = [
     state: "Lagos",
     status: "pilot",
     blurb: "Dense stalls, sharp bargaining, provisions and produce in one dense loop.",
+    venueType: "local_market",
+    categories: ["provisions", "produce", "spices"],
     image: "/quika-cat-produce.jpg",
   },
   {
@@ -26,6 +39,8 @@ export const DIRECTORY_MARKETS: DirectoryMarket[] = [
     state: "Lagos",
     status: "coming_soon",
     blurb: "Wholesale produce hub — peppers, tomatoes, and bulk restocks.",
+    venueType: "local_market",
+    categories: ["produce"],
     image: "/quika-cat-protein.jpg",
   },
   {
@@ -35,6 +50,8 @@ export const DIRECTORY_MARKETS: DirectoryMarket[] = [
     state: "Oyo",
     status: "coming_soon",
     blurb: "Classic open-air shopping for families across Ibadan.",
+    venueType: "local_market",
+    categories: ["produce", "provisions"],
     image: "/quika-cat-pantry.jpg",
   },
   {
@@ -44,6 +61,30 @@ export const DIRECTORY_MARKETS: DirectoryMarket[] = [
     state: "FCT",
     status: "coming_soon",
     blurb: "Capital city stalls for everyday groceries and specialty finds.",
+    venueType: "local_market",
+    categories: ["provisions", "protein"],
+    image: "/quika-trust-basket.jpg",
+  },
+  {
+    id: "shoprite-ikeja",
+    name: "Shoprite Ikeja City Mall",
+    city: "Ikeja",
+    state: "Lagos",
+    status: "pilot",
+    blurb: "Fixed prices, labelled aisles — faster when you know exactly what you need.",
+    venueType: "supermarket",
+    categories: ["provisions", "produce", "protein"],
+    image: "/quika-cat-pantry.jpg",
+  },
+  {
+    id: "spar-lekki",
+    name: "Spar Lekki",
+    city: "Lekki",
+    state: "Lagos",
+    status: "pilot",
+    blurb: "Shelf prices you can trust — Quika still picks and delivers.",
+    venueType: "supermarket",
+    categories: ["provisions", "produce"],
     image: "/quika-trust-basket.jpg",
   },
 ];
@@ -54,4 +95,24 @@ export function filterDirectoryMarkets(query: string): DirectoryMarket[] {
   return DIRECTORY_MARKETS.filter((m) =>
     [m.name, m.city, m.state, m.blurb].some((v) => v.toLowerCase().includes(q))
   );
+}
+
+/** Map marketing directory slug (e.g. balogun) onto a live API market row. */
+export function matchSlugToApiMarket<T extends { id: string; name: string; city?: string }>(
+  slug: string | null | undefined,
+  markets: T[]
+): T | null {
+  if (!slug || !markets?.length) return null;
+  const dir = DIRECTORY_MARKETS.find((m) => m.id === slug);
+  const needle = (dir?.name || slug).toLowerCase().replace(/\s+market$/, "");
+  return (
+    markets.find((m) => m.name.toLowerCase().includes(needle)) ||
+    markets.find((m) => m.name.toLowerCase().includes(slug.toLowerCase())) ||
+    null
+  );
+}
+
+export function isLocalMarket(m: { venue_type?: string; venueType?: string }) {
+  const v = m.venue_type || m.venueType || "local_market";
+  return v === "local_market";
 }

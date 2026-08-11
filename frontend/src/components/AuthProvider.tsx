@@ -26,7 +26,11 @@ export function AuthProvider({ children }: any) {
     setToken(null);
     setUser(null);
     setLoading(false);
-    if (pathname !== "/" && pathname !== "/login") {
+    // Stay on guest-capable surfaces; otherwise bounce to login
+    if (pathname === "/shop" || pathname === "/") {
+      return;
+    }
+    if (pathname !== "/login") {
       router.replace("/login");
     }
   }, [pathname, router]);
@@ -99,13 +103,13 @@ export function AuthProvider({ children }: any) {
     : null;
 
   const homePath = useMemo(() => {
-    if (!user) return "/login";
+    if (!user) return "/shop";
     const r = (user.role || "").toUpperCase();
     if ((r === "CUSTOMER" || r === "AGENT") && !user.full_name) return "/setup";
     if (r === "ADMIN") return "/admin";
     if (r === "AGENT" && onDuty) return "/agent";
     if (r === "CUSTOMER" || r === "AGENT") return "/shop";
-    return "/login";
+    return "/shop";
   }, [user, onDuty]);
 
   const value = {

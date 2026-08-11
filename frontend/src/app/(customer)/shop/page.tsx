@@ -1,31 +1,43 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Suspense, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { api } from "@/lib/api";
 import NewOrderFlow from "@/screens/NewOrderFlow";
 import { useAuth } from "@/components/AuthProvider";
+import { useShop } from "@/components/shop/ShopContext";
 
-export default function ShopPage() {
-  const { user } = useAuth();
+function ShopPageInner() {
+  const { user, token } = useAuth();
   const router = useRouter();
-  const [markets, setMarkets] = useState<any[]>([]);
-  const [marketsLoading, setMarketsLoading] = useState(true);
+  const { setMarkets, setMarketsLoading } = useShop();
 
   useEffect(() => {
-    api.getMarkets()
+    setMarketsLoading(true);
+    api
+      .getMarkets()
       .then(setMarkets)
-      .catch(() => {})
+      .catch(() => setMarkets([]))
       .finally(() => setMarketsLoading(false));
-  }, []);
+  }, [setMarkets, setMarketsLoading]);
 
   return (
     <NewOrderFlow
       user={user}
-      markets={markets}
-      marketsLoading={marketsLoading}
-      onCancel={() => router.push("/history")}
-      onOrderPlaced={(orderId) => router.push(`/orders/${orderId}`)}
+      onCancel={() => router.push(token && user ? "/history" : "/")}
+      onOrderPlaced={(orderId: string) => router.push(`/orders/${orderId}`)}
     />
+  );
+}
+
+export default function ShopPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="flex min-h-[40vh] items-center justify-center text-ink/50">Loading shop…</div>
+      }
+    >
+      <ShopPageInner />
+    </Suspense>
   );
 }
