@@ -36,6 +36,15 @@ async def test_admin_creates_market_and_customer_can_list_it(client):
     assert r.status_code == 200, r.text
     assert any(m["id"] == market["id"] for m in r.json())
 
+    # Guest browse — active markets are public
+    r = await client.get("/markets")
+    assert r.status_code == 200, r.text
+    assert any(m["id"] == market["id"] for m in r.json())
+
+    # Inactive listing still requires admin
+    r = await client.get("/markets?active_only=false")
+    assert r.status_code == 401
+
 
 @pytest.mark.asyncio
 async def test_admin_updates_market(client):

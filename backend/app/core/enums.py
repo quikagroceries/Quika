@@ -50,3 +50,10 @@ class TransactionStatus(str, enum.Enum):
     PENDING = "pending"
     SUCCESS = "success"
     FAILED = "failed"
+
+
+class VenueType(str, enum.Enum):
+    """Where Quika shops — drives customer flow branching."""
+
+    LOCAL_MARKET = "local_market"  # open-air; bargain; optional stalls
+    SUPERMARKET = "supermarket"  # fixed catalogue / fixed price path

@@ -1,9 +1,11 @@
 import uuid
 
 from fastapi import HTTPException, status
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.enums import VenueType
+from app.jit.models import Seller
 from app.markets.models import Agent, Market
 
 
@@ -13,21 +15,114 @@ async def create_market(
     name: str,
     city: str,
     state: str,
+    venue_type: VenueType | str = VenueType.LOCAL_MARKET,
     latitude: float | None = None,
     longitude: float | None = None,
 ) -> Market:
-    market = Market(name=name, city=city, state=state, latitude=latitude, longitude=longitude)
+    vt = venue_type.value if isinstance(venue_type, VenueType) else venue_type
+    market = Market(
+        name=name,
+        city=city,
+        state=state,
+        venue_type=vt or VenueType.LOCAL_MARKET.value,
+        latitude=latitude,
+        longitude=longitude,
+    )
     db.add(market)
     await db.flush()
     return market
 
 
-async def list_markets(db: AsyncSession, *, active_only: bool) -> list[Market]:
+async def list_markets(
+    db: AsyncSession,
+    *,
+    active_only: bool,
+    venue_type: str | None = None,
+) -> list[Market]:
     stmt = select(Market)
     if active_only:
         stmt = stmt.where(Market.is_active.is_(True))
+    if venue_type:
+        stmt = stmt.where(Market.venue_type == venue_type)
     result = await db.execute(stmt)
     return list(result.scalars().all())
+
+
+async def get_market(db: AsyncSession, *, market_id: uuid.UUID) -> Market:
+    result = await db.execute(select(Market).where(Market.id == market_id))
+    market = result.scalar_one_or_none()
+    if market is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Market not found")
+    return market
+
+
+async def list_vendors(db: AsyncSession, *, market_id: uuid.UUID) -> list[Seller]:
+    await get_market(db, market_id=market_id)
+    result = await db.execute(
+        select(Seller).where(Seller.market_id == market_id).order_by(Seller.name)
+    )
+    return list(result.scalars().all())
+
+
+async def create_vendor(
+    db: AsyncSession,
+    *,
+    market_id: uuid.UUID,
+    name: str,
+    stall_description: str | None = None,
+    phone: str | None = None,
+    latitude: float | None = None,
+    longitude: float | None = None,
+) -> Seller:
+    """Agent registers a stall on the fly while shopping.
+
+    No approval workflow — the stall is live immediately and shows up in
+    list_vendors right away. This is the only way a Seller row gets created
+    outside of dev-seeding: there is no admin authorship path, by design
+    ("the agent is the product" — stalls exist because an agent actually
+    found them, not because someone curated a directory in advance).
+    """
+    await get_market(db, market_id=market_id)
+    vendor = Seller(
+        market_id=market_id,
+        name=name,
+        stall_description=stall_description,
+        phone=phone,
+        latitude=latitude,
+        longitude=longitude,
+    )
+    db.add(vendor)
+    await db.flush()
+    return vendor
+
+
+async def shop_activity(db: AsyncSession) -> dict:
+    agents = await db.execute(
+        select(func.count())
+        .select_from(Agent)
+        .where(Agent.on_duty.is_(True), Agent.is_available.is_(True))
+    )
+    markets = await db.execute(
+        select(func.count())
+        .select_from(Market)
+        .where(
+            Market.is_active.is_(True),
+            Market.venue_type == VenueType.LOCAL_MARKET.value,
+        )
+    )
+    supers = await db.execute(
+        select(func.count())
+        .select_from(Market)
+        .where(
+            Market.is_active.is_(True),
+            Market.venue_type == VenueType.SUPERMARKET.value,
+        )
+    )
+    return {
+        "agents_on_duty": int(agents.scalar_one() or 0),
+        "active_markets": int(markets.scalar_one() or 0),
+        "active_supermarkets": int(supers.scalar_one() or 0),
+    }
 
 
 async def update_market(
@@ -38,6 +133,7 @@ async def update_market(
     city: str | None = None,
     state: str | None = None,
     is_active: bool | None = None,
+    venue_type: VenueType | str | None = None,
     latitude: float | None = None,
     longitude: float | None = None,
 ) -> Market:
@@ -53,6 +149,10 @@ async def update_market(
         market.state = state
     if is_active is not None:
         market.is_active = is_active
+    if venue_type is not None:
+        market.venue_type = (
+            venue_type.value if isinstance(venue_type, VenueType) else venue_type
+        )
     if latitude is not None:
         market.latitude = latitude
     if longitude is not None:

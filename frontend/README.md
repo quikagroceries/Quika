@@ -1,16 +1,24 @@
-# React + Vite
+# Quika Frontend
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Next.js 15 (App Router) + React 19 + Tailwind CSS 3.
 
-Currently, two official plugins are available:
+## Setup
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+```bash
+cp .env.example .env.local
+npm install
+npm run dev
+```
 
-## React Compiler
+App runs at [http://localhost:3003](http://localhost:3003) (pinned in `package.json` so it doesn’t collide with other Next apps that often claim `:3000`). Point `NEXT_PUBLIC_API_BASE_URL` at the FastAPI backend (default `http://localhost:8000`). Ensure the backend `ALLOWED_ORIGINS` includes `http://localhost:3003`.
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+## Scripts
 
-## Expanding the ESLint configuration
+- `npm run dev` — development server
+- `npm run build` — production build
+- `npm start` — serve production build
+- `npm run lint` — ESLint
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+## Marketing site
+
+Logged-out `/` is the public marketing page (hero, how-it-works, customer waitlist, agent apply, partner contact). Authenticated users hitting `/` are redirected to their role home.

@@ -3,7 +3,7 @@ from datetime import datetime
 from decimal import Decimal
 
 from sqlalchemy import (
-    Boolean, DateTime, Enum, ForeignKey, Integer, Numeric, String, Text, func,
+    Boolean, DateTime, Enum, Float, ForeignKey, Integer, Numeric, String, Text, func,
 )
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column
@@ -54,6 +54,14 @@ class Seller(Base):
     name: Mapped[str] = mapped_column(String(120))
     stall_description: Mapped[str | None] = mapped_column(String(255), nullable=True)
     phone: Mapped[str | None] = mapped_column(String(20), nullable=True)
+    # Captured once, from the registering agent's device, at the moment they
+    # save the stall - a single point, not a tracked path (see Market's own
+    # lat/lng, which is geocoded once from the market name; this is the same
+    # idea, sourced from the phone's GPS instead). Never blocks stall
+    # creation if location isn't available - same "never blocks" convention
+    # as VendorTransfer.photo_ref.
+    latitude: Mapped[float | None] = mapped_column(Float, nullable=True)
+    longitude: Mapped[float | None] = mapped_column(Float, nullable=True)
 
 
 class VendorAccount(Base):
