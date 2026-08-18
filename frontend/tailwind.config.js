@@ -23,8 +23,20 @@ module.exports = {
         display: ["var(--font-bricolage)", "'Bricolage Grotesque'", "system-ui", "sans-serif"],
       },
       boxShadow: {
-        card: "0 1px 2px 0 rgb(15 23 42 / 0.04), 0 4px 16px -4px rgb(15 23 42 / 0.08)",
+        // Elevation scale — warm ink-tinted shadows (not cool default slate)
+        // so depth reads as part of the brand, not a generic UI kit. Use the
+        // lowest level that still communicates "this is raised" — most cards
+        // want xs/sm; reserve lg/pop for things that float above content.
+        xs: "0 1px 2px 0 rgb(33 26 20 / 0.05)",
+        sm: "0 1px 2px 0 rgb(33 26 20 / 0.04), 0 2px 8px -2px rgb(33 26 20 / 0.06)",
+        card: "0 1px 2px 0 rgb(33 26 20 / 0.04), 0 4px 16px -4px rgb(33 26 20 / 0.08)",
+        md: "0 2px 6px -1px rgb(33 26 20 / 0.06), 0 8px 24px -6px rgb(33 26 20 / 0.1)",
+        lg: "0 4px 12px -2px rgb(33 26 20 / 0.08), 0 16px 40px -12px rgb(33 26 20 / 0.14)",
+        pop: "0 8px 24px -4px rgb(33 26 20 / 0.12), 0 24px 56px -16px rgb(33 26 20 / 0.18)",
         stamp: "0 2px 0 0 rgb(33 26 20 / 0.18)",
+      },
+      transitionTimingFunction: {
+        premium: "cubic-bezier(0.16, 1, 0.3, 1)",
       },
       borderRadius: {
         "2xl": "1rem",

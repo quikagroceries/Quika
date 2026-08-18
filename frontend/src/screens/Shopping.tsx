@@ -40,6 +40,15 @@ function Shopping({ orderId, onBack }: any) {
   const loadedRef = useRef(false); // has the FIRST load ever succeeded?
   const photoInputRef = useRef(null);
   const attachPhotoInputRef = useRef(null);
+  // This market's stalls, for showing an item's preferred_stall_id as a
+  // name (not a bare id) - reuses GET /markets/{id}/vendors, the same read
+  // path the customer-side "prefer a stall" picker uses. Also lets a newly
+  // registered stall (see handleAddStall) resolve immediately.
+  const [vendors, setVendors] = useState<any[]>([]);
+  const [addingStall, setAddingStall] = useState(false);
+  const [stallName, setStallName] = useState("");
+  const [stallDesc, setStallDesc] = useState("");
+  const [stallBusy, setStallBusy] = useState(false);
 
   // Reload the order from the server. Used both for the initial load and for
   // periodic polling below, so changes the customer makes (e.g. approving a
@@ -77,6 +86,57 @@ function Shopping({ orderId, onBack }: any) {
     return () => clearInterval(id);
     // eslint-disable-next-line react-hooks/exhaustive-deps -- one interval per orderId, matches Chat.jsx's poll pattern
   }, [orderId]);
+
+  useEffect(() => {
+    if (!order?.market_id) return;
+    api.getMarketVendors(order.market_id).then(setVendors).catch(() => {});
+  }, [order?.market_id]);
+
+  function preferredStallName(id) {
+    return vendors.find((v) => v.id === id)?.name || null;
+  }
+
+  // A single point, captured silently at save time - never a tracked path,
+  // never a required step. Resolves to null (not an error) on denial,
+  // timeout, or an unsupported browser, so a missing/blocked location can
+  // never hold up registering the stall.
+  function getLocationSilently(timeoutMs = 4000) {
+    return new Promise<{ latitude: number; longitude: number } | null>((resolve) => {
+      if (!navigator.geolocation) { resolve(null); return; }
+      const timer = setTimeout(() => resolve(null), timeoutMs);
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          clearTimeout(timer);
+          resolve({ latitude: pos.coords.latitude, longitude: pos.coords.longitude });
+        },
+        () => { clearTimeout(timer); resolve(null); },
+        { enableHighAccuracy: false, timeout: timeoutMs, maximumAge: 60000 }
+      );
+    });
+  }
+
+  // Register a stall on the fly - live immediately, no approval gate. Not
+  // tied to any one item; it just makes the stall findable for everyone
+  // (this order's preferred_stall_id tags, future customers browsing this
+  // market) from here on.
+  async function handleAddStall() {
+    if (!stallName.trim()) return;
+    setError(""); setStallBusy(true);
+    try {
+      const loc = await getLocationSilently();
+      const v = await api.createVendor(order.market_id, {
+        name: stallName.trim(),
+        stall_description: stallDesc.trim() || undefined,
+        ...(loc || {}),
+      });
+      setVendors((cur) => [...cur, v]);
+      setStallName(""); setStallDesc(""); setAddingStall(false);
+    } catch (e) {
+      setError("Could not add stall: " + e.message);
+    } finally {
+      setStallBusy(false);
+    }
+  }
 
   async function handleStart() {
     setError(""); setBusy(true);
@@ -334,6 +394,64 @@ function Shopping({ orderId, onBack }: any) {
               </div>
             )}
 
+          {/* Stall not in the system yet — register it on the fly. Live
+              immediately, no approval gate; just makes it findable going
+              forward (this order's tags, future customers' stall browse). */}
+          {isShopping && (
+            <div className="mb-3">
+              {!addingStall ? (
+                <button
+                  type="button"
+                  onClick={() => setAddingStall(true)}
+                  className="text-sm font-semibold text-brand-orange hover:underline"
+                >
+                  + Register a stall not listed here
+                </button>
+              ) : (
+                <Card className="py-3">
+                  <p className="mb-2 text-sm font-bold text-slate-900">New stall at this market</p>
+                  <div className="space-y-2">
+                    <Input
+                      placeholder="Stall name"
+                      value={stallName}
+                      onChange={(e) => setStallName(e.target.value)}
+                    />
+                    <Input
+                      placeholder="Rough location / what they sell (optional)"
+                      value={stallDesc}
+                      onChange={(e) => setStallDesc(e.target.value)}
+                    />
+                  </div>
+                  <p className="mt-2 text-xs text-slate-400">
+                    We&apos;ll tag this stall&apos;s location from your phone automatically — no extra step.
+                  </p>
+                  <div className="mt-3 flex gap-2">
+                    <Button
+                      onClick={handleAddStall}
+                      busy={stallBusy}
+                      disabled={!stallName.trim()}
+                      className="flex-1"
+                    >
+                      Save stall
+                    </Button>
+                    <Button
+                      variant="neutral"
+                      onClick={() => {
+                        setAddingStall(false);
+                        setStallName("");
+                        setStallDesc("");
+                      }}
+                      disabled={stallBusy}
+                      className="flex-1"
+                    >
+                      Cancel
+                    </Button>
+                  </div>
+                </Card>
+              )}
+            </div>
+          )}
+
           {/* The item list — scan-fast, minimal clutter */}
           <div className="space-y-2">
             {items.map((item) => {
@@ -383,6 +501,11 @@ function Shopping({ orderId, onBack }: any) {
                           Customer expected: ₦{item.listed_price}
                         </div>
                       )}
+                      {item.preferred_stall_id && actionable && (
+                        <div className="text-sm font-semibold text-brand-orange">
+                          Preferred stall: {preferredStallName(item.preferred_stall_id) || "…"}
+                        </div>
+                      )}
                       {bought && (
                         <div className="font-semibold text-brand-green">
                           Bought — ₦{item.confirmed_price}
@@ -407,7 +530,9 @@ function Shopping({ orderId, onBack }: any) {
                         disabled={busy}
                         className="shrink-0 px-3 text-sm text-red-600"
                       >
-                        Not here
+                        {item.preferred_stall_id
+                          ? `Not at ${preferredStallName(item.preferred_stall_id) || "this stall"}`
+                          : "Not here"}
                       </Button>
                     )}
                   </div>

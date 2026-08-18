@@ -344,7 +344,7 @@ function OrderDetail({ orderId, onBack, onTopUpWallet }: any) {
 
   if (!order) {
     return (
-      <div className="flex flex-col items-center gap-3 py-16 text-slate-500">
+      <div className="flex flex-col items-center gap-3 py-16 text-[#8a8178]">
         <svg className="h-8 w-8 animate-spin" viewBox="0 0 24 24" fill="none" aria-hidden="true">
           <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
           <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
@@ -393,7 +393,9 @@ function OrderDetail({ orderId, onBack, onTopUpWallet }: any) {
       </div>
 
       <div className="mb-4 flex items-center justify-between">
-        <h2 className="text-lg font-bold text-slate-900">Order {order.id.slice(0, 8)}…</h2>
+        <h2 className="font-display text-xl font-extrabold tracking-tight text-ink sm:text-2xl">
+          Order {order.id.slice(0, 8)}…
+        </h2>
         <StatusBadge status={order.status} />
       </div>
 
@@ -417,13 +419,13 @@ function OrderDetail({ orderId, onBack, onTopUpWallet }: any) {
       <Modal open={order.status === "proposed" && !needsDeposit} title="Your shopping agent">
         {proposedAgent ? (
           <>
-            <p className="mb-1 text-slate-800">
+            <p className="mb-1 text-ink/80">
               <span className="font-semibold">{proposedAgent.full_name || "Unnamed agent"}</span>
             </p>
-            <p className="mb-3 text-sm text-slate-500">{proposedAgent.phone}</p>
+            <p className="mb-3 text-sm text-[#8a8178]">{proposedAgent.phone}</p>
           </>
         ) : (
-          <p className="mb-3 text-sm text-slate-500">Looking for an available agent…</p>
+          <p className="mb-3 text-sm text-[#8a8178]">Looking for an available agent…</p>
         )}
         {assignmentNotice && (
           <p className="mb-3 rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-700">{assignmentNotice}</p>
@@ -451,12 +453,12 @@ function OrderDetail({ orderId, onBack, onTopUpWallet }: any) {
               <p className="mb-1 text-xs font-bold uppercase tracking-wide text-amber-700">
                 Price approval needed
               </p>
-              <p className="mb-1 text-slate-800">
+              <p className="mb-1 text-ink/80">
                 <span className="font-semibold">{item.description}</span> costs{" "}
                 <span className="font-semibold">₦{item.overage_requested_price}</span> at the stall —
                 ₦{extra.toFixed(2)} more than the ₦{item.listed_price} you listed.
               </p>
-              <p className="mb-3 text-sm text-slate-500">
+              <p className="mb-3 text-sm text-[#8a8178]">
                 You can hop on a call to confirm the price with the seller directly.
               </p>
               <div className="flex gap-2">
@@ -487,8 +489,8 @@ function OrderDetail({ orderId, onBack, onTopUpWallet }: any) {
             is - agent's start-shopping 402s otherwise). */}
         {needsDeposit && (
           <div className="rounded-xl border-2 border-brand-orange bg-white p-4 shadow-sm">
-            <p className="mb-3 text-slate-800">
-              <b className="text-slate-900">Deposit required:</b>{" "}
+            <p className="mb-3 text-ink/80">
+              <b className="text-ink">Deposit required:</b>{" "}
               {depositPct >= 99
                 ? "full payment upfront (a previous order wasn't paid) "
                 : `${depositPct}% upfront `}
@@ -547,9 +549,9 @@ function OrderDetail({ orderId, onBack, onTopUpWallet }: any) {
           <div className="space-y-2">
             {items.map((item) => (
               <Card key={item.id} id={`item-${item.id}`} className="py-3">
-                <div className="font-semibold text-slate-900">{item.description}</div>
+                <div className="font-semibold text-ink">{item.description}</div>
                 {item.requested_note && (
-                  <div className="text-sm text-slate-500">{item.requested_note}</div>
+                  <div className="text-sm text-[#8a8178]">{item.requested_note}</div>
                 )}
                 {item.confirmed_price != null && (
                   <div className="font-semibold text-brand-green">
@@ -597,16 +599,16 @@ function OrderDetail({ orderId, onBack, onTopUpWallet }: any) {
                 <p className="mb-1 text-xs font-bold uppercase tracking-wide text-amber-700">
                   Your agent needs approval
                 </p>
-                <p className="mb-3 text-slate-800">{pendingOverage.message}</p>
+                <p className="mb-3 text-ink/80">{pendingOverage.message}</p>
               </>
             ) : (
-              <p className="mb-2 font-bold text-slate-900">Spending approval</p>
+              <p className="mb-2 font-bold text-ink">Spending approval</p>
             )}
-            <div className="flex justify-between text-slate-700">
+            <div className="flex justify-between text-[#6b635a]">
               <span>Cap</span>
               <span className="font-semibold">₦{authorization.cap}</span>
             </div>
-            <div className="flex justify-between text-slate-700">
+            <div className="flex justify-between text-[#6b635a]">
               <span>Spent so far</span>
               <span className="font-semibold">₦{authorization.spent}</span>
             </div>
@@ -630,11 +632,11 @@ function OrderDetail({ orderId, onBack, onTopUpWallet }: any) {
             the estimate instead of a card full of misleading ₦0.00 lines. */}
         {isPriced ? (
           <Card>
-            <div className="space-y-1 text-slate-700">
+            <div className="space-y-1 text-[#6b635a]">
               <div className="flex justify-between"><span>Goods total</span><span className="font-semibold">₦{order.items_total}</span></div>
               <div className="flex justify-between"><span>Fees</span><span className="font-semibold">₦{fees.toFixed(2)}</span></div>
               <div className="flex justify-between"><span>Delivery</span><span className="font-semibold">₦{order.delivery_fee}</span></div>
-              <div className="flex justify-between border-t border-slate-200 pt-1 text-slate-900">
+              <div className="flex justify-between border-t border-[#ebe7e0] pt-1 text-ink">
                 <span className="font-semibold">Grand total</span>
                 <span className="font-bold">₦{order.grand_total}</span>
               </div>
@@ -644,7 +646,7 @@ function OrderDetail({ orderId, onBack, onTopUpWallet }: any) {
                   <span className="font-semibold">₦{order.deposit_amount} {depositPaid ? "(paid)" : "(unpaid)"}</span>
                 </div>
               )}
-              <div className="flex justify-between text-lg text-slate-900">
+              <div className="flex justify-between text-lg text-ink">
                 <span className="font-semibold">Amount due</span>
                 <span className="font-bold">₦{amountDue.toFixed(2)}</span>
               </div>
@@ -656,7 +658,7 @@ function OrderDetail({ orderId, onBack, onTopUpWallet }: any) {
           </Card>
         ) : (
           <Card>
-            <div className="space-y-1 text-slate-700">
+            <div className="space-y-1 text-[#6b635a]">
               <div className="flex justify-between"><span>Goods estimate</span><span className="font-semibold">₦{goodsEstimate.toFixed(2)}</span></div>
               <div className="flex justify-between"><span>Delivery quote</span><span className="font-semibold">₦{DELIVERY_QUOTE.toFixed(2)}</span></div>
               {/* No grand total shown here on purpose - the service fee is
@@ -674,13 +676,13 @@ function OrderDetail({ orderId, onBack, onTopUpWallet }: any) {
                 <StatusBadge status={order.status} />
               </div>
             </div>
-            <p className="mt-2 text-xs text-slate-400">Final fees and total are set once shopping is finished.</p>
+            <p className="mt-2 text-xs text-[#8a8178]">Final fees and total are set once shopping is finished.</p>
           </Card>
         )}
 
         {order.status === "awaiting_payment" && (
           <Card>
-            <p className="mb-3 text-lg font-bold text-slate-900">Pay balance</p>
+            <p className="mb-3 text-lg font-bold text-ink">Pay balance</p>
             <PaymentChooser
               amountDue={amountDue}
               walletBalance={walletBalance}
@@ -698,9 +700,9 @@ function OrderDetail({ orderId, onBack, onTopUpWallet }: any) {
             prompt (below, outside this list) is only for COLLECTING one. */}
         {isRateable(order.status) && rating && (
           <Card>
-            <p className="mb-2 font-bold text-slate-900">Your rating</p>
+            <p className="mb-2 font-bold text-ink">Your rating</p>
             <StarRating value={rating.stars} readOnly size={22} />
-            {rating.comment && <p className="mt-2 text-sm text-slate-600">{rating.comment}</p>}
+            {rating.comment && <p className="mt-2 text-sm text-[#6b635a]">{rating.comment}</p>}
           </Card>
         )}
       </div>
@@ -719,7 +721,7 @@ function OrderDetail({ orderId, onBack, onTopUpWallet }: any) {
           onChange={(e) => setDraftComment(e.target.value)}
           placeholder="Optional comment"
           rows={3}
-          className="mt-3 w-full rounded-xl border border-slate-300 px-4 py-3 text-base text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-brand-orange focus:border-brand-orange"
+          className="mt-3 w-full rounded-xl border border-[#ddd6cb] px-4 py-3 text-base text-ink placeholder:text-[#8a8178] focus:outline-none focus:ring-2 focus:ring-brand-orange focus:border-brand-orange"
         />
         <Button
           onClick={handleSubmitRating}

@@ -94,25 +94,25 @@ function Chat({ orderId, onMessages, onCollapse, onVoiceCall, onVideoCall }: any
 
   return (
     <div className="flex h-full flex-col bg-white">
-      <div className="flex items-center justify-between border-b border-slate-200 px-4 py-3 sm:px-6">
+      <div className="flex items-center justify-between border-b border-[#ebe7e0] px-4 py-3 sm:px-6">
         <div className="flex items-center gap-2">
           {onCollapse && (
             <button
               onClick={onCollapse}
               aria-label="Close chat"
-              className="flex h-10 w-10 items-center justify-center rounded-xl text-slate-500 hover:bg-slate-100"
+              className="flex h-10 w-10 items-center justify-center rounded-xl text-[#8a8178] hover:bg-[#f0eeeb]"
             >
               <Icon name="close" className="h-5 w-5" />
             </button>
           )}
-          <p className="text-lg font-bold text-slate-900">Chat</p>
+          <p className="text-lg font-bold text-ink">Chat</p>
         </div>
         <div className="flex items-center gap-1">
           {onVoiceCall && (
             <button
               onClick={onVoiceCall}
               aria-label="Voice call"
-              className="flex h-10 w-10 items-center justify-center rounded-full text-slate-600 hover:bg-slate-100"
+              className="flex h-10 w-10 items-center justify-center rounded-full text-[#6b635a] hover:bg-[#f0eeeb]"
             >
               <Icon name="phone" className="h-5 w-5" />
             </button>
@@ -121,7 +121,7 @@ function Chat({ orderId, onMessages, onCollapse, onVoiceCall, onVideoCall }: any
             <button
               onClick={onVideoCall}
               aria-label="Video call"
-              className="flex h-10 w-10 items-center justify-center rounded-full text-slate-600 hover:bg-slate-100"
+              className="flex h-10 w-10 items-center justify-center rounded-full text-[#6b635a] hover:bg-[#f0eeeb]"
             >
               <Icon name="video" className="h-5 w-5" />
             </button>
@@ -131,7 +131,7 @@ function Chat({ orderId, onMessages, onCollapse, onVoiceCall, onVideoCall }: any
 
       <div className="flex-1 space-y-2 overflow-y-auto px-4 py-3 sm:px-6">
         {messages.length === 0 && (
-          <p className="text-sm text-slate-500">No messages yet.</p>
+          <p className="text-sm text-[#8a8178]">No messages yet.</p>
         )}
         {messages.map((m) => {
           const mine = m.sender_id === myUserId;
@@ -142,7 +142,7 @@ function Chat({ orderId, onMessages, onCollapse, onVoiceCall, onVideoCall }: any
                   "max-w-[80%] rounded-2xl px-3 py-2 text-sm sm:max-w-[65%] " +
                   (mine
                     ? "bg-brand-orange text-white rounded-br-sm"
-                    : "bg-slate-100 text-slate-900 rounded-bl-sm")
+                    : "bg-[#f0eeeb] text-ink rounded-bl-sm")
                 }
               >
                 {m.text && <div className="whitespace-pre-wrap break-words">{m.text}</div>}
@@ -159,7 +159,7 @@ function Chat({ orderId, onMessages, onCollapse, onVoiceCall, onVideoCall }: any
         })}
       </div>
 
-      <div className="border-t border-slate-200 px-4 py-3 sm:px-6">
+      <div className="border-t border-[#ebe7e0] px-4 py-3 sm:px-6">
         {error && (
           <div className="mb-2">
             <p className="mb-1 text-sm text-red-600">{error}</p>
@@ -177,7 +177,7 @@ function Chat({ orderId, onMessages, onCollapse, onVoiceCall, onVideoCall }: any
               key={reply}
               onClick={() => sendQuickReply(reply)}
               disabled={busy}
-              className="shrink-0 whitespace-nowrap rounded-full border border-slate-200 bg-white px-3 py-1.5 text-sm font-semibold text-slate-600 transition-colors hover:border-brand-orange hover:text-brand-orange disabled:opacity-50"
+              className="shrink-0 whitespace-nowrap rounded-full border border-[#ebe7e0] bg-white px-3 py-1.5 text-sm font-semibold text-[#6b635a] transition-colors hover:border-brand-orange hover:text-brand-orange disabled:opacity-50"
             >
               {reply}
             </button>
@@ -191,7 +191,7 @@ function Chat({ orderId, onMessages, onCollapse, onVoiceCall, onVideoCall }: any
             value={text}
             onChange={(e) => setText(e.target.value)}
             onKeyDown={(e) => { if (e.key === "Enter") handleSend(); }}
-            className="min-h-[44px] flex-1 rounded-full border border-slate-300 px-4 text-base focus:outline-none focus:ring-2 focus:ring-brand-orange focus:border-brand-orange"
+            className="min-h-[44px] flex-1 rounded-full border border-[#ddd6cb] px-4 text-base focus:outline-none focus:ring-2 focus:ring-brand-orange focus:border-brand-orange"
           />
 
           {/* capture="environment" opens the rear camera directly on a phone. */}
@@ -207,7 +207,7 @@ function Chat({ orderId, onMessages, onCollapse, onVoiceCall, onVideoCall }: any
             onClick={() => fileInputRef.current && fileInputRef.current.click()}
             disabled={uploading}
             aria-label="Send a photo"
-            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-slate-100 text-slate-600 hover:bg-slate-200 disabled:opacity-50"
+            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[#f0eeeb] text-[#6b635a] hover:bg-[#e8e4df] disabled:opacity-50"
           >
             {uploading ? "…" : <Icon name="camera" className="h-5 w-5" />}
           </button>

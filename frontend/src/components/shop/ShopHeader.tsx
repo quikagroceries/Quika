@@ -66,8 +66,8 @@ function ShopHeader() {
   const [accountOpen, setAccountOpen] = useState(false);
   const [isNarrow, setIsNarrow] = useState(false);
   const accountRef = useRef<HTMLDivElement>(null);
-  const desktopGroupRef = useRef<HTMLDivElement>(null);
-  const mobileGroupRef = useRef<HTMLDivElement>(null);
+  const desktopGroupRef = useRef<HTMLButtonElement>(null);
+  const mobileGroupRef = useRef<HTMLButtonElement>(null);
   const guest = !token || !user;
   const itemCount = listDraft?.itemCount || 0;
   const searchEnabled = step === "market" || step === "vendors";
@@ -98,94 +98,59 @@ function ShopHeader() {
     };
   }, [accountOpen]);
 
-  const venueSub = venueSelected
-    ? [market?.city, market?.state].filter(Boolean).join(", ") || "Selected"
-    : "Choose venue";
-
   const deliverLabel = address.trim() || "Add address";
-
-  function openVenue() {
-    setVenueOpen(true);
-  }
 
   return (
     <header className="sticky top-0 z-40 border-b border-[#ebe7e0] bg-white">
       <div className="flex h-[64px] w-full items-center gap-3 px-4 md:gap-4 md:px-6 lg:px-8">
-        <Link href="/" className="shrink-0" aria-label="Quika home">
+        {/* The sidebar (from AppShell) carries the logo from md: up — this
+            stays mobile-only so the brand mark exists exactly once at any
+            given width, not twice. */}
+        <Link href="/" className="shrink-0 md:hidden" aria-label="Quika home">
           <Image src={logo} alt="Quika" className="h-10 w-auto object-contain" priority />
         </Link>
 
-        {/* Shop from | Deliver to — one container, vertical divider */}
-        <div
+        {/* One control, not two — it opens a single popover that manages
+            both venue and delivery address together, so it shouldn't look
+            like two separate dropdowns doing different jobs. */}
+        <button
           ref={desktopGroupRef}
+          type="button"
+          onClick={() => setVenueOpen((o) => !o)}
+          aria-expanded={venueOpen}
+          aria-haspopup="listbox"
           className={
-            "relative hidden h-11 min-w-0 max-w-[28rem] shrink-0 items-stretch overflow-hidden rounded-full border bg-white sm:flex md:max-w-[32rem] " +
+            "hidden h-11 min-w-0 max-w-[20rem] shrink-0 items-center gap-2.5 rounded-full border bg-white p-1.5 pr-3 text-left transition hover:bg-[#faf9f7] sm:flex md:max-w-[22rem] " +
             BORDER +
             " " +
             CONTROL_SHADOW
           }
         >
-          <button
-            type="button"
-            onClick={() => setVenueOpen((o) => !o)}
-            aria-expanded={venueOpen}
-            aria-haspopup="listbox"
-            className="flex min-w-0 flex-1 items-center gap-2 p-1.5 text-left transition hover:bg-[#faf9f7]"
-          >
-            <span className={ICON_WELL + " text-brand-orange"}>
-              <Icon name="store" className="h-4 w-4" />
-              {venueSelected && (
-                <span className="absolute -bottom-0.5 -right-0.5 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-brand-orange text-white ring-2 ring-white">
-                  <svg viewBox="0 0 20 20" className="h-2 w-2" fill="currentColor" aria-hidden>
-                    <path
-                      fillRule="evenodd"
-                      d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z"
-                      clipRule="evenodd"
-                    />
-                  </svg>
-                </span>
-              )}
-            </span>
-            <span className="min-w-0 flex-1">
-              {venueSelected ? (
-                <>
-                  <span className="block truncate text-sm font-bold text-ink">{market.name}</span>
-                  <span className="block truncate text-[0.7rem] font-medium text-[#8a8178]">
-                    {venueSub}
-                  </span>
-                </>
-              ) : (
-                <>
-                  <span className="block text-[0.65rem] font-bold uppercase tracking-wide text-[#8a8178]">
-                    Shop from
-                  </span>
-                  <span className="block truncate text-sm font-bold text-ink">Choose venue</span>
-                </>
-              )}
-            </span>
-            <Chevron open={venueOpen} />
-          </button>
-
-          <span className="my-2 w-px shrink-0 bg-[#ebe7e0]" aria-hidden />
-
-          <button
-            type="button"
-            onClick={openVenue}
-            aria-expanded={venueOpen}
-            className="flex min-w-0 flex-1 items-center gap-2 p-1.5 text-left transition hover:bg-[#faf9f7]"
-          >
-            <span className={ICON_WELL + " text-brand-green"}>
-              <PinGlyph />
-            </span>
-            <span className="min-w-0 flex-1">
-              <span className="block text-[0.65rem] font-bold uppercase tracking-wide text-[#8a8178]">
-                Deliver to
+          <span className={ICON_WELL + " text-brand-green"}>
+            <Icon name="store" className="h-4 w-4" />
+            {venueSelected && (
+              <span className="absolute -bottom-0.5 -right-0.5 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-brand-green text-white ring-2 ring-white">
+                <svg viewBox="0 0 20 20" className="h-2 w-2" fill="currentColor" aria-hidden>
+                  <path
+                    fillRule="evenodd"
+                    d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z"
+                    clipRule="evenodd"
+                  />
+                </svg>
               </span>
-              <span className="block truncate text-sm font-bold text-ink">{deliverLabel}</span>
+            )}
+          </span>
+          <span className="min-w-0 flex-1">
+            <span className="block truncate text-sm font-bold text-ink">
+              {venueSelected ? market.name : "Choose a market"}
             </span>
-            <Chevron open={venueOpen} />
-          </button>
-        </div>
+            <span className="flex items-center gap-1 truncate text-[0.7rem] font-medium text-[#8a8178]">
+              <PinGlyph className="h-2.5 w-2.5 shrink-0" />
+              <span className="truncate">{deliverLabel}</span>
+            </span>
+          </span>
+          <Chevron open={venueOpen} />
+        </button>
 
         {/* Search — same border language as the split control */}
         <div className="relative hidden min-w-0 flex-1 sm:block">
@@ -230,7 +195,10 @@ function ShopHeader() {
             )}
           </button>
 
-          <div className="relative shrink-0" ref={accountRef}>
+          {/* The sidebar (from AppShell) now covers sign-in/account/logout on
+              md+ — this stays mobile-only so there's exactly one place to
+              find it at any given width, not two. */}
+          <div className="relative shrink-0 md:hidden" ref={accountRef}>
             {guest ? (
               <Link
                 href="/login?next=/shop"
@@ -318,66 +286,43 @@ function ShopHeader() {
       {/* Mobile: split group + search */}
       <div className="border-t border-[#ebe7e0] px-4 py-2 sm:hidden md:px-6 lg:px-8">
         <div className="flex flex-col gap-2">
-          <div
+          <button
             ref={mobileGroupRef}
+            type="button"
+            onClick={() => setVenueOpen((o) => !o)}
+            aria-expanded={venueOpen}
             className={
-              "flex overflow-hidden rounded-xl border bg-white " + BORDER + " " + CONTROL_SHADOW
+              "flex items-center gap-2.5 rounded-xl border bg-white p-2 pr-3 text-left " +
+              BORDER +
+              " " +
+              CONTROL_SHADOW
             }
           >
-            <button
-              type="button"
-              onClick={() => setVenueOpen((o) => !o)}
-              className="flex min-w-0 flex-1 items-center gap-2 p-2.5 text-left"
-            >
-              <span className={ICON_WELL + " text-brand-orange"}>
-                <Icon name="store" className="h-4 w-4" />
-                {venueSelected && (
-                  <span className="absolute -bottom-0.5 -right-0.5 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-brand-orange text-white ring-2 ring-white">
-                    <svg viewBox="0 0 20 20" className="h-2 w-2" fill="currentColor" aria-hidden>
-                      <path
-                        fillRule="evenodd"
-                        d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z"
-                        clipRule="evenodd"
-                      />
-                    </svg>
-                  </span>
-                )}
-              </span>
-              <span className="min-w-0 flex-1">
-                {venueSelected ? (
-                  <>
-                    <span className="block truncate text-sm font-bold text-ink">{market.name}</span>
-                    <span className="block truncate text-[0.7rem] text-[#8a8178]">{venueSub}</span>
-                  </>
-                ) : (
-                  <>
-                    <span className="block text-[0.65rem] font-bold uppercase tracking-wide text-[#8a8178]">
-                      Shop from
-                    </span>
-                    <span className="block truncate text-sm font-bold text-ink">Choose venue</span>
-                  </>
-                )}
-              </span>
-              <Chevron open={venueOpen} />
-            </button>
-            <span className="my-2 w-px shrink-0 bg-[#ebe7e0]" aria-hidden />
-            <button
-              type="button"
-              onClick={openVenue}
-              className="flex min-w-0 flex-1 items-center gap-2 p-2.5 text-left"
-            >
-              <span className={ICON_WELL + " text-brand-green"}>
-                <PinGlyph />
-              </span>
-              <span className="min-w-0 flex-1">
-                <span className="block text-[0.65rem] font-bold uppercase tracking-wide text-[#8a8178]">
-                  Deliver to
+            <span className={ICON_WELL + " text-brand-green"}>
+              <Icon name="store" className="h-4 w-4" />
+              {venueSelected && (
+                <span className="absolute -bottom-0.5 -right-0.5 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-brand-green text-white ring-2 ring-white">
+                  <svg viewBox="0 0 20 20" className="h-2 w-2" fill="currentColor" aria-hidden>
+                    <path
+                      fillRule="evenodd"
+                      d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z"
+                      clipRule="evenodd"
+                    />
+                  </svg>
                 </span>
-                <span className="block truncate text-sm font-bold text-ink">{deliverLabel}</span>
+              )}
+            </span>
+            <span className="min-w-0 flex-1">
+              <span className="block truncate text-sm font-bold text-ink">
+                {venueSelected ? market.name : "Choose a market"}
               </span>
-              <Chevron open={venueOpen} />
-            </button>
-          </div>
+              <span className="flex items-center gap-1 truncate text-[0.7rem] text-[#8a8178]">
+                <PinGlyph className="h-2.5 w-2.5 shrink-0" />
+                <span className="truncate">{deliverLabel}</span>
+              </span>
+            </span>
+            <Chevron open={venueOpen} />
+          </button>
           <div className="relative">
             <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[#8a8178]">
               <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>

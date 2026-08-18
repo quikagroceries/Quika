@@ -122,6 +122,7 @@ async def create_order(
             requested_note=i.get("requested_note"),
             listed_price=i.get("listed_price"),
             quantity=i.get("quantity"),
+            preferred_stall_id=i.get("preferred_stall_id"),
         )
         for i in items
     ]

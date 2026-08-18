@@ -47,40 +47,40 @@ function Settings({ user, onUserUpdated, onLogout }: any) {
 
   return (
     <div>
-      <h1 className="mb-1 text-2xl font-extrabold tracking-tight text-slate-900 md:text-3xl">Settings</h1>
-      <p className="mb-6 text-slate-500">Your account details.</p>
+      <h1 className="mb-1 font-display text-3xl font-extrabold tracking-tight text-ink md:text-4xl">Settings</h1>
+      <p className="mb-6 text-[#6b635a]">Your account details.</p>
 
       <div className="max-w-[560px] space-y-4">
         <Card>
           <div className="mb-4 flex items-center gap-3">
-            <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-brand-orange/10 text-brand-orange">
+            <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-brand-orange/10 text-brand-orange">
               <Icon name="user" className="h-6 w-6" />
             </span>
             <div className="min-w-0 flex-1">
-              <div className="truncate font-bold text-slate-900">{user.full_name || "Unnamed"}</div>
-              <div className="truncate text-sm text-slate-500">{user.phone}</div>
+              <div className="truncate font-display text-lg font-extrabold tracking-tight text-ink">{user.full_name || "Unnamed"}</div>
+              <div className="truncate text-sm text-[#6b635a]">{user.phone}</div>
             </div>
             <span
               className={
                 "shrink-0 rounded-full px-3 py-1 text-xs font-bold " +
-                (STATUS_TONE[user.status] || "bg-slate-100 text-slate-600")
+                (STATUS_TONE[user.status] || "bg-[#f0eeeb] text-[#6b635a]")
               }
             >
               {STATUS_LABEL[user.status] || user.status}
             </span>
           </div>
 
-          <p className="mb-3 text-sm font-bold uppercase tracking-wide text-slate-400">Profile</p>
+          <p className="mb-3 text-sm font-bold uppercase tracking-wide text-[#8a8178]">Profile</p>
           <div className="space-y-3">
             <label className="block">
-              <span className="mb-1 block text-sm font-semibold text-slate-700">Full name</span>
+              <span className="mb-1 block text-sm font-semibold text-ink/80">Full name</span>
               <Input value={fullName} onChange={(e) => setFullName(e.target.value)} placeholder="e.g. Ada Obi" />
             </label>
 
             {isCustomer && (
               <label className="block">
-                <span className="mb-1 block text-sm font-semibold text-slate-700">
-                  Default delivery address <span className="font-normal text-slate-400">(optional)</span>
+                <span className="mb-1 block text-sm font-semibold text-ink/80">
+                  Default delivery address <span className="font-normal text-[#8a8178]">(optional)</span>
                 </span>
                 <Input
                   placeholder="e.g. 12 Allen Avenue, Ikeja"
@@ -99,18 +99,18 @@ function Settings({ user, onUserUpdated, onLogout }: any) {
         </Card>
 
         <Card>
-          <p className="mb-3 text-sm font-bold uppercase tracking-wide text-slate-400">Account</p>
+          <p className="mb-3 text-sm font-bold uppercase tracking-wide text-[#8a8178]">Account</p>
           <div className="space-y-3">
             <label className="block">
-              <span className="mb-1 block text-sm font-semibold text-slate-700">Phone</span>
-              <Input value={user.phone} disabled className="bg-slate-50 text-slate-500" />
+              <span className="mb-1 block text-sm font-semibold text-ink/80">Phone</span>
+              <Input value={user.phone} disabled className="bg-[#f7f5f2] text-[#6b635a]" />
             </label>
             <label className="block">
-              <span className="mb-1 block text-sm font-semibold text-slate-700">Role</span>
+              <span className="mb-1 block text-sm font-semibold text-ink/80">Role</span>
               <Input
                 value={user.role ? user.role[0].toUpperCase() + user.role.slice(1) : ""}
                 disabled
-                className="bg-slate-50 text-slate-500"
+                className="bg-[#f7f5f2] text-[#6b635a]"
               />
             </label>
           </div>

@@ -83,7 +83,7 @@ function Notifications() {
         <div className="mb-1 text-xs font-semibold uppercase tracking-wide text-brand-orange">
           {kindLabel(note.kind)}
         </div>
-        <p className="text-slate-800">{note.message}</p>
+        <p className="text-ink/80">{note.message}</p>
 
         {error && (
           <p className="mt-2 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p>

@@ -13,7 +13,16 @@ import { rememberVenue } from "./VenuePopover";
 
 export type ShopListDraft = {
   mode: "detailed" | "freetext";
-  rows: { item: string; price: string; qty: string; note: string }[];
+  rows: {
+    item: string;
+    price: string;
+    qty: string;
+    note: string;
+    // Set when this row was added from a stall's page — a hint the agent
+    // tries to honor, not a binding order (see OrderItem.preferred_stall_id).
+    stallId?: string;
+    stallName?: string;
+  }[];
   budgetText: string;
   budget: string;
   goodsTotal: number;
@@ -21,6 +30,10 @@ export type ShopListDraft = {
   items: any[];
   pricedTotal: number;
   unstructuredTotal: number;
+  // Sum of free-typed lines whose price was auto-extracted (e.g. "Rice
+  // 2000") - distinct from unstructuredTotal, which is the manual estimate
+  // covering only the lines nothing could be extracted from.
+  autoPricedTotal: number;
 };
 
 export type ShopVendor = {
@@ -113,8 +126,11 @@ export function ShopProvider({ children }: { children: ReactNode }) {
       setSearchQuery("");
       setVenueOpen(false);
       rememberVenue(m.id);
-      const isSuper = (m.venue_type || "local_market") === "supermarket";
-      setStep(isSuper ? "list" : "vendors");
+      // Straight to the list either way — the classic "send someone to the
+      // market" flow is list-first, not a catalogue to browse. Local-market
+      // customers can still prefer a specific (real, agent-registered)
+      // stall per item right there in the list builder.
+      setStep("list");
     },
     [setBrowseStall]
   );

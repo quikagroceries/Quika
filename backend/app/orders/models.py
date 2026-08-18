@@ -211,9 +211,21 @@ class OrderItem(Base):
         Numeric(12, 2), nullable=True
     )
 
+    # A strong HINT, not a binding order — set only when the customer added
+    # this item while browsing a specific stall's page (jit.models.Seller).
+    # The agent tries to buy it there first, but a pinned stall can always be
+    # closed/sold-out/gone that day; when that happens it's routed through
+    # the SAME unavailable-item flow below, not a separate mechanism. No FK
+    # constraint - loose reference, same convention as Seller.market_id.
+    preferred_stall_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), nullable=True, index=True
+    )
+
     # Not-available flow. When the agent can't find an item at the stall they
     # flag it 'unavailable'; the customer decides buy_elsewhere or drop; if they
-    # never answer, it falls back to buy-as-listed at shopping's end.
+    # never answer, it falls back to buy-as-listed at shopping's end. A pinned
+    # vendor being closed/out-of-stock/gone goes through this exact same flow -
+    # "vendor unavailable" is not a distinct case from "item unavailable".
     #   pending | unavailable | buy_elsewhere | dropped | bought
     availability: Mapped[str] = mapped_column(String(20), default="pending")
 

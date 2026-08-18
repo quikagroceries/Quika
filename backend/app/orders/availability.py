@@ -28,10 +28,11 @@ async def flag_unavailable(
     if item is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Item not on this order")
     item.availability = "unavailable"
+    where = "at your preferred stall" if item.preferred_stall_id else "here"
     await notif_service.send(
         db, user_id=order.customer_id, order_id=order.id,
         kind="item_unavailable",
-        message=f"'{item.description}' isn't available here. Buy it elsewhere, "
+        message=f"'{item.description}' isn't available {where}. Buy it elsewhere, "
                 f"or drop it? If you don't respond, we'll buy it as listed.",
     )
     await db.flush()

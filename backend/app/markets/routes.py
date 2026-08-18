@@ -13,6 +13,7 @@ from app.jit.models import Seller
 from app.markets.schemas import (
     AgentStatusOut,
     CreateMarketIn,
+    CreateVendorIn,
     MarketOut,
     SetDutyIn,
     ShopActivityOut,
@@ -75,6 +76,22 @@ async def list_vendors(
 ) -> list[Seller]:
     """Public stall list for a market — guest shop browse."""
     return await service.list_vendors(db, market_id=market_id)
+
+
+@router.post("/{market_id}/vendors", response_model=VendorOut, status_code=201)
+async def create_vendor(
+    market_id: uuid.UUID,
+    body: CreateVendorIn,
+    db: AsyncSession = Depends(get_db),
+    agent: User = Depends(require_role(UserRole.AGENT)),
+) -> Seller:
+    """Agent registers a stall on the fly while shopping — live immediately,
+    no approval gate. Shows up in list_vendors right away."""
+    return await service.create_vendor(
+        db, market_id=market_id, name=body.name,
+        stall_description=body.stall_description, phone=body.phone,
+        latitude=body.latitude, longitude=body.longitude,
+    )
 
 
 @router.get("/agents/me", response_model=AgentStatusOut)

@@ -32,8 +32,8 @@ function Call({ orderId, onClose, mode = "video" }: any) {
       {error && (
         <div className="p-4 text-white">
           <p className="text-red-400">{error}</p>
-          <p className="text-sm text-slate-400">
-            If this says LiveKit isn't configured, the backend needs
+          <p className="text-sm text-[#8a8178]">
+            If this says LiveKit isn&apos;t configured, the backend needs
             LIVEKIT_URL/LIVEKIT_API_KEY/LIVEKIT_API_SECRET set.
           </p>
         </div>

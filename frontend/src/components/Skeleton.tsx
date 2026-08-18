@@ -2,7 +2,7 @@
 
 // Generic skeleton rectangle — the building block.
 export function Skeleton({ className = "" }: any) {
-  return <div className={"animate-pulse rounded-lg bg-slate-200 " + className} />;
+  return <div className={"animate-pulse rounded-lg bg-[#ece8e2] " + className} />;
 }
 
 // Shaped to roughly match an order card (badge row + title + total), so the

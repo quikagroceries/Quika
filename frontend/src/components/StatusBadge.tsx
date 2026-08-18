@@ -8,14 +8,18 @@ const SUCCESS = new Set(["paid", "delivered", "closed"]);
 const PROBLEM = new Set(["cancelled", "cancelled_unpaid", "disputed"]);
 
 function StatusBadge({ status }: any) {
-  const style = PROBLEM.has(status)
+  const problem = PROBLEM.has(status);
+  const success = SUCCESS.has(status);
+  const style = problem
     ? "bg-red-50 text-red-700"
-    : SUCCESS.has(status)
+    : success
     ? "bg-brand-green/10 text-brand-green"
-    : "bg-amber-50 text-amber-700";
+    : "bg-amber-50 text-amber-800";
+  const dot = problem ? "bg-red-600" : success ? "bg-brand-green" : "bg-amber-500";
 
   return (
-    <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold capitalize ${style}`}>
+    <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-bold capitalize ${style}`}>
+      <span className={`h-1.5 w-1.5 shrink-0 rounded-full ${dot}`} />
       {(status || "").replaceAll("_", " ")}
     </span>
   );
