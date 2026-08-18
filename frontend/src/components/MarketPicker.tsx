@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import EmptyState from "./EmptyState";
 import Icon from "./Icon";
 import MarketArt from "@/components/shop/MarketArt";
@@ -14,6 +15,47 @@ import { catalogForStall, categoriesForCatalog } from "@/lib/stallCatalog";
 import { useShopOptional } from "@/components/shop/ShopContext";
 import { api } from "@/lib/api";
 import ShopSideRail from "@/components/shop/ShopSideRail";
+import { useActiveOrders } from "@/lib/useActiveOrders";
+
+function summarizeActiveOrder(order: any): string {
+  const at = order.marketName ? ` at ${order.marketName}` : "";
+  switch (order.status) {
+    case "draft":
+      return "Pick up where you left off — list not sent yet";
+    case "proposed":
+      return "Finding you an agent";
+    case "agent_assigned":
+      return `Agent assigned${at} — shopping starts soon`;
+    case "shopping": {
+      const items = order.items || [];
+      const bought = items.filter((it: any) => it.confirmed_price != null).length;
+      return `Agent is shopping${at} — ${bought} of ${items.length} bought`;
+    }
+    case "awaiting_payment":
+      return "Shopping done — balance due";
+    case "paid":
+      return "Packing your order";
+    case "packed":
+      return "Packed, waiting for pickup";
+    case "out_for_delivery":
+      return "Out for delivery";
+    default:
+      return "In progress";
+  }
+}
+
+function activeOrderHeadline(orders: any[] | null): { title: string; href: string } | null {
+  if (!orders || orders.length === 0) return null;
+  const multiple = orders.length > 1;
+  const primary =
+    orders.find((o) => o.status === "shopping") ||
+    orders.find((o) => o.status === "awaiting_payment") ||
+    orders[0];
+  return {
+    title: multiple ? `${orders.length} orders in progress` : summarizeActiveOrder(primary),
+    href: multiple ? "/track" : `/orders/${primary.id}`,
+  };
+}
 
 const VENUE_TYPES: {
   id: VenueType;
@@ -25,12 +67,21 @@ const VENUE_TYPES: {
   { id: "supermarket", label: "Supermarkets", hint: "Fixed prices", icon: "store" },
 ];
 
-const FOOD_FILTERS: { id: FoodCategory | "popular"; label: string; icon: string }[] = [
-  { id: "popular", label: "Popular", icon: "star" },
-  { id: "produce", label: "Produce", icon: "basket" },
-  { id: "protein", label: "Protein", icon: "flag" },
-  { id: "provisions", label: "Provisions", icon: "wallet" },
-  { id: "spices", label: "Spices", icon: "store" },
+// Each category carries its own identity — icon + a real accent color, not
+// the one brand orange stretched across everything — so the row reads as a
+// spread of departments (produce section, butcher counter, spice rack) the
+// way a physical market would, and stays scannable at a glance.
+const FOOD_FILTERS: {
+  id: FoodCategory | "popular";
+  label: string;
+  icon: string;
+  color: string;
+}[] = [
+  { id: "popular", label: "Popular", icon: "star", color: "#E8541E" },
+  { id: "produce", label: "Produce", icon: "leaf", color: "#0E7A3C" },
+  { id: "protein", label: "Protein", icon: "drumstick", color: "#8B3A2E" },
+  { id: "provisions", label: "Provisions", icon: "jar", color: "#B8860B" },
+  { id: "spices", label: "Spices", icon: "chili", color: "#C2430F" },
 ];
 
 type SortMode = "featured" | "az" | "za";
@@ -85,34 +136,46 @@ function MarketCard({
       type="button"
       onClick={() => onSelect(m)}
       className={
-        "group shrink-0 snap-start text-left transition duration-200 " +
-        (wide ? "w-[300px] sm:w-[340px]" : "w-[240px] sm:w-[260px]")
+        "group shrink-0 snap-start text-left transition duration-300 ease-premium " +
+        (wide ? "w-[300px] sm:w-[340px]" : "w-[250px] sm:w-[270px]")
       }
     >
-      <span className="relative block overflow-hidden rounded-xl ring-1 ring-[#ebe7e0] transition duration-200 group-hover:-translate-y-0.5 group-hover:shadow-[0_12px_28px_rgba(33,26,20,0.1)] group-hover:ring-[#ddd6cb]">
+      <span className="relative block overflow-hidden rounded-2xl shadow-sm transition duration-300 ease-premium group-hover:-translate-y-1 group-hover:shadow-lg">
         <MarketArt
           tone={m.tone}
           title={m.name}
           image={m.image}
           featured={m.featured}
-          className="aspect-[16/10] w-full"
+          className="aspect-[4/3] w-full"
         />
         {m.live ? (
-          <span className="absolute left-2.5 top-2.5 rounded bg-brand-orange px-2 py-1 text-[0.7rem] font-bold text-white">
-            {m.venue_type === "supermarket" ? "Open · fixed price" : "Live · agent shops"}
+          <span className="absolute left-3 top-3 inline-flex items-center gap-1.5 rounded-full bg-white/95 px-2.5 py-1.5 text-[0.7rem] font-extrabold uppercase tracking-wide text-ink shadow-sm backdrop-blur-sm">
+            <span className="relative flex h-1.5 w-1.5">
+              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-brand-green opacity-75" />
+              <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-brand-green" />
+            </span>
+            {m.venue_type === "supermarket" ? "Fixed price" : "Live now"}
           </span>
         ) : (
-          <span className="absolute left-2.5 top-2.5 rounded bg-white/95 px-2 py-1 text-[0.7rem] font-bold text-ink">
+          <span className="absolute left-3 top-3 rounded-full bg-white/95 px-2.5 py-1.5 text-[0.7rem] font-extrabold uppercase tracking-wide text-ink shadow-sm backdrop-blur-sm">
             Coming soon
           </span>
         )}
       </span>
-      <span className="mt-2.5 block pr-1">
-        <span className={"block truncate font-bold text-ink " + (wide ? "text-base" : "text-[0.95rem]")}>
+      <span className="mt-3 block pr-1">
+        <span className={"block truncate font-display font-extrabold tracking-tight text-ink " + (wide ? "text-lg" : "text-base")}>
           {m.name}
         </span>
-        <span className="mt-0.5 block text-sm text-[#6b635a]">{m.area}</span>
-        <span className="mt-1.5 block text-xs font-medium text-[#8a8178]">
+        <span className="mt-0.5 flex items-center gap-1 text-sm text-[#6b635a]">
+          <Icon name="pin" className="h-3 w-3 shrink-0 text-[#8a8178]" />
+          <span className="truncate">{m.area}</span>
+        </span>
+        <span
+          className={
+            "mt-1.5 inline-block text-xs font-bold " +
+            (m.isPilot ? "text-brand-orange" : "text-brand-green")
+          }
+        >
           {m.isPilot ? "Pilot — be among the first to shop here" : "New on Quika"}
         </span>
       </span>
@@ -429,7 +492,7 @@ function ShopHeroBanner({
 
   return (
     <div
-      className="relative mb-6 min-h-[200px] overflow-hidden rounded-2xl sm:min-h-[240px]"
+      className="relative mb-6 min-h-[220px] overflow-hidden rounded-2xl shadow-md sm:min-h-[280px]"
       style={{ backgroundColor: bg }}
     >
       <div className="pointer-events-none absolute inset-y-0 right-0 w-full sm:w-[60%]">
@@ -448,7 +511,7 @@ function ShopHeroBanner({
         />
       </div>
 
-      <div className="relative z-10 flex w-full flex-col justify-center px-5 py-7 sm:w-[40%] sm:px-7 sm:py-9">
+      <div className="relative z-10 flex w-full flex-col justify-center px-5 py-7 sm:w-[45%] sm:px-8 sm:py-9 lg:w-[40%]">
         <p
           className={
             "text-xs font-bold uppercase tracking-[0.14em] " +
@@ -457,10 +520,10 @@ function ShopHeroBanner({
         >
           {eyebrow}
         </p>
-        <h2 className="mt-2 font-display text-2xl font-extrabold tracking-tight text-white sm:text-3xl">
+        <h2 className="mt-2.5 font-display text-3xl font-extrabold leading-[1.05] tracking-tight text-white sm:text-4xl lg:text-[2.75rem]">
           {title}
         </h2>
-        <p className="mt-2 text-sm leading-relaxed text-white/70 sm:text-base line-clamp-3">{body}</p>
+        <p className="mt-3 text-sm leading-relaxed text-white/70 sm:text-base line-clamp-3">{body}</p>
       </div>
     </div>
   );
@@ -482,6 +545,7 @@ function MarketPicker({
   vendorsPanel = null,
   listPanel = null,
 }: any) {
+  const router = useRouter();
   const shop = useShopOptional();
   const searchQuery = queryProp ?? shop?.searchQuery ?? "";
   const inVendors = Boolean(vendorsPanel);
@@ -490,6 +554,8 @@ function MarketPicker({
   const activeMarket = inShell ? shop?.market : null;
   const browseStall = inVendors ? shop?.browseStall : null;
   const preferredVendor = inList ? shop?.vendor : null;
+  const activeOrders = useActiveOrders();
+  const headline = activeOrderHeadline(activeOrders);
 
   const [venueType, setVenueType] = useState<VenueType>("local_market");
   const [food, setFood] = useState<FoodCategory | "popular">("popular");
@@ -635,23 +701,6 @@ function MarketPicker({
         ? "vendors"
         : "browse";
 
-  function goVendors() {
-    shop?.setBrowseStall(null);
-    shop?.setStep("vendors");
-  }
-
-  function backToStallFromList() {
-    const v = shop?.vendor;
-    if (v) {
-      shop?.setBrowseStall({
-        id: v.id,
-        name: v.name,
-        stall_description: v.stall_description ?? null,
-      });
-    }
-    shop?.setStep("vendors");
-  }
-
   function goList() {
     shop?.setBrowseStall(null);
     shop?.setStep("list");
@@ -686,7 +735,6 @@ function MarketPicker({
       onSelectFood={(id) => setFood(id as FoodCategory | "popular")}
       market={activeMarket}
       stall={browseStall}
-      preferredVendor={preferredVendor || shop?.vendor}
       stallTypeFilter={shop?.stallTypeFilter || "all"}
       onStallTypeFilter={(id) => shop?.setStallTypeFilter(id)}
       stallTypeFilters={STALL_TYPE_FILTERS}
@@ -696,8 +744,6 @@ function MarketPicker({
       listComposerMode={shop?.listComposerMode || "detailed"}
       onListComposerMode={(id) => shop?.setListComposerMode(id)}
       listTools={LIST_TOOLS}
-      onGoVendors={goVendors}
-      onBackToStall={backToStallFromList}
       onGoList={goList}
       onShopWholeMarket={shopWholeMarket}
       onWriteOwnList={writeOwnList}
@@ -877,41 +923,115 @@ function MarketPicker({
             ))}
           </div>
         )}
-        <div className="mb-4 flex gap-2 overflow-x-auto pb-1 lg:hidden [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-          {inList
-            ? LIST_TOOLS.map((f) => (
-                <button
-                  key={f.id}
-                  type="button"
-                  onClick={() => shop?.setListComposerMode(f.id)}
-                  className={
-                    "inline-flex shrink-0 rounded-full px-3 py-1.5 text-sm font-semibold " +
-                    (shop?.listComposerMode === f.id
-                      ? "bg-brand-orange/15 text-brand-orange-dark"
-                      : "bg-[#f7f5f2] text-[#6b635a]")
-                  }
-                >
-                  {f.label}
-                </button>
-              ))
-            : browseStall
-              ? stallNavCats.map((c) => (
+        {/* Categories + page header — one row, every width. Categories are a
+            "refine what I'm looking at" control, the same family as
+            Live-now/Sort below, not app navigation - so it lives in the
+            content area, not the sidebar. When there's an active order, its
+            card takes the other side of this row rather than a separate
+            banner competing for attention. */}
+        {!inList && !browseStall && !inVendors && (
+          <div className="mb-4 flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+            <div className="min-w-0 lg:flex-1">
+              <div className="flex gap-2.5 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                {FOOD_FILTERS.map((f) => {
+                  const active = food === f.id;
+                  return (
+                    <button
+                      key={f.id}
+                      type="button"
+                      onClick={() => setFood(f.id)}
+                      style={active ? { boxShadow: `inset 0 0 0 1.5px ${f.color}` } : undefined}
+                      className={
+                        "inline-flex shrink-0 items-center gap-2 rounded-full bg-white py-2 pl-2.5 pr-4 text-sm font-bold transition-all duration-200 " +
+                        (active
+                          ? "text-ink"
+                          : "text-ink/55 ring-1 ring-[#ebe7e0] hover:text-ink hover:ring-[#ddd6cb]")
+                      }
+                    >
+                      <span
+                        className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full"
+                        style={{
+                          backgroundColor: `${f.color}${active ? "22" : "14"}`,
+                          color: f.color,
+                        }}
+                      >
+                        <Icon name={f.icon} className="h-3.5 w-3.5" />
+                      </span>
+                      {f.label}
+                    </button>
+                  );
+                })}
+              </div>
+              <div className="mt-5">
+                <h1 className="font-display text-3xl font-extrabold tracking-tight text-ink md:text-4xl">
+                  {pageTitle}
+                </h1>
+                <p className="mt-1.5 text-[15px] text-[#6b635a]">{pageSubtitle}</p>
+              </div>
+            </div>
+
+            {headline && (
+              <button
+                type="button"
+                onClick={() => router.push(headline.href)}
+                className="flex shrink-0 flex-col justify-between gap-4 rounded-2xl bg-[#211A14] px-5 py-4 text-left transition hover:brightness-110 lg:w-[280px]"
+              >
+                <div className="min-w-0 flex items-center gap-3">
+                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-brand-orange/15 text-brand-orange">
+                    <Icon name="pin" className="h-5 w-5" />
+                  </span>
+                  <div className="min-w-0">
+                    <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-brand-orange">
+                      Order in progress
+                    </p>
+                    <p className="mt-0.5 truncate text-sm font-bold text-white">{headline.title}</p>
+                  </div>
+                </div>
+                <span className="inline-flex w-fit items-center gap-1 rounded-full bg-white px-4 py-2 text-sm font-bold text-ink">
+                  Track →
+                </span>
+              </button>
+            )}
+          </div>
+        )}
+
+        {/* Mobile-only: list-composer tools / stall-specific chips — desktop
+            already has these via the sidebar. */}
+        {(inList || browseStall || inVendors) && (
+          <div className="mb-4 flex gap-2 overflow-x-auto pb-1 lg:hidden [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+            {inList
+              ? LIST_TOOLS.map((f) => (
                   <button
-                    key={c.id}
+                    key={f.id}
                     type="button"
-                    onClick={() => shop?.setStallCategory(c.id)}
+                    onClick={() => shop?.setListComposerMode(f.id)}
                     className={
                       "inline-flex shrink-0 rounded-full px-3 py-1.5 text-sm font-semibold " +
-                      (shop?.stallCategory === c.id
+                      (shop?.listComposerMode === f.id
                         ? "bg-brand-orange/15 text-brand-orange-dark"
                         : "bg-[#f7f5f2] text-[#6b635a]")
                     }
                   >
-                    {c.label}
+                    {f.label}
                   </button>
                 ))
-              : inVendors
-                ? STALL_TYPE_FILTERS.map((f) => (
+              : browseStall
+                ? stallNavCats.map((c) => (
+                    <button
+                      key={c.id}
+                      type="button"
+                      onClick={() => shop?.setStallCategory(c.id)}
+                      className={
+                        "inline-flex shrink-0 rounded-full px-3 py-1.5 text-sm font-semibold " +
+                        (shop?.stallCategory === c.id
+                          ? "bg-brand-orange/15 text-brand-orange-dark"
+                          : "bg-[#f7f5f2] text-[#6b635a]")
+                      }
+                    >
+                      {c.label}
+                    </button>
+                  ))
+                : STALL_TYPE_FILTERS.map((f) => (
                     <button
                       key={f.id}
                       type="button"
@@ -925,25 +1045,11 @@ function MarketPicker({
                     >
                       {f.label}
                     </button>
-                  ))
-                : FOOD_FILTERS.map((f) => (
-                    <button
-                      key={f.id}
-                      type="button"
-                      onClick={() => setFood(f.id)}
-                      className={
-                        "inline-flex shrink-0 rounded-full px-3 py-1.5 text-sm font-semibold " +
-                        (food === f.id
-                          ? "bg-brand-orange/15 text-brand-orange-dark"
-                          : "bg-[#f7f5f2] text-[#6b635a]")
-                      }
-                    >
-                      {f.label}
-                    </button>
                   ))}
-        </div>
+          </div>
+        )}
 
-        {!browseStall && !inList && (
+        {!browseStall && !inList && inVendors && (
           <div className="mb-4">
             <h1 className="text-2xl font-bold tracking-tight text-ink md:text-[1.75rem]">
               {pageTitle}

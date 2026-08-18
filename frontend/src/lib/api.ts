@@ -85,6 +85,10 @@ export const api = {
   },
   getShopActivity: () => request("/markets/activity"),
   getMarketVendors: (marketId: string) => request(`/markets/${marketId}/vendors`),
+  createVendor: (
+    marketId: string,
+    body: { name: string; stall_description?: string; phone?: string; latitude?: number; longitude?: number }
+  ) => request(`/markets/${marketId}/vendors`, { method: "POST", body }),
   payBalance: (id) =>
     request(`/payments/orders/${id}/pay-from-wallet`, { method: "POST" }),
   payDeposit: (id) =>

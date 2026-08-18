@@ -22,11 +22,13 @@ function ShopPageInner() {
   }, [setMarkets, setMarketsLoading]);
 
   return (
-    <NewOrderFlow
-      user={user}
-      onCancel={() => router.push(token && user ? "/history" : "/")}
-      onOrderPlaced={(orderId: string) => router.push(`/orders/${orderId}`)}
-    />
+    <>
+      <NewOrderFlow
+        user={user}
+        onCancel={() => router.push(token && user ? "/history" : "/")}
+        onOrderPlaced={(orderId: string) => router.push(`/orders/${orderId}`)}
+      />
+    </>
   );
 }
 

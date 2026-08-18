@@ -13,15 +13,15 @@ function PaymentChooser({ amountDue, walletBalance, onPayWallet, onPayTransfer, 
 
   return (
     <div>
-      <div className="mb-3 flex items-center justify-between text-slate-700">
+      <div className="mb-3 flex items-center justify-between text-[#6b635a]">
         <span>Wallet balance</span>
-        <span className="font-semibold text-slate-900">
+        <span className="font-semibold text-ink">
           {loadingBalance ? "…" : `₦${Number(walletBalance).toFixed(2)}`}
         </span>
       </div>
       <div className="mb-4 flex items-center justify-between">
-        <span className="font-semibold text-slate-900">Amount due</span>
-        <span className="text-lg font-bold text-slate-900">₦{Number(amountDue).toFixed(2)}</span>
+        <span className="font-semibold text-ink">Amount due</span>
+        <span className="text-lg font-bold text-ink">₦{Number(amountDue).toFixed(2)}</span>
       </div>
 
       {error && (

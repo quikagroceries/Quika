@@ -12,10 +12,10 @@ function FilterPills({ options, value, onChange }: any) {
           key={opt.key}
           onClick={() => onChange(opt.key)}
           className={
-            "shrink-0 whitespace-nowrap rounded-full px-4 min-h-[44px] text-sm font-semibold transition-colors " +
+            "shrink-0 whitespace-nowrap rounded-full px-4 min-h-[44px] text-sm font-bold transition-colors duration-150 " +
             (value === opt.key
-              ? "bg-brand-orange text-white"
-              : "bg-slate-100 text-slate-600 hover:bg-slate-200")
+              ? "bg-ink text-white"
+              : "bg-[#f0eeeb] text-[#6b635a] hover:bg-[#e8e4df]")
           }
         >
           {opt.label}

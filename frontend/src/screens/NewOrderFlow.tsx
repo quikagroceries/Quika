@@ -9,12 +9,68 @@ import Card from "@/components/Card";
 import Icon from "@/components/Icon";
 import Input from "@/components/Input";
 import MarketPicker from "@/components/MarketPicker";
-import VendorPicker from "@/components/VendorPicker";
 import ListBuilder from "@/components/ListBuilder";
 import { useAuth } from "@/components/AuthProvider";
 import { useShop, type ShopListDraft } from "@/components/shop/ShopContext";
 import { clearGuestDraft, loadGuestDraft, saveGuestDraft } from "@/lib/guestDraft";
 import { matchSlugToApiMarket } from "@/lib/marketDirectory";
+
+// Same dark-banner visual language as the shop shell's ShopHeroBanner
+// (MarketPicker.tsx) — kept local and simple (no market image lookup) since
+// these two steps are a focused, distraction-free hand-off to payment, not
+// part of the browsing shell.
+const CHECKOUT_STEPS = ["List", "Delivery", "Quote"] as const;
+
+function CheckoutHero({
+  isSuper,
+  eyebrow,
+  title,
+  body,
+  step,
+}: {
+  isSuper: boolean;
+  eyebrow: string;
+  title: string;
+  body: string;
+  /** Which of the 3 checkout steps this screen is (1-indexed) — list itself
+      never renders this hero, so this only ever shows 2 or 3, but the full
+      3-segment track still gives an honest "you're almost there" read. */
+  step: 2 | 3;
+}) {
+  return (
+    <div className="mb-6">
+      <div className="mb-3 flex items-center gap-2">
+        {CHECKOUT_STEPS.map((label, i) => {
+          const n = i + 1;
+          const done = n < step;
+          const current = n === step;
+          return (
+            <div key={label} className="flex flex-1 items-center gap-2">
+              <span
+                className={
+                  "h-1 flex-1 rounded-full transition-colors duration-300 " +
+                  (done || current ? "bg-brand-orange" : "bg-ink/10")
+                }
+              />
+            </div>
+          );
+        })}
+      </div>
+      <div
+        className="relative overflow-hidden rounded-2xl px-5 py-6 shadow-md sm:px-7 sm:py-8"
+        style={{ backgroundColor: isSuper ? "#1A2E1F" : "#211A14" }}
+      >
+        <p className="text-xs font-bold uppercase tracking-[0.14em] text-brand-orange">
+          Step {step} of 3 · {eyebrow}
+        </p>
+        <h1 className="mt-2 font-display text-2xl font-extrabold tracking-tight text-white sm:text-3xl">
+          {title}
+        </h1>
+        <p className="mt-2 text-sm leading-relaxed text-white/70">{body}</p>
+      </div>
+    </div>
+  );
+}
 
 const DELIVERY_QUOTE = 3600;
 const COMBINED_FEE_ESTIMATE = 2000;
@@ -33,8 +89,6 @@ function NewOrderFlow({ user, onCancel, onOrderPlaced }: any) {
     setStep,
     market,
     setMarket,
-    vendor,
-    setVendor,
     listDraft,
     setListDraft,
     setSearchQuery,
@@ -57,13 +111,12 @@ function NewOrderFlow({ user, onCancel, onOrderPlaced }: any) {
     hydratedRef.current = true;
     const draft = loadGuestDraft();
     if (!draft) return;
-    if (draft.step) setStep(draft.step);
+    // "vendors" is a retired step from an older build — coerce any stale
+    // stored draft straight to the list rather than a step that no longer exists.
+    if (draft.step) setStep(draft.step === "vendors" ? "list" : draft.step);
     if (draft.stagedList) setListDraft(draft.stagedList as ShopListDraft);
     if (draft.address) setAddress(draft.address);
-    if (draft.vendorId && draft.vendorName) {
-      setVendor({ id: draft.vendorId, name: draft.vendorName });
-    }
-  }, [setStep, setListDraft, setVendor, setAddress]);
+  }, [setStep, setListDraft, setAddress]);
 
   useEffect(() => {
     if (user?.default_delivery_address && !address.trim()) {
@@ -83,10 +136,7 @@ function NewOrderFlow({ user, onCancel, onOrderPlaced }: any) {
       const found = markets.find((m: any) => m.id === draft.marketId);
       if (found) {
         setMarket(found);
-        const isSuper = (found.venue_type || "local_market") === "supermarket";
-        if (!draft.step || draft.step === "market") {
-          setStep(isSuper ? "list" : "vendors");
-        } else if (draft.step === "vendors" && isSuper) {
+        if (!draft.step || draft.step === "market" || draft.step === "vendors") {
           setStep("list");
         }
         setHandoffReady(true);
@@ -97,9 +147,8 @@ function NewOrderFlow({ user, onCancel, onOrderPlaced }: any) {
       const matched = matchSlugToApiMarket(marketSlug, markets);
       if (matched) {
         setMarket(matched);
-        const isSuper = (matched.venue_type || "local_market") === "supermarket";
-        if (!draft?.step || draft.step === "market") {
-          setStep(isSuper ? "list" : "vendors");
+        if (!draft?.step || draft.step === "market" || draft.step === "vendors") {
+          setStep("list");
         }
       }
     }
@@ -110,80 +159,25 @@ function NewOrderFlow({ user, onCancel, onOrderPlaced }: any) {
     if (!hydratedRef.current) return;
     saveGuestDraft({
       marketId: market?.id || null,
-      vendorId: vendor?.id || null,
-      vendorName: vendor?.name || null,
       step,
       stagedList: listDraft,
       address,
       marketSlug: marketSlug || null,
     });
-  }, [market, vendor, step, listDraft, address, marketSlug]);
-
-  useEffect(() => {
-    if (step === "vendors" && market && (market.venue_type || "") === "supermarket") {
-      setStep("list");
-    }
-  }, [step, market, setStep]);
+  }, [market, step, listDraft, address, marketSlug]);
 
   useEffect(() => {
     if ((step === "address" || step === "quote") && !stagedList) setStep("list");
   }, [step, stagedList, setStep]);
 
-  // Clear search when leaving browse steps
+  // Clear search when leaving the market-browse step
   useEffect(() => {
-    if (step !== "market" && step !== "vendors") setSearchQuery("");
+    if (step !== "market") setSearchQuery("");
   }, [step, setSearchQuery]);
 
-  function handleSelectVendor(v: {
-    id: string;
-    name: string;
-    stall_description?: string | null;
-  }) {
-    setBrowseStall(null);
-    setVendor(v);
-    setStep("list");
-  }
-
-  function handleContinueWithSeededList(
-    v: { id: string; name: string; stall_description?: string | null },
-    draft: ShopListDraft
-  ) {
-    setBrowseStall(null);
-    setVendor(v);
-    setListDraft(draft);
-    setStep("list");
-  }
-
-  function handleShopWholeMarket() {
-    setBrowseStall(null);
-    setVendor(null);
-    setStep("list");
-  }
-
-  function handleBackToMarkets() {
+  function handleBackFromList() {
     setBrowseStall(null);
     setStep("market");
-  }
-
-  function handleBackFromList() {
-    const isSuper = (market?.venue_type || "local_market") === "supermarket";
-    if (isSuper) {
-      setBrowseStall(null);
-      setStep("market");
-      return;
-    }
-    // Came from a stall → reopen that stall; whole-market list → stall grid
-    if (vendor) {
-      setBrowseStall({
-        id: vendor.id,
-        name: vendor.name,
-        stall_description: vendor.stall_description ?? null,
-      });
-      setStep("vendors");
-      return;
-    }
-    setBrowseStall(null);
-    setStep("vendors");
   }
 
   function handleListContinue(payload: ShopListDraft) {
@@ -197,10 +191,7 @@ function NewOrderFlow({ user, onCancel, onOrderPlaced }: any) {
       const price = it.listed_price != null ? ` — ₦${it.listed_price}${qty}` : "";
       return `${i + 1}. ${it.description}${price}`;
     });
-    const header = vendor
-      ? `Market list · prefer ${vendor.name}`
-      : "Market list · whole market";
-    return [header, ...lines].join("\n");
+    return ["Market list", ...lines].join("\n");
   }
 
   async function placeOrderNow() {
@@ -258,7 +249,7 @@ function NewOrderFlow({ user, onCancel, onOrderPlaced }: any) {
     );
   }
 
-  if (!market || step === "market" || step === "vendors" || step === "list") {
+  if (!market || step === "market" || step === "list") {
     const isSuper = market ? (market.venue_type || "local_market") === "supermarket" : false;
     return (
       <MarketPicker
@@ -267,20 +258,7 @@ function NewOrderFlow({ user, onCancel, onOrderPlaced }: any) {
         onSelect={pickMarket}
         onCancel={onCancel}
         title="Which market?"
-        subtitle="Choose where your agent shops. Then pick a stall or shop the whole market."
-        vendorsPanel={
-          step === "vendors" && market ? (
-            <VendorPicker
-              embedded
-              market={market}
-              preferredVendorId={vendor?.id}
-              onSelectVendor={handleSelectVendor}
-              onShopWholeMarket={handleShopWholeMarket}
-              onChangeMarket={handleBackToMarkets}
-              onContinueWithSeededList={handleContinueWithSeededList}
-            />
-          ) : null
-        }
+        subtitle="Choose where your agent shops, then build your list."
         listPanel={
           step === "list" && market ? (
             <div className="w-full min-w-0">
@@ -290,23 +268,13 @@ function NewOrderFlow({ user, onCancel, onOrderPlaced }: any) {
                   <h2 className="mt-1 font-display text-xl font-extrabold tracking-tight text-ink md:text-2xl">
                     {isSuper ? "Add items" : "Compose your list"}
                   </h2>
+                  {/* Which market this is stays the header's and the hero
+                      banner's job — this line explains the PRICING model
+                      instead of repeating a name already stated twice above. */}
                   <p className="shop-sub mt-2 max-w-2xl">
-                    {isSuper ? (
-                      <>
-                        Fixed prices at <span className="font-semibold text-ink">{market.name}</span>.
-                      </>
-                    ) : (
-                      <>
-                        Estimates for {market.name}
-                        {vendor ? (
-                          <>
-                            {" "}
-                            · soft prefer <span className="font-semibold text-ink">{vendor.name}</span>
-                          </>
-                        ) : null}
-                        .
-                      </>
-                    )}
+                    {isSuper
+                      ? "Shelf prices — closer to checkout than open-air bargaining."
+                      : "Real prices come from bargaining at the market, not a catalogue."}
                   </p>
                 </div>
                 <button
@@ -314,17 +282,13 @@ function NewOrderFlow({ user, onCancel, onOrderPlaced }: any) {
                   onClick={handleBackFromList}
                   className="inline-flex h-11 shrink-0 items-center justify-center rounded-full border border-[#ddd6cb] bg-white px-4 text-sm font-bold text-ink transition hover:bg-[#faf9f7] lg:hidden"
                 >
-                  ←{" "}
-                  {isSuper
-                    ? "Markets"
-                    : vendor
-                      ? vendor.name
-                      : "Stalls"}
+                  ← Markets
                 </button>
               </div>
               <ListBuilder
                 embedded
                 initial={stagedList}
+                marketId={market.id}
                 marketName={market.name}
                 pricingMode={isSuper ? "fixed" : "estimate"}
                 onContinue={handleListContinue}
@@ -342,16 +306,21 @@ function NewOrderFlow({ user, onCancel, onOrderPlaced }: any) {
       return <div className="flex min-h-[30vh] items-center justify-center text-ink/50">Loading list…</div>;
     }
     const savedAddress = user?.default_delivery_address;
+    const isSuper = (market?.venue_type || "local_market") === "supermarket";
     return (
-      <div className="w-full max-w-md px-4 py-6 md:px-6 md:py-8 lg:px-8">
+      <div className="mx-auto w-full max-w-lg px-4 py-8 md:px-6 md:py-12">
         <Button variant="neutral" onClick={() => setStep("list")} className="mb-4">
           ← Edit list
         </Button>
-        <p className="shop-label">Delivery</p>
-        <h1 className="shop-title mt-1">Where to?</h1>
-        <p className="shop-sub mt-2 mb-6">Where should we deliver your haul?</p>
+        <CheckoutHero
+          isSuper={isSuper}
+          eyebrow="Delivery"
+          title="Where to?"
+          body={`We'll deliver your haul from ${market?.name || "the market"} here.`}
+          step={2}
+        />
 
-        <Card className="rounded-2xl border border-[#ebe7e0] bg-white shadow-none">
+        <Card>
           <label className="block">
             <span className="mb-1.5 flex items-center gap-1.5 text-sm font-semibold text-ink">
               <Icon name="pin" className="h-4 w-4 text-brand-orange" />
@@ -402,48 +371,83 @@ function NewOrderFlow({ user, onCancel, onOrderPlaced }: any) {
     : estimatedValue > DEPOSIT_THRESHOLD
       ? goodsTotal * DEPOSIT_RATE
       : 0;
+  const isSuperQuote = (market.venue_type || "") === "supermarket";
 
   return (
-    <div className="w-full max-w-md px-4 py-6 md:px-6 md:py-8 lg:px-8">
+    <div className="mx-auto w-full max-w-lg px-4 py-8 md:px-6 md:py-12">
       <Button variant="neutral" onClick={() => setStep("address")} className="mb-4">
         ← Back
       </Button>
-      <p className="shop-label">Estimate</p>
-      <h1 className="shop-title mt-1">
-        {(market.venue_type || "") === "supermarket" ? "Your total" : "Your estimate"}
-      </h1>
-      <p className="shop-sub mt-2 mb-6">
-        {(market.venue_type || "") === "supermarket"
-          ? `Shelf prices at ${market.name} — closer to a fixed cart than open-air bargaining.`
-          : `Not a fixed catalogue total — your agent bargains real prices at ${market.name}.`}
-      </p>
+      <CheckoutHero
+        isSuper={isSuperQuote}
+        eyebrow="Estimate"
+        title={isSuperQuote ? "Your total" : "Your estimate"}
+        body={
+          isSuperQuote
+            ? `Shelf prices at ${market.name} — closer to a fixed cart than open-air bargaining.`
+            : `Not a fixed catalogue total — your agent bargains real prices at ${market.name}.`
+        }
+        step={3}
+      />
 
-      <Card className="rounded-2xl border-2 border-brand-orange bg-white shadow-none">
-        <div className="space-y-1 text-[#6b635a]">
+      {stagedList.items?.length > 0 && (
+        <Card className="mb-4">
+          <p className="font-display text-base font-bold text-ink">Your list</p>
+          <p className="mb-3 text-xs text-[#8a8178]">What your agent will shop for.</p>
+          <div className="max-h-56 space-y-1.5 overflow-y-auto pr-1">
+            {stagedList.items.map((it: any, i: number) => (
+              <div
+                key={i}
+                className="flex items-baseline justify-between gap-3 border-b border-[#f0eeeb] pb-1.5 last:border-0 last:pb-0"
+              >
+                <span className="min-w-0 truncate text-sm text-ink">
+                  {it.description}
+                  {it.quantity != null && (
+                    <span className="ml-1.5 text-xs font-semibold text-[#8a8178]">×{it.quantity}</span>
+                  )}
+                </span>
+                {it.listed_price != null ? (
+                  <span className="shrink-0 text-sm font-semibold tabular-nums text-ink">
+                    ₦{Number(it.listed_price).toLocaleString()}
+                  </span>
+                ) : (
+                  <span className="shrink-0 text-xs text-[#8a8178]">from budget</span>
+                )}
+              </div>
+            ))}
+          </div>
+        </Card>
+      )}
+
+      <Card className="border-2 border-brand-orange shadow-lg">
+        <div className="space-y-1.5 text-[#6b635a]">
           <div className="flex justify-between">
             <span>Goods estimate</span>
-            <span className="font-semibold">₦{goodsTotal.toFixed(2)}</span>
+            <span className="font-semibold tabular-nums text-ink">₦{goodsTotal.toFixed(2)}</span>
           </div>
           <div className="flex justify-between">
             <span>Delivery quote</span>
-            <span className="font-semibold">₦{DELIVERY_QUOTE.toFixed(2)}</span>
+            <span className="font-semibold tabular-nums text-ink">₦{DELIVERY_QUOTE.toFixed(2)}</span>
           </div>
         </div>
         <p className="mt-2 text-xs text-ink/40">Service fee calculated when shopping finishes.</p>
 
         {depositAmount > 0 && (
-          <p className="mt-3 mb-3 rounded-shop bg-amber-50 px-3 py-2 text-sm text-amber-800">
-            {mustPrepay ? (
-              <>
-                Because a previous order wasn&apos;t paid, this order requires full payment upfront —
-                ₦{depositAmount.toFixed(2)}.
-              </>
-            ) : (
-              <>
-                This estimate is over ₦30,000 — a 20% deposit (₦{depositAmount.toFixed(2)}) will be
-                required before shopping can start.
-              </>
-            )}
+          <p className="mt-3 mb-3 flex items-start gap-2 rounded-shop bg-amber-50 px-3 py-2 text-sm text-amber-900">
+            <Icon name="alert" className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" />
+            <span>
+              {mustPrepay ? (
+                <>
+                  Because a previous order wasn&apos;t paid, this order requires full payment upfront —
+                  ₦{depositAmount.toFixed(2)}.
+                </>
+              ) : (
+                <>
+                  This estimate is over ₦30,000 — a 20% deposit (₦{depositAmount.toFixed(2)}) will be
+                  required before shopping can start.
+                </>
+              )}
+            </span>
           </p>
         )}
 

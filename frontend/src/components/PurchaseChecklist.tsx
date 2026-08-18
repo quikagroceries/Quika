@@ -15,7 +15,7 @@ function PurchaseChecklist({ items, purchases }: any) {
 
   return (
     <div>
-      <p className="mb-2 font-bold text-slate-900">Bought items</p>
+      <p className="mb-2 font-bold text-ink">Bought items</p>
       <div className="space-y-2">
         {items.map((item) => {
           const bought = item.confirmed_price != null;
@@ -26,16 +26,16 @@ function PurchaseChecklist({ items, purchases }: any) {
               <span
                 className={
                   "flex h-7 w-7 shrink-0 items-center justify-center rounded-full " +
-                  (bought ? "bg-brand-green text-white" : "border-2 border-slate-300")
+                  (bought ? "bg-brand-green text-white" : "border-2 border-[#ddd6cb]")
                 }
               >
                 {bought && <Icon name="check" className="h-4 w-4" />}
               </span>
               <div className="min-w-0 flex-1">
-                <div className={"font-semibold " + (bought ? "text-slate-900" : "text-slate-400 " + (dropped ? "line-through" : ""))}>
+                <div className={"font-semibold " + (bought ? "text-ink" : "text-[#8a8178] " + (dropped ? "line-through" : ""))}>
                   {item.description}
                 </div>
-                <div className={"text-sm " + (bought ? "font-semibold text-brand-green" : "text-slate-400")}>
+                <div className={"text-sm " + (bought ? "font-semibold text-brand-green" : "text-[#8a8178]")}>
                   {bought ? `₦${item.confirmed_price}` : dropped ? "Dropped" : "Not bought"}
                 </div>
               </div>

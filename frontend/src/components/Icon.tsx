@@ -144,6 +144,32 @@ const ICONS = {
       <line x1="13.7" y1="10.5" x2="13.4" y2="16.5" />
     </>
   ),
+  // Category glyphs — produce/protein/provisions/spices — same
+  // basic-shapes convention as the rest of the set.
+  leaf: (
+    <>
+      <path d="M6 19C6 10 12 4 20 4c0 9-6 15-14 15Z" />
+      <path d="M6 19c3-4 6-8 12-13" />
+    </>
+  ),
+  drumstick: (
+    <>
+      <circle cx="14.5" cy="9.5" r="5" />
+      <path d="M11 13 6.3 17.7a2.1 2.1 0 0 0 3 3L14 16" />
+    </>
+  ),
+  jar: (
+    <>
+      <path d="M9 3h6v3.2l2 2.3V19a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2V8.5l2-2.3Z" />
+      <line x1="7.4" y1="12" x2="16.6" y2="12" />
+    </>
+  ),
+  chili: (
+    <>
+      <path d="M9.5 5c0-1.1.9-2 2-2" />
+      <path d="M9.5 5c3.5 0 4.5 2.3 6 2.8 2.3.8 4 3 4 5.7 0 4.1-3.8 8.5-7.3 8.5-3.2 0-5.7-2.9-5.7-6.4 0-3.8 1.6-6.2 3-10.6Z" />
+    </>
+  ),
 };
 
 function Icon({ name, className = "h-5 w-5" }: any) {

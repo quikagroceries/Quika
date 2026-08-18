@@ -64,6 +64,38 @@ async def list_vendors(db: AsyncSession, *, market_id: uuid.UUID) -> list[Seller
     return list(result.scalars().all())
 
 
+async def create_vendor(
+    db: AsyncSession,
+    *,
+    market_id: uuid.UUID,
+    name: str,
+    stall_description: str | None = None,
+    phone: str | None = None,
+    latitude: float | None = None,
+    longitude: float | None = None,
+) -> Seller:
+    """Agent registers a stall on the fly while shopping.
+
+    No approval workflow — the stall is live immediately and shows up in
+    list_vendors right away. This is the only way a Seller row gets created
+    outside of dev-seeding: there is no admin authorship path, by design
+    ("the agent is the product" — stalls exist because an agent actually
+    found them, not because someone curated a directory in advance).
+    """
+    await get_market(db, market_id=market_id)
+    vendor = Seller(
+        market_id=market_id,
+        name=name,
+        stall_description=stall_description,
+        phone=phone,
+        latitude=latitude,
+        longitude=longitude,
+    )
+    db.add(vendor)
+    await db.flush()
+    return vendor
+
+
 async def shop_activity(db: AsyncSession) -> dict:
     agents = await db.execute(
         select(func.count())

@@ -4,6 +4,7 @@ import { usePathname } from "next/navigation";
 import RequireAuth from "@/components/RequireAuth";
 import AppShell from "@/components/AppShell";
 import Notifications from "@/screens/Notifications";
+import { ActiveOrderBanner } from "@/components/ActiveOrderBanner";
 import { useAuth } from "@/components/AuthProvider";
 import { CUSTOMER_NAV } from "@/lib/nav";
 import { ShopProvider } from "@/components/shop/ShopContext";
@@ -11,6 +12,7 @@ import ShopShell from "@/components/shop/ShopShell";
 
 function activeKeyFromPath(pathname: string) {
   if (pathname.startsWith("/orders/")) return null;
+  if (pathname.startsWith("/track")) return "track";
   if (pathname.startsWith("/history")) return "history";
   if (pathname.startsWith("/wallet")) return "wallet";
   if (pathname.startsWith("/settings")) return "settings";
@@ -30,7 +32,15 @@ function LoadingScreen() {
   );
 }
 
-/** /shop is guest-capable + header-first; account pages keep AppShell sidebar. */
+/**
+ * One shell for the whole customer dashboard — Shop, History, Wallet,
+ * Settings all sit under the same adaptive AppShell sidebar now. Shop is
+ * the one exception to auth: it stays guest-capable (browse and build a
+ * list before signing in), so it skips RequireAuth and passes its own
+ * guest flag straight to the sidebar, and it renders `bare` so its own
+ * ShopHeader/ShopBag remain the sticky top bar + mobile nav instead of
+ * doubling up with AppShell's generic ones.
+ */
 export default function CustomerLayout({ children }: any) {
   const { user, token, hydrated, handleLogout, roleSwitch } = useAuth();
   const pathname = usePathname();
@@ -38,9 +48,21 @@ export default function CustomerLayout({ children }: any) {
 
   if (isShop) {
     if (!hydrated) return <LoadingScreen />;
+    const guest = !token || !user;
     return (
       <ShopProvider>
-        <ShopShell>{children}</ShopShell>
+        <AppShell
+          navItems={CUSTOMER_NAV}
+          activeKey="shop"
+          user={user}
+          onLogout={handleLogout}
+          roleSwitch={roleSwitch}
+          guest={guest}
+          bare
+          bottomNav
+        >
+          <ShopShell>{children}</ShopShell>
+        </AppShell>
       </ShopProvider>
     );
   }
@@ -53,8 +75,10 @@ export default function CustomerLayout({ children }: any) {
         user={user}
         onLogout={handleLogout}
         roleSwitch={roleSwitch}
+        bottomNav
       >
         <Notifications />
+        <ActiveOrderBanner />
         {children}
       </AppShell>
     </RequireAuth>

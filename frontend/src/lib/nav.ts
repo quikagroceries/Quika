@@ -1,5 +1,6 @@
 export const CUSTOMER_NAV = [
   { key: "shop", label: "Shop", icon: "store", href: "/shop" },
+  { key: "track", label: "Track", icon: "pin", href: "/track" },
   { key: "history", label: "History", icon: "clock", href: "/history" },
   { key: "wallet", label: "Wallet", icon: "wallet", href: "/wallet" },
   { key: "settings", label: "Settings", icon: "settings", href: "/settings" },

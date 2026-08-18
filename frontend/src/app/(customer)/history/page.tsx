@@ -70,8 +70,8 @@ export default function HistoryPage() {
 
   return (
     <div>
-      <h1 className="mb-1 text-2xl font-extrabold tracking-tight text-slate-900 md:text-3xl">History</h1>
-      <p className="mb-6 text-slate-500">Every order you&apos;ve placed, active or finished.</p>
+      <h1 className="mb-1 font-display text-3xl font-extrabold tracking-tight text-ink md:text-4xl">History</h1>
+      <p className="mb-6 text-[#6b635a]">Every order you&apos;ve placed, active or finished.</p>
 
       {error && (
         <p className="mb-4 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p>
@@ -115,7 +115,7 @@ export default function HistoryPage() {
             footer={isDeletableOrder(order) ? (
               confirmDeleteId === order.id ? (
                 <div className="flex items-center gap-2">
-                  <span className="flex-1 text-sm text-slate-600">Delete this order?</span>
+                  <span className="flex-1 text-sm text-[#6b635a]">Delete this order?</span>
                   <Button
                     variant="neutral"
                     onClick={() => setConfirmDeleteId(null)}
@@ -135,7 +135,7 @@ export default function HistoryPage() {
               ) : (
                 <button
                   onClick={() => { setActionError(""); setConfirmDeleteId(order.id); }}
-                  className="flex items-center gap-1.5 text-sm font-semibold text-slate-400 hover:text-red-600"
+                  className="flex items-center gap-1.5 text-sm font-semibold text-[#8a8178] hover:text-red-600"
                 >
                   <Icon name="trash" className="h-4 w-4" />
                   Delete
@@ -144,7 +144,7 @@ export default function HistoryPage() {
             ) : isCancellableOrder(order) ? (
               confirmCancelId === order.id ? (
                 <div className="flex items-center gap-2">
-                  <span className="flex-1 text-sm text-slate-600">Cancel? Your deposit will be refunded.</span>
+                  <span className="flex-1 text-sm text-[#6b635a]">Cancel? Your deposit will be refunded.</span>
                   <Button
                     variant="neutral"
                     onClick={() => setConfirmCancelId(null)}
@@ -164,7 +164,7 @@ export default function HistoryPage() {
               ) : (
                 <button
                   onClick={() => { setActionError(""); setConfirmCancelId(order.id); }}
-                  className="flex items-center gap-1.5 text-sm font-semibold text-slate-400 hover:text-red-600"
+                  className="flex items-center gap-1.5 text-sm font-semibold text-[#8a8178] hover:text-red-600"
                 >
                   <Icon name="trash" className="h-4 w-4" />
                   Cancel order (deposit refunded)

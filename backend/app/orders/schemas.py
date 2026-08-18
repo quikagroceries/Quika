@@ -19,6 +19,9 @@ class OrderItemIn(BaseModel):
     listed_price: Decimal | None = Field(default=None, ge=0, examples=["500.00"])
     # Display-only (see OrderItem.quantity) — never factored into totals.
     quantity: int | None = Field(default=None, ge=1, examples=[2])
+    # A hint, not a guarantee — see OrderItem.preferred_stall_id. Set only
+    # when the customer added this item from a specific stall's page.
+    preferred_stall_id: uuid.UUID | None = Field(default=None)
 
 
 class CreateOrderIn(BaseModel):
@@ -46,6 +49,7 @@ class OrderItemOut(BaseModel):
     requested_note: str | None
     listed_price: Decimal | None
     quantity: int | None
+    preferred_stall_id: uuid.UUID | None
     availability: str
     confirmed_price: Decimal | None
     confirmed_at: datetime | None

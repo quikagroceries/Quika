@@ -39,6 +39,20 @@ class MarketOut(BaseModel):
     longitude: float | None
 
 
+class CreateVendorIn(BaseModel):
+    """A stall registered by an agent on the fly while shopping — no photo,
+    no hours, no approval gate. Live the moment it's created."""
+
+    name: str = Field(..., examples=["Mama Chidinma's stall"])
+    # Rough location/category, free text — e.g. "Produce, near the east gate".
+    stall_description: str | None = Field(default=None, examples=["Fresh produce, row 3"])
+    phone: str | None = None
+    # A single point captured from the agent's device at save time - optional,
+    # never required. See Seller.latitude/longitude.
+    latitude: float | None = None
+    longitude: float | None = None
+
+
 class VendorOut(BaseModel):
     """A stall / seller inside a market — customer browse surface."""
 
@@ -49,6 +63,8 @@ class VendorOut(BaseModel):
     name: str
     stall_description: str | None
     phone: str | None
+    latitude: float | None
+    longitude: float | None
 
 
 class ShopActivityOut(BaseModel):
