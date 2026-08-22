@@ -54,6 +54,9 @@ export function useActiveOrders() {
 
   return useMemo(() => {
     if (!orders) return orders;
-    return orders.map((o) => ({ ...o, marketName: markets.find((m) => m.id === o.market_id)?.name }));
+    return orders.map((o) => {
+      const market = markets.find((m) => m.id === o.market_id);
+      return { ...o, market, marketName: market?.name };
+    });
   }, [orders, markets]);
 }

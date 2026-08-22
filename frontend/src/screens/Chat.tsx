@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import { api } from "@/lib/api";
 import Button from "@/components/Button";
 import Icon from "@/components/Icon";
+import { formatDayDivider, formatClockTime } from "@/lib/dateFormat";
 
 const POLL_MS = 5000;
 const QUICK_REPLIES = ["Hello", "On it", "Almost done", "Thank you"];
@@ -19,7 +20,9 @@ function Chat({ orderId, onMessages, onCollapse, onVoiceCall, onVideoCall }: any
   const [busy, setBusy] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [pendingFile, setPendingFile] = useState<any>(null); // kept so "Retry" can resend it
+  const [preview, setPreview] = useState<any>(null);
   const fileInputRef = useRef(null);
+  const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     api.me().then((u) => setMyUserId(u.id)).catch(() => {});
@@ -41,6 +44,12 @@ function Chat({ orderId, onMessages, onCollapse, onVoiceCall, onVideoCall }: any
     return () => clearInterval(id);
     // eslint-disable-next-line react-hooks/exhaustive-deps -- one interval per orderId, matches Notifications.jsx's poll pattern
   }, [orderId]);
+
+  // Keep the latest message in view - a new message arriving mid-poll
+  // shouldn't require a manual scroll to notice.
+  useEffect(() => {
+    scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight });
+  }, [messages.length]);
 
   async function handleSend() {
     if (!text.trim()) return;
@@ -129,35 +138,84 @@ function Chat({ orderId, onMessages, onCollapse, onVoiceCall, onVideoCall }: any
         </div>
       </div>
 
-      <div className="flex-1 space-y-2 overflow-y-auto px-4 py-3 sm:px-6">
+      <div ref={scrollRef} className="flex-1 space-y-1 overflow-y-auto px-4 py-3 sm:px-6">
         {messages.length === 0 && (
-          <p className="text-sm text-[#8a8178]">No messages yet.</p>
+          <div className="flex h-full flex-col items-center justify-center gap-2 text-center">
+            <span className="flex h-12 w-12 items-center justify-center rounded-full bg-[#f0eeeb] text-[#8a8178]">
+              <Icon name="chat" className="h-6 w-6" />
+            </span>
+            <p className="font-display text-base font-bold text-ink">No messages yet</p>
+            <p className="max-w-[220px] text-sm text-[#8a8178]">
+              Say hello, or send a quick reply below to get things started.
+            </p>
+          </div>
         )}
-        {messages.map((m) => {
+        {messages.map((m, i) => {
           const mine = m.sender_id === myUserId;
+          const prev = messages[i - 1];
+          const showDivider = !prev || formatDayDivider(prev.created_at) !== formatDayDivider(m.created_at);
+          // Consecutive bubbles from the same sender sit closer together and
+          // drop the redundant tail corner, like every modern chat UI - only
+          // the last bubble in a run gets the "pointed" corner + timestamp.
+          const next = messages[i + 1];
+          const lastInRun = !next || next.sender_id !== m.sender_id || formatDayDivider(next.created_at) !== formatDayDivider(m.created_at);
           return (
-            <div key={m.id} className={"flex " + (mine ? "justify-end" : "justify-start")}>
-              <div
-                className={
-                  "max-w-[80%] rounded-2xl px-3 py-2 text-sm sm:max-w-[65%] " +
-                  (mine
-                    ? "bg-brand-orange text-white rounded-br-sm"
-                    : "bg-[#f0eeeb] text-ink rounded-bl-sm")
-                }
-              >
-                {m.text && <div className="whitespace-pre-wrap break-words">{m.text}</div>}
-                {m.image_url && (
-                  <img
-                    src={m.image_url}
-                    alt="attachment"
-                    className={"block max-w-full rounded-lg" + (m.text ? " mt-1.5" : "")}
-                  />
-                )}
+            <div key={m.id}>
+              {showDivider && (
+                <div className="my-3 flex items-center justify-center">
+                  <span className="rounded-full bg-[#f0eeeb] px-3 py-1 text-[0.7rem] font-semibold text-[#8a8178]">
+                    {formatDayDivider(m.created_at)}
+                  </span>
+                </div>
+              )}
+              <div className={"flex " + (mine ? "justify-end" : "justify-start") + (lastInRun ? " mb-2" : " mb-0.5")}>
+                <div className="max-w-[80%] sm:max-w-[65%]">
+                  <div
+                    className={
+                      "rounded-2xl px-3 py-2 text-sm " +
+                      (mine
+                        ? "bg-brand-orange text-white " + (lastInRun ? "rounded-br-sm" : "")
+                        : "bg-[#f0eeeb] text-ink " + (lastInRun ? "rounded-bl-sm" : ""))
+                    }
+                  >
+                    {m.text && <div className="whitespace-pre-wrap break-words">{m.text}</div>}
+                    {m.image_url && (
+                      <button
+                        type="button"
+                        onClick={() => setPreview(m.image_url)}
+                        className={"block max-w-full" + (m.text ? " mt-1.5" : "")}
+                      >
+                        <img src={m.image_url} alt="attachment" className="block max-h-64 w-full rounded-lg object-cover" />
+                      </button>
+                    )}
+                  </div>
+                  {lastInRun && m.created_at && (
+                    <div className={"mt-0.5 text-[0.7rem] text-[#8a8178] " + (mine ? "text-right" : "text-left")}>
+                      {formatClockTime(m.created_at)}
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
           );
         })}
       </div>
+
+      {preview && (
+        <div
+          className="fixed inset-0 z-[1800] flex items-center justify-center bg-black/90 p-4"
+          onClick={() => setPreview(null)}
+        >
+          <img src={preview} alt="Attachment" className="max-h-full max-w-full rounded-lg" />
+          <button
+            onClick={() => setPreview(null)}
+            aria-label="Close"
+            className="absolute right-4 top-4 flex h-11 w-11 items-center justify-center rounded-full bg-white/10 text-white hover:bg-white/20"
+          >
+            <Icon name="close" className="h-6 w-6" />
+          </button>
+        </div>
+      )}
 
       <div className="border-t border-[#ebe7e0] px-4 py-3 sm:px-6">
         {error && (

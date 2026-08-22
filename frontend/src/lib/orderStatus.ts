@@ -66,3 +66,37 @@ export function filterOrders(orders, filterKey) {
   const filter = ORDER_FILTERS.find((f) => f.key === filterKey) || ORDER_FILTERS[1];
   return orders.filter(filter.test);
 }
+
+// One human-readable "what's happening right now" line per status, shared by
+// every surface that summarizes an in-progress order (active-order banner,
+// Shop's own headline card, the order detail header) so the wording never
+// drifts between them.
+export function summarizeOrderStatus(order): string {
+  const at = order.marketName ? ` at ${order.marketName}` : "";
+  switch (order.status) {
+    case "draft":
+      return "Pick up where you left off — list not sent yet";
+    case "proposed":
+      return "Finding you an agent";
+    case "agent_assigned":
+      return `Agent assigned${at} — shopping starts soon`;
+    case "shopping": {
+      const items = order.items || [];
+      const bought = items.filter((it) => it.confirmed_price != null).length;
+      return `Agent is shopping${at} — ${bought} of ${items.length} bought`;
+    }
+    case "awaiting_payment":
+      return "Shopping done — balance due";
+    case "paid":
+      return "Packing your order";
+    case "packed":
+      return "Packed, waiting for pickup";
+    case "out_for_delivery":
+      return "Out for delivery";
+    case "delivered":
+    case "closed":
+      return "Delivered";
+    default:
+      return "In progress";
+  }
+}

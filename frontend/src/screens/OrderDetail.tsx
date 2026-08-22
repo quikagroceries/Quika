@@ -12,7 +12,10 @@ import StatusBadge from "@/components/StatusBadge";
 import PaymentChooser from "@/components/PaymentChooser";
 import StarRating from "@/components/StarRating";
 import Modal from "@/components/Modal";
-import { isChatAvailable, isRateable } from "@/lib/orderStatus";
+import Icon from "@/components/Icon";
+import { isChatAvailable, isRateable, summarizeOrderStatus } from "@/lib/orderStatus";
+import { marketTone, TONE_COVER } from "@/lib/vendorVisuals";
+import { coverImageForMarket } from "@/lib/marketDirectory";
 
 const POLL_MS = 5000;
 
@@ -50,6 +53,11 @@ function pendingCheckoutRef() {
 
 function OrderDetail({ orderId, onBack, onTopUpWallet }: any) {
   const [order, setOrder] = useState<any>(null);
+  // The order itself only carries market_id - this resolves it to the full
+  // market row (name, city, venue_type) so the header can lead with the
+  // market's identity the same way Shop's own cards do, instead of a bare
+  // order id. Best-effort: a failed lookup just falls back to the id.
+  const [market, setMarket] = useState<any>(null);
   const [authorization, setAuthorization] = useState<any>(null);
   // An unread overage_approval notification for THIS order, if any - drives
   // the persistent alert state below so a dismissed/missed toast still
@@ -160,6 +168,17 @@ function OrderDetail({ orderId, onBack, onTopUpWallet }: any) {
   useEffect(() => {
     api.getWalletBalance().then((d) => setWalletBalance(d.balance)).catch(() => {});
   }, []);
+
+  // Market never changes for a given order, so this only needs to run once
+  // it's known (not on every poll tick).
+  useEffect(() => {
+    if (!order?.market_id) return;
+    api
+      .getMarkets()
+      .then((list: any[]) => setMarket(list.find((m) => m.id === order.market_id) || null))
+      .catch(() => {});
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- only re-fetch when the order's market changes
+  }, [order?.market_id]);
 
   // Purchase photos never change once shopping's finished, so this only
   // needs to run once the order first reaches PAID (not on every poll tick).
@@ -385,18 +404,68 @@ function OrderDetail({ orderId, onBack, onTopUpWallet }: any) {
   // #1: chat is scoped to the shopping window - see isChatAvailable.
   const showChat = isChatAvailable(order.status);
 
+  const heroBg = market ? TONE_COVER[marketTone(market.name, market.city)].bg : "#211A14";
+  const heroBody = isPaidOrLater
+    ? "Live delivery status below — packaging, handover code, and confirm on arrival."
+    : "Your agent is on it — items and any approvals needed appear below as they come in.";
+
   return (
     <div>
-      <div className="mb-3 flex items-center justify-between">
-        <Button variant="neutral" onClick={onBack}>← Back</Button>
-        {showChat && <ChatPanel orderId={orderId} />}
-      </div>
+      {/* Leads with the market's identity and a live status line, the same
+          scale and gradient-bleed technique as Shop's own hero banner - so
+          opening a tracked order still feels like the same product, not a
+          plain utility screen bolted onto it. Back + chat float over the
+          banner itself (a modern order-tracking convention) instead of
+          sitting in their own plain row above it. */}
+      <div
+        className="relative mb-4 min-h-[200px] overflow-hidden rounded-2xl shadow-md sm:min-h-[240px]"
+        style={{ backgroundColor: heroBg }}
+      >
+        {market && (
+          <div className="pointer-events-none absolute inset-y-0 right-0 w-full sm:w-[60%]">
+            <img
+              src={coverImageForMarket(market)}
+              alt={market.name}
+              className="h-full w-full object-cover object-center"
+            />
+            <div
+              className="absolute inset-0"
+              style={{
+                background: `linear-gradient(90deg, ${heroBg} 0%, ${heroBg} 12%, ${heroBg}cc 28%, ${heroBg}66 48%, transparent 72%)`,
+              }}
+            />
+            <div
+              className="absolute inset-0 sm:hidden"
+              style={{
+                background: `linear-gradient(90deg, ${heroBg} 0%, ${heroBg}e6 35%, ${heroBg}99 55%, transparent 85%)`,
+              }}
+            />
+          </div>
+        )}
 
-      <div className="mb-4 flex items-center justify-between">
-        <h2 className="font-display text-xl font-extrabold tracking-tight text-ink sm:text-2xl">
-          Order {order.id.slice(0, 8)}…
-        </h2>
-        <StatusBadge status={order.status} />
+        <div className="relative z-20 px-4 pt-4 sm:px-5 sm:pt-5">
+          <button
+            type="button"
+            onClick={onBack}
+            aria-label="Back"
+            className="flex h-11 w-11 items-center justify-center rounded-full bg-white/90 text-ink shadow-sm backdrop-blur-sm transition hover:bg-white"
+          >
+            <Icon name="chevronDown" className="h-5 w-5 rotate-90" />
+          </button>
+        </div>
+
+        <div className="relative z-10 flex w-full flex-col justify-center gap-2 px-5 pb-6 pt-3 sm:w-[55%] sm:px-6 sm:pb-8 lg:w-[48%]">
+          <div className="flex flex-wrap items-center gap-2">
+            <p className="text-xs font-bold uppercase tracking-[0.14em] text-white/55">
+              {market?.name || "Order"} · #{order.id.slice(0, 8)}
+            </p>
+            <StatusBadge status={order.status} />
+          </div>
+          <h2 className="font-display text-2xl font-extrabold leading-[1.1] tracking-tight text-white sm:text-3xl">
+            {summarizeOrderStatus({ ...order, marketName: market?.name })}
+          </h2>
+          <p className="text-sm leading-relaxed text-white/70 sm:text-base line-clamp-2">{heroBody}</p>
+        </div>
       </div>
 
       {verifyingPayment && (
@@ -440,8 +509,10 @@ function OrderDetail({ orderId, onBack, onTopUpWallet }: any) {
         </div>
       </Modal>
 
+      {/* Anything that blocks progress or needs an immediate decision stays
+          full-width, above the two-column split below - these are never
+          "just another card" among the order's normal content. */}
       <div className="space-y-4">
-
         {/* #5: per-item overage - persistent, must-respond, one card per
             pending item so several overages at once are never hidden behind
             each other. The agent keeps shopping other items while this
@@ -508,203 +579,228 @@ function OrderDetail({ orderId, onBack, onTopUpWallet }: any) {
             />
           </div>
         )}
+      </div>
 
-        {/* Status/tracking screen — vertical timeline, packaging countdown,
-            packing photos, handover code, confirm-delivery action. Covers
-            PAID onward, so the customer is never in the dark right after
-            paying. */}
-        {isPaidOrLater && (
-          <DeliveryTracking
-            order={order}
-            onConfirmDelivery={handleConfirmDelivery}
-            busy={busy}
-          />
-        )}
-
-        {/* Aggregate signal so a decision-needed item is never just
-            something to stumble across while scrolling the list below. */}
-        {!isPaidOrLater && pendingDecisionCount > 0 && (
-          <button
-            onClick={() => {
-              const first = items.find((it) => it.availability === "unavailable");
-              if (first) document.getElementById(`item-${first.id}`)?.scrollIntoView({ behavior: "smooth", block: "center" });
-            }}
-            className="flex w-full items-center gap-3 rounded-xl border-2 border-amber-400 bg-amber-50 px-4 py-3 text-left"
-          >
-            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-amber-400 text-sm font-bold text-white">
-              {pendingDecisionCount}
-            </span>
-            <span className="font-semibold text-amber-800">
-              {pendingDecisionCount === 1 ? "1 item needs your decision" : `${pendingDecisionCount} items need your decision`}
-            </span>
-          </button>
-        )}
-
-        {/* Phase 1: post-payment, the plain item list becomes a bought/not-
-            bought checklist with each stall's purchase photo as proof.
-            Before payment, keep the original list with decide-buttons. */}
-        {isPaidOrLater ? (
-          <PurchaseChecklist items={items} purchases={purchases} />
-        ) : (
-          <div className="space-y-2">
-            {items.map((item) => (
-              <Card key={item.id} id={`item-${item.id}`} className="py-3">
-                <div className="font-semibold text-ink">{item.description}</div>
-                {item.requested_note && (
-                  <div className="text-sm text-[#8a8178]">{item.requested_note}</div>
-                )}
-                {item.confirmed_price != null && (
-                  <div className="font-semibold text-brand-green">
-                    Bought — ₦{item.confirmed_price}
-                  </div>
-                )}
-                {item.availability === "unavailable" && (
-                  <div className="mt-2">
-                    <p className="mb-2 text-sm text-amber-700">
-                      Not found at the market. What should we do?
-                    </p>
-                    <div className="flex gap-2">
-                      <Button
-                        variant="secondary"
-                        onClick={() => handleDecide(item.id, "buy_elsewhere")}
-                        disabled={busy}
-                        className="text-sm"
-                      >
-                        Buy elsewhere
-                      </Button>
-                      <Button
-                        variant="neutral"
-                        onClick={() => handleDecide(item.id, "dropped")}
-                        disabled={busy}
-                        className="text-sm"
-                      >
-                        Drop item
-                      </Button>
-                    </div>
-                  </div>
-                )}
-              </Card>
-            ))}
-          </div>
-        )}
-
-        {/* Spending cap: only relevant while shopping is in progress. Alert
-            state (amber border, headline, the agent's actual message)
-            whenever there's an unread overage_approval for this order -
-            persists here regardless of whether the toast was dismissed. */}
-        {order.status === "shopping" && authorization && (
-          <Card className={pendingOverage ? "border-2 border-amber-400 bg-amber-50/60" : ""}>
-            {pendingOverage ? (
-              <>
-                <p className="mb-1 text-xs font-bold uppercase tracking-wide text-amber-700">
-                  Your agent needs approval
-                </p>
-                <p className="mb-3 text-ink/80">{pendingOverage.message}</p>
-              </>
-            ) : (
-              <p className="mb-2 font-bold text-ink">Spending approval</p>
-            )}
-            <div className="flex justify-between text-[#6b635a]">
-              <span>Cap</span>
-              <span className="font-semibold">₦{authorization.cap}</span>
-            </div>
-            <div className="flex justify-between text-[#6b635a]">
-              <span>Spent so far</span>
-              <span className="font-semibold">₦{authorization.spent}</span>
-            </div>
-            <Input
-              placeholder="Amount to approve (₦)"
-              value={raiseAmount}
-              onChange={(e) => setRaiseAmount(e.target.value)}
-              className="mt-3 mb-2"
-            />
-            <Button onClick={handleRaiseCap} busy={busy} disabled={!raiseAmount} fullWidth>
-              {pendingOverage ? "Approve increase now" : "Approve increase"}
-            </Button>
-          </Card>
-        )}
-
-        {/* Money summary — a summary, not the raw per-transfer breakdown.
-            The full ledger (every transfer, fee, EMTL line) stays in the
-            database exactly as recorded; this is just the readable version.
-            Pre-shopping, none of items_total/combined_fee/delivery_fee/
-            grand_total exist yet (finish_shopping is what sets them) - show
-            the estimate instead of a card full of misleading ₦0.00 lines. */}
-        {isPriced ? (
-          <Card>
-            <div className="space-y-1 text-[#6b635a]">
-              <div className="flex justify-between"><span>Goods total</span><span className="font-semibold">₦{order.items_total}</span></div>
-              <div className="flex justify-between"><span>Fees</span><span className="font-semibold">₦{fees.toFixed(2)}</span></div>
-              <div className="flex justify-between"><span>Delivery</span><span className="font-semibold">₦{order.delivery_fee}</span></div>
-              <div className="flex justify-between border-t border-[#ebe7e0] pt-1 text-ink">
-                <span className="font-semibold">Grand total</span>
-                <span className="font-bold">₦{order.grand_total}</span>
-              </div>
-              {Number(order.deposit_amount) > 0 && (
-                <div className="flex justify-between">
-                  <span>Deposit</span>
-                  <span className="font-semibold">₦{order.deposit_amount} {depositPaid ? "(paid)" : "(unpaid)"}</span>
-                </div>
-              )}
-              <div className="flex justify-between text-lg text-ink">
-                <span className="font-semibold">Amount due</span>
-                <span className="font-bold">₦{amountDue.toFixed(2)}</span>
-              </div>
-              <div className="flex justify-between">
-                <span>Status</span>
-                <StatusBadge status={order.status} />
-              </div>
-            </div>
-          </Card>
-        ) : (
-          <Card>
-            <div className="space-y-1 text-[#6b635a]">
-              <div className="flex justify-between"><span>Goods estimate</span><span className="font-semibold">₦{goodsEstimate.toFixed(2)}</span></div>
-              <div className="flex justify-between"><span>Delivery quote</span><span className="font-semibold">₦{DELIVERY_QUOTE.toFixed(2)}</span></div>
-              {/* No grand total shown here on purpose - the service fee is
-                  time-based and unknown until shopping finishes, so a number
-                  shown now wouldn't match the real bill later. See the same
-                  reasoning in NewOrderFlow.jsx's quote screen. */}
-              {depositPaid && (
-                <div className="flex justify-between">
-                  <span>Deposit</span>
-                  <span className="font-semibold">₦{order.deposit_amount} (paid)</span>
-                </div>
-              )}
-              <div className="flex justify-between">
-                <span>Status</span>
-                <StatusBadge status={order.status} />
-              </div>
-            </div>
-            <p className="mt-2 text-xs text-[#8a8178]">Final fees and total are set once shopping is finished.</p>
-          </Card>
-        )}
-
-        {order.status === "awaiting_payment" && (
-          <Card>
-            <p className="mb-3 text-lg font-bold text-ink">Pay balance</p>
-            <PaymentChooser
-              amountDue={amountDue}
-              walletBalance={walletBalance}
-              onPayWallet={handlePayBalanceWallet}
-              onPayTransfer={handlePayBalanceTransfer}
-              onTopUp={onTopUpWallet}
+      {/* Everything else splits into "what's happening" (wide, left - the
+          timeline and the items themselves) and "manage this order"
+          (narrow, right - chat, payment, the money summary), the way an
+          order-tracking page should read instead of one long undifferentiated
+          stack of cards. On mobile the sidebar surfaces FIRST (chat and
+          payment shouldn't require scrolling past the whole item list to
+          find), and it stays in view while scrolling on desktop. */}
+      <div className="mt-4 grid grid-cols-1 gap-4 lg:grid-cols-[1fr_360px] lg:items-start lg:gap-6">
+        <div className="order-2 flex flex-col gap-4 lg:order-1">
+          {/* Status/tracking screen — vertical timeline, packaging countdown,
+              packing photos, handover code, confirm-delivery action. Covers
+              PAID onward, so the customer is never in the dark right after
+              paying. */}
+          {isPaidOrLater && (
+            <DeliveryTracking
+              order={order}
+              onConfirmDelivery={handleConfirmDelivery}
               busy={busy}
             />
-          </Card>
-        )}
+          )}
 
-        {/* #7: agent rating - customer feedback only, once the order is
-            genuinely finished. Never feeds assignment or agent pay. Once
-            submitted, just a small read-only display here - the pop-up
-            prompt (below, outside this list) is only for COLLECTING one. */}
-        {isRateable(order.status) && rating && (
-          <Card>
-            <p className="mb-2 font-bold text-ink">Your rating</p>
-            <StarRating value={rating.stars} readOnly size={22} />
-            {rating.comment && <p className="mt-2 text-sm text-[#6b635a]">{rating.comment}</p>}
-          </Card>
-        )}
+          {/* Aggregate signal so a decision-needed item is never just
+              something to stumble across while scrolling the list below. */}
+          {!isPaidOrLater && pendingDecisionCount > 0 && (
+            <button
+              onClick={() => {
+                const first = items.find((it) => it.availability === "unavailable");
+                if (first) document.getElementById(`item-${first.id}`)?.scrollIntoView({ behavior: "smooth", block: "center" });
+              }}
+              className="flex w-full items-center gap-3 rounded-xl border-2 border-amber-400 bg-amber-50 px-4 py-3 text-left"
+            >
+              <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-amber-400 text-sm font-bold text-white">
+                {pendingDecisionCount}
+              </span>
+              <span className="font-semibold text-amber-800">
+                {pendingDecisionCount === 1 ? "1 item needs your decision" : `${pendingDecisionCount} items need your decision`}
+              </span>
+            </button>
+          )}
+
+          {/* Phase 1: post-payment, the plain item list becomes a bought/not-
+              bought checklist with each stall's purchase photo as proof.
+              Before payment, keep the original list with decide-buttons. */}
+          {isPaidOrLater ? (
+            <PurchaseChecklist items={items} purchases={purchases} />
+          ) : (
+            <div>
+              <p className="mb-2 font-bold text-ink">Your list</p>
+              <div className="space-y-2">
+                {items.map((item) => (
+                  <Card key={item.id} id={`item-${item.id}`} className="py-3">
+                    <div className="font-semibold text-ink">{item.description}</div>
+                    {item.requested_note && (
+                      <div className="text-sm text-[#8a8178]">{item.requested_note}</div>
+                    )}
+                    {item.confirmed_price != null && (
+                      <div className="font-semibold text-brand-green">
+                        Bought — ₦{item.confirmed_price}
+                      </div>
+                    )}
+                    {item.availability === "unavailable" && (
+                      <div className="mt-2">
+                        <p className="mb-2 text-sm text-amber-700">
+                          Not found at the market. What should we do?
+                        </p>
+                        <div className="flex gap-2">
+                          <Button
+                            variant="secondary"
+                            onClick={() => handleDecide(item.id, "buy_elsewhere")}
+                            disabled={busy}
+                            className="text-sm"
+                          >
+                            Buy elsewhere
+                          </Button>
+                          <Button
+                            variant="neutral"
+                            onClick={() => handleDecide(item.id, "dropped")}
+                            disabled={busy}
+                            className="text-sm"
+                          >
+                            Drop item
+                          </Button>
+                        </div>
+                      </div>
+                    )}
+                  </Card>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+
+        <div className="order-1 flex flex-col gap-4 lg:order-2 lg:sticky lg:top-6">
+          {/* Labeled, not just an icon - makes it obvious a chat with the
+              agent exists at all, for the one window (agent_assigned/
+              shopping) it's actually available. Lives in the sidebar now:
+              this is a "manage the order" action, not part of the status
+              feed. */}
+          {showChat && <ChatPanel orderId={orderId} variant="button" />}
+
+          {/* Spending cap: only relevant while shopping is in progress. Alert
+              state (amber border, headline, the agent's actual message)
+              whenever there's an unread overage_approval for this order -
+              persists here regardless of whether the toast was dismissed. */}
+          {order.status === "shopping" && authorization && (
+            <Card className={pendingOverage ? "border-2 border-amber-400 bg-amber-50/60" : ""}>
+              {pendingOverage ? (
+                <>
+                  <p className="mb-1 text-xs font-bold uppercase tracking-wide text-amber-700">
+                    Your agent needs approval
+                  </p>
+                  <p className="mb-3 text-ink/80">{pendingOverage.message}</p>
+                </>
+              ) : (
+                <p className="mb-2 font-bold text-ink">Spending approval</p>
+              )}
+              <div className="flex justify-between text-[#6b635a]">
+                <span>Cap</span>
+                <span className="font-semibold">₦{authorization.cap}</span>
+              </div>
+              <div className="flex justify-between text-[#6b635a]">
+                <span>Spent so far</span>
+                <span className="font-semibold">₦{authorization.spent}</span>
+              </div>
+              <Input
+                placeholder="Amount to approve (₦)"
+                value={raiseAmount}
+                onChange={(e) => setRaiseAmount(e.target.value)}
+                className="mt-3 mb-2"
+              />
+              <Button onClick={handleRaiseCap} busy={busy} disabled={!raiseAmount} fullWidth>
+                {pendingOverage ? "Approve increase now" : "Approve increase"}
+              </Button>
+            </Card>
+          )}
+
+          {order.status === "awaiting_payment" && (
+            <Card>
+              <p className="mb-3 text-lg font-bold text-ink">Pay balance</p>
+              <PaymentChooser
+                amountDue={amountDue}
+                walletBalance={walletBalance}
+                onPayWallet={handlePayBalanceWallet}
+                onPayTransfer={handlePayBalanceTransfer}
+                onTopUp={onTopUpWallet}
+                busy={busy}
+              />
+            </Card>
+          )}
+
+          {/* Money summary — a summary, not the raw per-transfer breakdown.
+              The full ledger (every transfer, fee, EMTL line) stays in the
+              database exactly as recorded; this is just the readable version.
+              Pre-shopping, none of items_total/combined_fee/delivery_fee/
+              grand_total exist yet (finish_shopping is what sets them) - show
+              the estimate instead of a card full of misleading ₦0.00 lines. */}
+          {isPriced ? (
+            <Card>
+              <p className="mb-2 font-bold text-ink">Order summary</p>
+              <div className="space-y-1 text-[#6b635a]">
+                <div className="flex justify-between"><span>Goods total</span><span className="font-semibold">₦{order.items_total}</span></div>
+                <div className="flex justify-between"><span>Fees</span><span className="font-semibold">₦{fees.toFixed(2)}</span></div>
+                <div className="flex justify-between"><span>Delivery</span><span className="font-semibold">₦{order.delivery_fee}</span></div>
+                <div className="flex justify-between border-t border-[#ebe7e0] pt-1 text-ink">
+                  <span className="font-semibold">Grand total</span>
+                  <span className="font-bold">₦{order.grand_total}</span>
+                </div>
+                {Number(order.deposit_amount) > 0 && (
+                  <div className="flex justify-between">
+                    <span>Deposit</span>
+                    <span className="font-semibold">₦{order.deposit_amount} {depositPaid ? "(paid)" : "(unpaid)"}</span>
+                  </div>
+                )}
+                <div className="flex justify-between text-lg text-ink">
+                  <span className="font-semibold">Amount due</span>
+                  <span className="font-bold">₦{amountDue.toFixed(2)}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>Status</span>
+                  <StatusBadge status={order.status} />
+                </div>
+              </div>
+            </Card>
+          ) : (
+            <Card>
+              <p className="mb-2 font-bold text-ink">Order estimate</p>
+              <div className="space-y-1 text-[#6b635a]">
+                <div className="flex justify-between"><span>Goods estimate</span><span className="font-semibold">₦{goodsEstimate.toFixed(2)}</span></div>
+                <div className="flex justify-between"><span>Delivery quote</span><span className="font-semibold">₦{DELIVERY_QUOTE.toFixed(2)}</span></div>
+                {/* No grand total shown here on purpose - the service fee is
+                    time-based and unknown until shopping finishes, so a number
+                    shown now wouldn't match the real bill later. See the same
+                    reasoning in NewOrderFlow.jsx's quote screen. */}
+                {depositPaid && (
+                  <div className="flex justify-between">
+                    <span>Deposit</span>
+                    <span className="font-semibold">₦{order.deposit_amount} (paid)</span>
+                  </div>
+                )}
+                <div className="flex justify-between">
+                  <span>Status</span>
+                  <StatusBadge status={order.status} />
+                </div>
+              </div>
+              <p className="mt-2 text-xs text-[#8a8178]">Final fees and total are set once shopping is finished.</p>
+            </Card>
+          )}
+
+          {/* #7: agent rating - customer feedback only, once the order is
+              genuinely finished. Never feeds assignment or agent pay. Once
+              submitted, just a small read-only display here - the pop-up
+              prompt (below, outside this list) is only for COLLECTING one. */}
+          {isRateable(order.status) && rating && (
+            <Card>
+              <p className="mb-2 font-bold text-ink">Your rating</p>
+              <StarRating value={rating.stars} readOnly size={22} />
+              {rating.comment && <p className="mt-2 text-sm text-[#6b635a]">{rating.comment}</p>}
+            </Card>
+          )}
+        </div>
       </div>
 
       {/* #7: the rating pop-up itself - a prompt, not an inline section.

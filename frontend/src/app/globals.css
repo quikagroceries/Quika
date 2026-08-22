@@ -50,6 +50,10 @@ body {
   background: linear-gradient(145deg, #f06a32 0%, #e8541e 42%, #c94416 100%);
 }
 
+.panel-green-rich {
+  background: linear-gradient(145deg, #17a35a 0%, #0e7a3c 45%, #094f28 100%);
+}
+
 /* Meal-Monkey-style jagged section edges */
 .edge-torn-top {
   --c: #211a14;
@@ -238,5 +242,26 @@ body {
   color: #6b635a;
 }
 
+/* LiveKit's call UI ships with its own generic blue-on-black theme
+   (@livekit/components-styles). Retint just the accent/background tokens to
+   the brand palette instead of rebuilding the whole control bar/video grid -
+   !important because these need to beat the library's own same-specificity
+   [data-lk-theme=default] rule regardless of CSS import order. */
+[data-lk-theme="default"] {
+  --lk-bg: #17110c !important;
+  --lk-bg2: #211a14 !important;
+  --lk-bg3: #2c231b !important;
+  --lk-bg4: #382c22 !important;
+  --lk-accent-fg: #fff !important;
+  --lk-accent-bg: #e8541e !important;
+  --lk-accent2: #f06a32 !important;
+  --lk-accent3: #f37f4d !important;
+  --lk-accent4: #f69468 !important;
+  --lk-success: #0e7a3c !important;
+  --lk-danger: #dc2626 !important;
+  --lk-border-color: rgba(255, 255, 255, 0.12) !important;
+  --lk-font-family: var(--font-plus-jakarta), "Plus Jakarta Sans", system-ui, sans-serif !important;
+  --lk-border-radius: 0.875rem !important;
+}
 
 

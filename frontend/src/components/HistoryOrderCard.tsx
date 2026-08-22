@@ -3,6 +3,9 @@
 import Card from "./Card";
 import Icon from "./Icon";
 import StatusBadge from "./StatusBadge";
+import MarketArt from "./shop/MarketArt";
+import { marketTone } from "@/lib/vendorVisuals";
+import { coverImageForMarket } from "@/lib/marketDirectory";
 
 import { isHistoryStatus } from "@/lib/orderStatus";
 
@@ -16,21 +19,37 @@ import { isHistoryStatus } from "@/lib/orderStatus";
 // the summary, so callers don't need a second card shape for that. Market
 // leads the card the way a restaurant name leads a delivery-app card — the
 // market IS the identity here, so it isn't repeated lower as a plain row.
-function HistoryOrderCard({ order, marketName, counterpartLabel, counterpartId, onClick, footer, hideTotal }: any) {
+//
+// `market` (optional, full API market row) picks up the same tone+cover
+// system Shop's own market cards use, so an order card reads as "that
+// market" at a glance instead of every card wearing an identical icon.
+// Callers that don't have it yet fall back to the plain icon well.
+function HistoryOrderCard({ order, market, marketName, counterpartLabel, counterpartId, onClick, footer, hideTotal }: any) {
   const boughtItems = (order.items || []).filter((it) => it.confirmed_price != null);
   const date = order.created_at ? new Date(order.created_at).toLocaleDateString() : null;
   const done = isHistoryStatus(order.status);
+  const name = market?.name || marketName;
 
   return (
     <Card interactive={!!onClick} onClick={onClick}>
       <div className="flex items-start justify-between gap-3">
         <div className="flex min-w-0 items-center gap-3">
-          <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-brand-orange/10 text-brand-orange">
-            <Icon name="store" className="h-5 w-5" />
-          </span>
+          {market ? (
+            <MarketArt
+              tone={marketTone(market.name, market.city)}
+              title={market.name}
+              image={coverImageForMarket(market)}
+              compact
+              className="h-11 w-11 shrink-0 rounded-full"
+            />
+          ) : (
+            <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-brand-orange/10 text-brand-orange">
+              <Icon name="store" className="h-5 w-5" />
+            </span>
+          )}
           <div className="min-w-0">
             <p className="truncate font-display text-base font-extrabold tracking-tight text-ink">
-              {marketName || "Market"}
+              {name || "Market"}
             </p>
             {date && <p className="text-xs text-[#8a8178]">{date}</p>}
           </div>

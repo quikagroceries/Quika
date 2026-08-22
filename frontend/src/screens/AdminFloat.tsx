@@ -13,7 +13,7 @@ function TopUpForm({ market, onSubmit, onCancel, busy, error }: any) {
   const [amount, setAmount] = useState("");
   const [note, setNote] = useState("");
   return (
-    <div className="mt-3 rounded-xl border border-slate-200 bg-slate-50 p-3">
+    <div className="mt-3 rounded-xl border border-[#ebe7e0] bg-[#f7f5f2] p-3">
       <Input placeholder="Amount (₦)" value={amount} onChange={(e) => setAmount(e.target.value)} className="mb-2 bg-white" />
       <Input placeholder="Note (optional)" value={note} onChange={(e) => setNote(e.target.value)} className="mb-2 bg-white" />
       {error && <p className="mb-2 text-sm text-red-600">{error}</p>}
@@ -118,8 +118,8 @@ function AdminFloat() {
 
   return (
     <div>
-      <h1 className="mb-1 text-2xl font-extrabold tracking-tight text-slate-900 md:text-3xl">Float</h1>
-      <p className="mb-6 text-slate-500">Working capital per market — top up, move between pools, and the movement trail.</p>
+      <h1 className="mb-1 font-display text-3xl font-extrabold tracking-tight text-ink md:text-4xl">Float</h1>
+      <p className="mb-6 text-[#6b635a]">Working capital per market — top up, move between pools, and the movement trail.</p>
 
       {error && <p className="mb-4 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p>}
 
@@ -135,14 +135,14 @@ function AdminFloat() {
             return (
               <Card key={m.id} className={low ? "border-2 border-red-400" : ""}>
                 <div className="flex items-center justify-between gap-2">
-                  <span className="truncate font-bold text-slate-900">{m.name}</span>
+                  <span className="truncate font-bold text-ink">{m.name}</span>
                   {low && (
                     <span className="flex shrink-0 items-center gap-1 rounded-full bg-red-50 px-2 py-0.5 text-xs font-bold text-red-600">
                       <Icon name="alert" className="h-3.5 w-3.5" /> Low
                     </span>
                   )}
                 </div>
-                <div className={"mt-2 text-2xl font-extrabold " + (low ? "text-red-600" : "text-slate-900")}>
+                <div className={"mt-2 text-2xl font-extrabold " + (low ? "text-red-600" : "text-ink")}>
                   {balance != null ? `₦${balance}` : "—"}
                 </div>
                 {toppingUpId === m.id ? (
@@ -166,25 +166,25 @@ function AdminFloat() {
 
       {/* Transfer between pools */}
       <Card className="mb-8">
-        <p className="mb-3 font-bold text-slate-900">Move float between pools</p>
+        <p className="mb-3 font-bold text-ink">Move float between pools</p>
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <label className="block">
-            <span className="mb-1 block text-sm font-semibold text-slate-700">From</span>
+            <span className="mb-1 block text-sm font-semibold text-ink/80">From</span>
             <select
               value={fromMarketId}
               onChange={(e) => { setFromMarketId(e.target.value); setConfirmingTransfer(false); }}
-              className="w-full min-h-[44px] rounded-xl border border-slate-300 px-4 text-base text-slate-900"
+              className="w-full min-h-[44px] rounded-xl border border-[#ddd6cb] px-4 text-base text-ink"
             >
               <option value="">Select a market…</option>
               {markets?.map((m) => <option key={m.id} value={m.id}>{m.name}</option>)}
             </select>
           </label>
           <label className="block">
-            <span className="mb-1 block text-sm font-semibold text-slate-700">To</span>
+            <span className="mb-1 block text-sm font-semibold text-ink/80">To</span>
             <select
               value={toMarketId}
               onChange={(e) => { setToMarketId(e.target.value); setConfirmingTransfer(false); }}
-              className="w-full min-h-[44px] rounded-xl border border-slate-300 px-4 text-base text-slate-900"
+              className="w-full min-h-[44px] rounded-xl border border-[#ddd6cb] px-4 text-base text-ink"
             >
               <option value="">Select a market…</option>
               {markets?.filter((m) => m.id !== fromMarketId).map((m) => <option key={m.id} value={m.id}>{m.name}</option>)}
@@ -193,8 +193,8 @@ function AdminFloat() {
         </div>
 
         {fromMarketId && (
-          <p className="mt-2 text-sm text-slate-500">
-            {marketName(fromMarketId)}'s current balance: <span className="font-semibold text-slate-900">₦{fromBalance?.toFixed(2)}</span>
+          <p className="mt-2 text-sm text-[#6b635a]">
+            {marketName(fromMarketId)}'s current balance: <span className="font-semibold text-ink">₦{fromBalance?.toFixed(2)}</span>
           </p>
         )}
 
@@ -227,10 +227,10 @@ function AdminFloat() {
           </Button>
         ) : (
           <div className="mt-3 rounded-xl border-2 border-brand-orange bg-white p-3">
-            <p className="mb-2 text-sm font-semibold text-slate-800">
+            <p className="mb-2 text-sm font-semibold text-ink">
               Move ₦{Number(transferAmount).toFixed(2)} from {marketName(fromMarketId)} to {marketName(toMarketId)}?
             </p>
-            <div className="mb-3 space-y-1 text-sm text-slate-600">
+            <div className="mb-3 space-y-1 text-sm text-[#6b635a]">
               <div className="flex justify-between">
                 <span>{marketName(fromMarketId)}</span>
                 <span>₦{fromBalance?.toFixed(2)} → ₦{(fromBalance - Number(transferAmount)).toFixed(2)}</span>
@@ -261,30 +261,30 @@ function AdminFloat() {
       {/* Movement history for a selected market */}
       <Card>
         <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-          <p className="font-bold text-slate-900">Movement history</p>
+          <p className="font-bold text-ink">Movement history</p>
           <select
             value={historyMarketId}
             onChange={(e) => setHistoryMarketId(e.target.value)}
-            className="min-h-[36px] rounded-lg border border-slate-300 px-3 text-sm text-slate-900"
+            className="min-h-[36px] rounded-lg border border-[#ddd6cb] px-3 text-sm text-ink"
           >
             {markets?.map((m) => <option key={m.id} value={m.id}>{m.name}</option>)}
           </select>
         </div>
         {!history ? (
-          <p className="text-sm text-slate-400">Loading…</p>
+          <p className="text-sm text-[#8a8178]">Loading…</p>
         ) : history.recent_movements.length === 0 ? (
-          <p className="text-sm text-slate-400">No movements recorded yet for this market.</p>
+          <p className="text-sm text-[#8a8178]">No movements recorded yet for this market.</p>
         ) : (
           <div className="space-y-2">
             {history.recent_movements.map((m, i) => (
-              <div key={i} className="flex items-center justify-between border-b border-slate-50 pb-2 text-sm last:border-0">
+              <div key={i} className="flex items-center justify-between border-b border-[#ebe7e0] pb-2 text-sm last:border-0">
                 <div>
                   <span className={"font-semibold " + (m.direction === "credit" ? "text-brand-green" : "text-red-600")}>
                     {m.direction === "credit" ? "+" : "−"}₦{m.amount}
                   </span>
-                  <span className="ml-2 text-slate-500">{m.note || "—"}</span>
+                  <span className="ml-2 text-[#6b635a]">{m.note || "—"}</span>
                 </div>
-                <div className="shrink-0 text-right text-slate-400">
+                <div className="shrink-0 text-right text-[#8a8178]">
                   <div>Bal. ₦{m.balance_after}</div>
                   <div>{m.at ? new Date(m.at).toLocaleString() : ""}</div>
                 </div>

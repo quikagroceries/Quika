@@ -6,7 +6,7 @@ import EmptyState from "./EmptyState";
 import Icon from "./Icon";
 import MarketArt from "@/components/shop/MarketArt";
 import {
-  DIRECTORY_MARKETS,
+  findDirectoryMarket,
   type FoodCategory,
   type VenueType,
 } from "@/lib/marketDirectory";
@@ -16,33 +16,7 @@ import { useShopOptional } from "@/components/shop/ShopContext";
 import { api } from "@/lib/api";
 import ShopSideRail from "@/components/shop/ShopSideRail";
 import { useActiveOrders } from "@/lib/useActiveOrders";
-
-function summarizeActiveOrder(order: any): string {
-  const at = order.marketName ? ` at ${order.marketName}` : "";
-  switch (order.status) {
-    case "draft":
-      return "Pick up where you left off — list not sent yet";
-    case "proposed":
-      return "Finding you an agent";
-    case "agent_assigned":
-      return `Agent assigned${at} — shopping starts soon`;
-    case "shopping": {
-      const items = order.items || [];
-      const bought = items.filter((it: any) => it.confirmed_price != null).length;
-      return `Agent is shopping${at} — ${bought} of ${items.length} bought`;
-    }
-    case "awaiting_payment":
-      return "Shopping done — balance due";
-    case "paid":
-      return "Packing your order";
-    case "packed":
-      return "Packed, waiting for pickup";
-    case "out_for_delivery":
-      return "Out for delivery";
-    default:
-      return "In progress";
-  }
-}
+import { summarizeOrderStatus } from "@/lib/orderStatus";
 
 function activeOrderHeadline(orders: any[] | null): { title: string; href: string } | null {
   if (!orders || orders.length === 0) return null;
@@ -52,7 +26,7 @@ function activeOrderHeadline(orders: any[] | null): { title: string; href: strin
     orders.find((o) => o.status === "awaiting_payment") ||
     orders[0];
   return {
-    title: multiple ? `${orders.length} orders in progress` : summarizeActiveOrder(primary),
+    title: multiple ? `${orders.length} orders in progress` : summarizeOrderStatus(primary),
     href: multiple ? "/track" : `/orders/${primary.id}`,
   };
 }
@@ -71,17 +45,38 @@ const VENUE_TYPES: {
 // the one brand orange stretched across everything — so the row reads as a
 // spread of departments (produce section, butcher counter, spice rack) the
 // way a physical market would, and stays scannable at a glance.
-const FOOD_FILTERS: {
-  id: FoodCategory | "popular";
-  label: string;
-  icon: string;
-  color: string;
-}[] = [
-  { id: "popular", label: "Popular", icon: "star", color: "#E8541E" },
-  { id: "produce", label: "Produce", icon: "leaf", color: "#0E7A3C" },
-  { id: "protein", label: "Protein", icon: "drumstick", color: "#8B3A2E" },
-  { id: "provisions", label: "Provisions", icon: "jar", color: "#B8860B" },
-  { id: "spices", label: "Spices", icon: "chili", color: "#C2430F" },
+// Lets the search box drive the category pills instead of the two controls
+// sitting side by side unrelated — type "pepper" and Spices lights up on its
+// own. Kept intentionally small/unambiguous; it's a soft suggestion the user
+// can always override by tapping a pill directly, not a hard classifier.
+const SEARCH_CATEGORY_KEYWORDS: Record<FoodCategory, string[]> = {
+  produce: ["tomato", "onion", "vegetable", "carrot", "cabbage", "spinach", "ugu", "okra", "plantain", "banana", "orange", "apple", "cucumber", "lettuce", "fruit"],
+  protein: ["chicken", "meat", "beef", "goat", "turkey", "egg", "mutton", "pork", "poultry"],
+  fish: ["fish", "titus", "mackerel", "croaker", "catfish", "stockfish", "prawns", "shrimp", "crayfish", "seafood"],
+  provisions: ["oil", "salt", "sugar", "maggi", "spaghetti", "macaroni", "noodles", "flour", "milk", "tinned", "canned", "pasta"],
+  grains: ["rice", "beans", "garri", "yam", "corn", "maize", "millet", "sorghum", "wheat"],
+  spices: ["pepper", "chili", "chilli", "curry", "thyme", "spice", "ginger", "garlic", "seasoning"],
+  household: ["soap", "detergent", "tissue", "bleach", "cleaning", "sponge", "disinfectant"],
+};
+
+function categoryFromSearch(query: string): FoodCategory | null {
+  const q = query.trim().toLowerCase();
+  if (!q) return null;
+  for (const [category, words] of Object.entries(SEARCH_CATEGORY_KEYWORDS)) {
+    if (words.some((w) => q.includes(w))) return category as FoodCategory;
+  }
+  return null;
+}
+
+const FOOD_FILTERS: { id: FoodCategory | "popular"; label: string }[] = [
+  { id: "popular", label: "Popular" },
+  { id: "produce", label: "Produce" },
+  { id: "protein", label: "Protein" },
+  { id: "fish", label: "Fish" },
+  { id: "provisions", label: "Provisions" },
+  { id: "grains", label: "Grains" },
+  { id: "spices", label: "Spices" },
+  { id: "household", label: "Household" },
 ];
 
 type SortMode = "featured" | "az" | "za";
@@ -93,12 +88,7 @@ const SORT_OPTIONS: { id: SortMode; label: string }[] = [
 ];
 
 function enrichMarket(m: any) {
-  const dir = DIRECTORY_MARKETS.find(
-    (d) =>
-      m.name?.toLowerCase().includes(d.name.toLowerCase().replace(/\s+market$/, "").slice(0, 8)) ||
-      d.name.toLowerCase() === (m.name || "").toLowerCase() ||
-      m.name?.toLowerCase().includes(d.name.toLowerCase().slice(0, 10))
-  );
+  const dir = findDirectoryMarket(m);
   const venueType: VenueType =
     (m.venue_type as VenueType) || dir?.venueType || "local_market";
   return {
@@ -559,6 +549,17 @@ function MarketPicker({
 
   const [venueType, setVenueType] = useState<VenueType>("local_market");
   const [food, setFood] = useState<FoodCategory | "popular">("popular");
+  // Once the customer taps a pill directly, their choice wins — search text
+  // stops silently overriding it until they switch venue type (a fresh start).
+  const foodIsManual = useRef(false);
+  function pickFood(id: FoodCategory | "popular") {
+    foodIsManual.current = true;
+    setFood(id);
+  }
+  useEffect(() => {
+    if (foodIsManual.current) return;
+    setFood(categoryFromSearch(searchQuery) || "popular");
+  }, [searchQuery]);
   const [liveOnly, setLiveOnly] = useState(true);
   const [sort, setSort] = useState<SortMode>("featured");
   const [activity, setActivity] = useState<{
@@ -580,6 +581,7 @@ function MarketPicker({
 
   function selectVenueType(id: VenueType) {
     setVenueType(id);
+    foodIsManual.current = false;
     setFood("popular");
     // Leaving a market/list section via the rail returns to venue browse
     if (inShell && shop) {
@@ -730,9 +732,6 @@ function MarketPicker({
       venueType={venueType}
       venueCounts={counts}
       onSelectVenueType={selectVenueType}
-      food={food}
-      foodFilters={FOOD_FILTERS}
-      onSelectFood={(id) => setFood(id as FoodCategory | "popular")}
       market={activeMarket}
       stall={browseStall}
       stallTypeFilter={shop?.stallTypeFilter || "all"}
@@ -932,37 +931,8 @@ function MarketPicker({
         {!inList && !browseStall && !inVendors && (
           <div className="mb-4 flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
             <div className="min-w-0 lg:flex-1">
-              <div className="flex gap-2.5 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-                {FOOD_FILTERS.map((f) => {
-                  const active = food === f.id;
-                  return (
-                    <button
-                      key={f.id}
-                      type="button"
-                      onClick={() => setFood(f.id)}
-                      style={active ? { boxShadow: `inset 0 0 0 1.5px ${f.color}` } : undefined}
-                      className={
-                        "inline-flex shrink-0 items-center gap-2 rounded-full bg-white py-2 pl-2.5 pr-4 text-sm font-bold transition-all duration-200 " +
-                        (active
-                          ? "text-ink"
-                          : "text-ink/55 ring-1 ring-[#ebe7e0] hover:text-ink hover:ring-[#ddd6cb]")
-                      }
-                    >
-                      <span
-                        className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full"
-                        style={{
-                          backgroundColor: `${f.color}${active ? "22" : "14"}`,
-                          color: f.color,
-                        }}
-                      >
-                        <Icon name={f.icon} className="h-3.5 w-3.5" />
-                      </span>
-                      {f.label}
-                    </button>
-                  );
-                })}
-              </div>
-              <div className="mt-5">
+              
+              <div className="">
                 <h1 className="font-display text-3xl font-extrabold tracking-tight text-ink md:text-4xl">
                   {pageTitle}
                 </h1>
@@ -974,7 +944,7 @@ function MarketPicker({
               <button
                 type="button"
                 onClick={() => router.push(headline.href)}
-                className="flex shrink-0 flex-col justify-between gap-4 rounded-2xl bg-[#211A14] px-5 py-4 text-left transition hover:brightness-110 lg:w-[280px]"
+                className="flex shrink-0 items-center justify-between gap-4 rounded-2xl bg-[#211A14] px-5 py-4 text-left transition hover:brightness-110 lg:w-[340px]"
               >
                 <div className="min-w-0 flex items-center gap-3">
                   <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-brand-orange/15 text-brand-orange">
@@ -987,7 +957,7 @@ function MarketPicker({
                     <p className="mt-0.5 truncate text-sm font-bold text-white">{headline.title}</p>
                   </div>
                 </div>
-                <span className="inline-flex w-fit items-center gap-1 rounded-full bg-white px-4 py-2 text-sm font-bold text-ink">
+                <span className="inline-flex w-fit shrink-0 items-center gap-1 rounded-full bg-white px-4 py-2 text-sm font-bold text-ink">
                   Track →
                 </span>
               </button>

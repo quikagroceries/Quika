@@ -17,7 +17,7 @@ function RoleSwitch({ mode, onToggle, busy, error, compact = false }: any) {
         disabled={busy}
         title={isCustomer ? "Switch to agent view" : "Switch to customer view"}
         aria-label={isCustomer ? "Switch to agent view" : "Switch to customer view"}
-        className="flex h-11 w-11 items-center justify-center self-center rounded-xl bg-slate-100 text-slate-600 transition-colors hover:bg-slate-200 disabled:opacity-50"
+        className="flex h-11 w-11 items-center justify-center self-center rounded-xl bg-[#f0eeeb] text-[#6b635a] transition-colors hover:bg-[#e8e4df] disabled:opacity-50"
       >
         <span className="text-xs font-bold">{isCustomer ? "A" : "C"}</span>
       </button>
@@ -30,7 +30,7 @@ function RoleSwitch({ mode, onToggle, busy, error, compact = false }: any) {
         onClick={() => onToggle(isCustomer ? "agent" : "customer")}
         disabled={busy}
         aria-label={isCustomer ? "Switch to agent view" : "Switch to customer view"}
-        className="relative flex h-10 w-full items-center rounded-full bg-slate-100 p-1 text-sm font-semibold transition-opacity disabled:opacity-50"
+        className="relative flex h-10 w-full items-center rounded-full bg-[#f0eeeb] p-1 text-sm font-semibold transition-opacity disabled:opacity-50"
       >
         <span
           aria-hidden="true"
@@ -39,10 +39,10 @@ function RoleSwitch({ mode, onToggle, busy, error, compact = false }: any) {
             (isCustomer ? "translate-x-[calc(100%+4px)]" : "translate-x-0")
           }
         />
-        <span className={"relative z-10 flex-1 text-center " + (!isCustomer ? "text-brand-orange" : "text-slate-500")}>
+        <span className={"relative z-10 flex-1 text-center " + (!isCustomer ? "text-brand-orange" : "text-[#6b635a]")}>
           Agent
         </span>
-        <span className={"relative z-10 flex-1 text-center " + (isCustomer ? "text-brand-orange" : "text-slate-500")}>
+        <span className={"relative z-10 flex-1 text-center " + (isCustomer ? "text-brand-orange" : "text-[#6b635a]")}>
           Customer
         </span>
       </button>

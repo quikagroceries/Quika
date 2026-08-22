@@ -58,14 +58,14 @@ export function OrderDetailPanel({ orderId, markets, agents, onBack, onAssigned 
       ) : (
         <div className="space-y-4">
           <div className="flex items-center justify-between">
-            <h2 className="text-lg font-bold text-slate-900">Order {order.id.slice(0, 8)}…</h2>
+            <h2 className="text-lg font-bold text-ink">Order {order.id.slice(0, 8)}…</h2>
             <StatusBadge status={order.status} />
           </div>
 
           {error && <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p>}
 
           <Card>
-            <div className="space-y-1 text-slate-700">
+            <div className="space-y-1 text-ink/80">
               <div className="flex justify-between"><span>Market</span><span className="font-semibold">{market ? `${market.name}, ${market.city}` : order.market_id.slice(0, 8) + "…"}</span></div>
               <div className="flex justify-between"><span>Customer</span><span className="font-semibold">{order.customer_id.slice(0, 8)}…</span></div>
               <div className="flex justify-between"><span>Agent</span><span className="font-semibold">{order.agent_id ? order.agent_id.slice(0, 8) + "…" : "Unassigned"}</span></div>
@@ -81,15 +81,15 @@ export function OrderDetailPanel({ orderId, markets, agents, onBack, onAssigned 
 
           {!order.agent_id && (
             <Card className="border-2 border-amber-400">
-              <p className="mb-2 font-bold text-slate-900">Assign an agent</p>
+              <p className="mb-2 font-bold text-ink">Assign an agent</p>
               {marketAgents.length === 0 ? (
-                <p className="text-sm text-slate-500">No agents are registered for this market yet.</p>
+                <p className="text-sm text-[#6b635a]">No agents are registered for this market yet.</p>
               ) : (
                 <>
                   <select
                     value={pickedAgent}
                     onChange={(e) => setPickedAgent(e.target.value)}
-                    className="mb-2 w-full min-h-[44px] rounded-xl border border-slate-300 px-4 text-base text-slate-900"
+                    className="mb-2 w-full min-h-[44px] rounded-xl border border-[#ddd6cb] px-4 text-base text-ink"
                   >
                     <option value="">Select an agent…</option>
                     {marketAgents.map((a) => (
@@ -107,12 +107,12 @@ export function OrderDetailPanel({ orderId, markets, agents, onBack, onAssigned 
           )}
 
           <Card>
-            <p className="mb-2 font-bold text-slate-900">Items ({(order.items || []).length})</p>
+            <p className="mb-2 font-bold text-ink">Items ({(order.items || []).length})</p>
             <div className="space-y-2">
               {(order.items || []).map((it) => (
-                <div key={it.id} className="flex items-center justify-between border-b border-slate-100 pb-2 text-sm last:border-0">
-                  <span className="min-w-0 flex-1 truncate text-slate-700">{it.description}</span>
-                  <span className="shrink-0 font-semibold text-slate-900">
+                <div key={it.id} className="flex items-center justify-between border-b border-[#ebe7e0] pb-2 text-sm last:border-0">
+                  <span className="min-w-0 flex-1 truncate text-ink/80">{it.description}</span>
+                  <span className="shrink-0 font-semibold text-ink">
                     {it.confirmed_price != null ? `₦${it.confirmed_price}` : it.availability}
                   </span>
                 </div>
@@ -157,8 +157,8 @@ function AdminOrders() {
 
   return (
     <div>
-      <h1 className="mb-1 text-2xl font-extrabold tracking-tight text-slate-900 md:text-3xl">Orders</h1>
-      <p className="mb-6 text-slate-500">Every order still in flight — not yet delivered, closed, or cancelled.</p>
+      <h1 className="mb-1 font-display text-3xl font-extrabold tracking-tight text-ink md:text-4xl">Orders</h1>
+      <p className="mb-6 text-[#6b635a]">Every order still in flight — not yet delivered, closed, or cancelled.</p>
 
       {error && <p className="mb-4 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p>}
 
@@ -167,10 +167,10 @@ function AdminOrders() {
       ) : data.orders.length === 0 ? (
         <EmptyState icon="basket" title="Nothing in flight" subtitle="Every order is delivered, closed, or cancelled." />
       ) : (
-        <div className="overflow-x-auto rounded-2xl bg-white shadow-card">
+        <div className="overflow-x-auto rounded-2xl border border-[#ebe7e0] bg-white shadow-sm">
           <table className="w-full min-w-[720px] text-left text-sm">
             <thead>
-              <tr className="border-b border-slate-100 text-xs uppercase tracking-wide text-slate-400">
+              <tr className="border-b border-[#ebe7e0] text-xs uppercase tracking-wide text-[#8a8178]">
                 <th className="px-4 py-3 font-semibold">Status</th>
                 <th className="px-4 py-3 font-semibold">Market</th>
                 <th className="px-4 py-3 font-semibold">Agent</th>
@@ -186,25 +186,25 @@ function AdminOrders() {
                   <tr
                     key={o.id}
                     onClick={() => router.push(`/admin/orders/${o.id}`)}
-                    className="cursor-pointer border-b border-slate-50 last:border-0 hover:bg-slate-50"
+                    className="cursor-pointer border-b border-[#ebe7e0] last:border-0 hover:bg-[#f7f5f2]"
                   >
                     <td className="px-4 py-3"><StatusBadge status={o.status} /></td>
-                    <td className="px-4 py-3 text-slate-700">{marketName(o.market_id)}</td>
+                    <td className="px-4 py-3 text-ink/80">{marketName(o.market_id)}</td>
                     <td className="px-4 py-3">
                       {o.agent_id ? (
-                        <span className="text-slate-700">{o.agent_id.slice(0, 8)}…</span>
+                        <span className="text-ink/80">{o.agent_id.slice(0, 8)}…</span>
                       ) : (
                         <span className="rounded-full bg-amber-50 px-2 py-0.5 text-xs font-bold text-amber-700">Unassigned</span>
                       )}
                     </td>
-                    <td className="px-4 py-3 text-slate-500">{o.customer_id.slice(0, 8)}…</td>
+                    <td className="px-4 py-3 text-[#6b635a]">{o.customer_id.slice(0, 8)}…</td>
                     <td className="px-4 py-3">
-                      <span className={stuck ? "flex items-center gap-1 font-bold text-red-600" : "text-slate-500"}>
+                      <span className={stuck ? "flex items-center gap-1 font-bold text-red-600" : "text-[#6b635a]"}>
                         {stuck && <Icon name="alert" className="h-3.5 w-3.5" />}
                         {formatAge(now - new Date(o.created_at).getTime())}
                       </span>
                     </td>
-                    <td className="px-4 py-3 text-right text-slate-300">›</td>
+                    <td className="px-4 py-3 text-right text-[#8a8178]">›</td>
                   </tr>
                 );
               })}

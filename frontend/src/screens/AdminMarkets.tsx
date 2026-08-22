@@ -31,7 +31,7 @@ function MarketForm({ initial, onSubmit, onCancel, busy, error }: any) {
 
   return (
     <Card className="border-2 border-brand-orange">
-      <p className="mb-3 font-bold text-slate-900">{initial ? "Edit market" : "New market"}</p>
+      <p className="mb-3 font-bold text-ink">{initial ? "Edit market" : "New market"}</p>
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <Input placeholder="Name (e.g. Mile 12 Market)" value={name} onChange={(e) => setName(e.target.value)} className="sm:col-span-2" />
         <Input placeholder="City" value={city} onChange={(e) => setCity(e.target.value)} />
@@ -121,8 +121,8 @@ function AdminMarkets() {
     <div>
       <div className="mb-6 flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-extrabold tracking-tight text-slate-900 md:text-3xl">Markets</h1>
-          <p className="mt-1 text-slate-500">Where agents shop — this is what sets up a pilot market.</p>
+          <h1 className="font-display text-3xl font-extrabold tracking-tight text-ink md:text-4xl">Markets</h1>
+          <p className="mt-1 text-[#6b635a]">Where agents shop — this is what sets up a pilot market.</p>
         </div>
         {!creating && (
           <Button onClick={() => setCreating(true)} className="shrink-0">
@@ -166,20 +166,20 @@ function AdminMarkets() {
               <Card key={m.id} className={m.is_active ? "" : "opacity-60"}>
                 <div className="flex items-start justify-between gap-2">
                   <div className="min-w-0">
-                    <div className="truncate font-bold text-slate-900">{m.name}</div>
-                    <div className="text-sm text-slate-500">{m.city}, {m.state}</div>
+                    <div className="truncate font-bold text-ink">{m.name}</div>
+                    <div className="text-sm text-[#6b635a]">{m.city}, {m.state}</div>
                   </div>
                   {!m.is_active && (
-                    <span className="shrink-0 rounded-full bg-slate-100 px-2 py-0.5 text-xs font-bold text-slate-500">Inactive</span>
+                    <span className="shrink-0 rounded-full bg-[#f0eeeb] px-2 py-0.5 text-xs font-bold text-[#6b635a]">Inactive</span>
                   )}
                 </div>
 
                 <div className="mt-3 flex items-center justify-between">
-                  <span className="text-sm text-slate-500">Float balance</span>
+                  <span className="text-sm text-[#6b635a]">Float balance</span>
                   <span className={
                     "font-bold " +
                     (floatByMarket[m.id] != null && Number(floatByMarket[m.id]) < LOW_FLOAT_BALANCE
-                      ? "text-red-600" : "text-slate-900")
+                      ? "text-red-600" : "text-ink")
                   }>
                     {floatByMarket[m.id] != null ? `₦${floatByMarket[m.id]}` : "—"}
                   </span>

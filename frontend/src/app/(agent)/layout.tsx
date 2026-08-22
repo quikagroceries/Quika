@@ -7,7 +7,10 @@ import { useAuth } from "@/components/AuthProvider";
 import { AGENT_NAV } from "@/lib/nav";
 
 function activeKeyFromPath(pathname) {
-  if (pathname.startsWith("/agent/orders/")) return null;
+  // A single order's shopping screen - reachable from Home, so it
+  // identifies as Home rather than leaving the sidebar showing nothing
+  // active (same reasoning as the customer side's /orders/:id -> Track).
+  if (pathname.startsWith("/agent/orders/")) return "home";
   if (pathname.startsWith("/agent/history")) return "history";
   if (pathname.startsWith("/agent/dashboard")) return "dashboard";
   if (pathname.startsWith("/agent/settings")) return "settings";
@@ -26,6 +29,9 @@ export default function AgentLayout({ children }: any) {
         user={user}
         onLogout={handleLogout}
         roleSwitch={roleSwitch}
+        bottomNav
+        fullWidth
+        contentClassName="bg-white"
       >
         {children}
       </AppShell>

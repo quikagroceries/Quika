@@ -27,12 +27,21 @@ function AppShell({
   guest = false,
   bare = false,
   bottomNav = false,
+  fullWidth = false,
+  contentClassName = "",
   children,
 }: any) {
   const [drawerOpen, setDrawerOpen] = useState(false);
 
   return (
-    <div className="min-h-screen bg-canvas md:flex">
+    // Always a flex row (not just from md up) - Sidebar collapses to
+    // nothing below md via its own `hidden` class, so this stays visually
+    // identical there, but it means the content column's `flex-1` actually
+    // takes effect on mobile too instead of silently no-op'ing outside a
+    // flex context, which is what let the canvas color show through below
+    // short content instead of the page's real background reaching the
+    // bottom-nav's reserved space.
+    <div className="flex min-h-screen flex-col bg-canvas md:flex-row">
       <Sidebar
         navItems={navItems}
         activeKey={activeKey}
@@ -58,8 +67,17 @@ function AppShell({
             />
           </>
         )}
-        <div className={bottomNav ? "pb-16 md:pb-0" : ""}>
-          {bare ? children : <PageContainer>{children}</PageContainer>}
+        {/* contentClassName's background lives on THIS wrapper, not on
+            PageContainer's <main> - the bottom-nav reserve (`pb-16`) is
+            padding on this element, so putting the color here instead of
+            one level in covers that reserved strip too, instead of leaving
+            it to show the canvas color behind the fixed tab bar. */}
+        <div className={"flex flex-1 flex-col " + (bottomNav ? "pb-16 md:pb-0" : "") + " " + contentClassName}>
+          {bare ? children : (
+            <PageContainer full={fullWidth} className="flex-1">
+              {children}
+            </PageContainer>
+          )}
         </div>
         {bottomNav && <MobileBottomNav navItems={navItems} activeKey={activeKey} />}
       </div>

@@ -53,13 +53,10 @@ function ShopHeader() {
     setSearchQuery,
     listDraft,
     openBag,
-    markets,
-    pickMarket,
     venueOpen,
     setVenueOpen,
     address,
     setAddress,
-    deliveryCoords,
     setDeliveryCoords,
   } = useShop();
 
@@ -127,7 +124,7 @@ function ShopHeader() {
           }
         >
           <span className={ICON_WELL + " text-brand-green"}>
-            <Icon name="store" className="h-4 w-4" />
+            <Icon name="pin" className="h-4 w-4" />
             {venueSelected && (
               <span className="absolute -bottom-0.5 -right-0.5 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-brand-green text-white ring-2 ring-white">
                 <svg viewBox="0 0 20 20" className="h-2 w-2" fill="currentColor" aria-hidden>
@@ -142,7 +139,7 @@ function ShopHeader() {
           </span>
           <span className="min-w-0 flex-1">
             <span className="block truncate text-sm font-bold text-ink">
-              {venueSelected ? market.name : "Choose a market"}
+              {venueSelected ? market.name : "Choose your location"}
             </span>
             <span className="flex items-center gap-1 truncate text-[0.7rem] font-medium text-[#8a8178]">
               <PinGlyph className="h-2.5 w-2.5 shrink-0" />
@@ -299,7 +296,7 @@ function ShopHeader() {
             }
           >
             <span className={ICON_WELL + " text-brand-green"}>
-              <Icon name="store" className="h-4 w-4" />
+              <Icon name="pin" className="h-4 w-4" />
               {venueSelected && (
                 <span className="absolute -bottom-0.5 -right-0.5 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-brand-green text-white ring-2 ring-white">
                   <svg viewBox="0 0 20 20" className="h-2 w-2" fill="currentColor" aria-hidden>
@@ -314,7 +311,7 @@ function ShopHeader() {
             </span>
             <span className="min-w-0 flex-1">
               <span className="block truncate text-sm font-bold text-ink">
-                {venueSelected ? market.name : "Choose a market"}
+                {venueSelected ? market.name : "Choose your location"}
               </span>
               <span className="flex items-center gap-1 truncate text-[0.7rem] text-[#8a8178]">
                 <PinGlyph className="h-2.5 w-2.5 shrink-0" />
@@ -348,13 +345,9 @@ function ShopHeader() {
       <VenuePopover
         open={venueOpen}
         onClose={() => setVenueOpen(false)}
-        markets={markets}
-        currentId={market?.id}
-        onSelect={pickMarket}
         anchorRef={venueAnchorRef}
         address={address}
         onAddressChange={setAddress}
-        deliveryCoords={deliveryCoords}
         onDeliveryCoordsChange={setDeliveryCoords}
       />
     </header>

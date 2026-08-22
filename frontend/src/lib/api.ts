@@ -41,8 +41,10 @@ async function request(path: string, { method = "GET", body }: { method?: string
 export const api = {
   requestOtp: (phone) =>
     request("/auth/request-otp", { method: "POST", body: { phone } }),
-  verifyOtp: (phone, code) =>
-    request("/auth/verify-otp", { method: "POST", body: { phone, code } }),
+  // `role` is only honored by the backend outside production, and only for
+  // a phone number that doesn't already have an account - see auth/routes.py.
+  verifyOtp: (phone, code, role?: string) =>
+    request("/auth/verify-otp", { method: "POST", body: { phone, code, ...(role ? { role } : {}) } }),
   myOrders: () => request("/orders/mine"),
 
   me: () => request("/auth/me"),
@@ -137,6 +139,7 @@ export const api = {
     request(`/delivery/orders/${id}/confirm-delivery`, { method: "POST" }),
 
   applyAsAgent: (body) => request("/agent-applications", { method: "POST", body }),
+  getMyAgentApplications: () => request("/agent-applications/me"),
   raiseCap: (id, extra) =>
     request(`/jit/orders/${id}/authorization/raise`, {
       method: "POST",

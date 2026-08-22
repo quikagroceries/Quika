@@ -20,7 +20,7 @@ function TrackOrder() {
 
   if (orders === null) {
     return (
-      <div className="flex flex-col items-center gap-3 py-16 text-ink/40">
+      <div className="flex flex-1 flex-col items-center justify-center gap-3 text-ink/40">
         <svg className="h-8 w-8 animate-spin" viewBox="0 0 24 24" fill="none" aria-hidden="true">
           <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
           <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
@@ -32,19 +32,19 @@ function TrackOrder() {
 
   if (orders.length === 0) {
     return (
-      <div>
+      <div className="flex flex-1 flex-col">
         <h1 className="mb-1 font-display text-3xl font-extrabold tracking-tight text-ink md:text-4xl">
           Track
         </h1>
         <p className="mb-6 text-[#6b635a]">Live status for whatever your agent&apos;s doing right now.</p>
-        <EmptyState
-          icon="pin"
-          title="No active orders"
-          subtitle="Once you place an order, it shows up here in real time — from agent assignment through delivery."
-        />
-        <Button onClick={() => router.push("/shop")} className="mt-4">
-          Start shopping
-        </Button>
+        <div className="flex flex-1 flex-col items-center justify-center gap-4 text-center">
+          <EmptyState
+            icon="pin"
+            title="No active orders"
+            subtitle="Once you place an order, it shows up here in real time — from agent assignment through delivery."
+          />
+          <Button onClick={() => router.push("/shop")}>Start shopping</Button>
+        </div>
       </div>
     );
   }
@@ -61,7 +61,7 @@ function TrackOrder() {
   }
 
   return (
-    <div>
+    <div className="flex flex-1 flex-col">
       <h1 className="mb-1 font-display text-3xl font-extrabold tracking-tight text-ink md:text-4xl">
         Track
       </h1>
@@ -73,6 +73,7 @@ function TrackOrder() {
           <HistoryOrderCard
             key={order.id}
             order={order}
+            market={order.market}
             marketName={order.marketName}
             counterpartLabel="Agent"
             counterpartId={order.agent_id}

@@ -1,8 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import Image from "next/image";
-import logo from "@/assets/logo.png";
 import Icon from "./Icon";
 import RoleSwitch from "./RoleSwitch";
 
@@ -23,12 +21,14 @@ function Sidebar({ navItems, activeKey, user, onLogout, roleSwitch, guest = fals
       <div className="flex min-h-0 flex-1 flex-col overflow-y-auto">
         <Link
           href={navItems[0]?.href || "/"}
-          className="flex items-center justify-center px-2 py-5 lg:justify-start lg:px-5"
+          className="flex items-center justify-center gap-3 px-2 py-6 lg:justify-start lg:px-5"
           aria-label="Quika home"
         >
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={favicon} alt="" className="h-8 w-8 object-contain lg:hidden" />
-          <Image src={logo} alt="Quika Groceries" className="hidden h-9 w-auto object-contain lg:block" priority />
+          <img src={favicon} alt="" className="h-11 w-11 shrink-0 object-contain" />
+          <span className="hidden font-display text-2xl font-extrabold tracking-tight text-ink lg:inline">
+            Quika
+          </span>
         </Link>
 
         {/* Workspace-style switcher slot, right below the brand mark —
@@ -49,22 +49,24 @@ function Sidebar({ navItems, activeKey, user, onLogout, roleSwitch, guest = fals
         <nav className="space-y-1 px-2 py-1 lg:px-3">
           {navItems.map((item: any) => {
             const active = item.key === activeKey;
+            const color = item.color || "#0E7A3C";
             return (
               <Link
                 key={item.key}
                 href={item.href}
                 title={item.label}
+                style={active ? { backgroundColor: `${color}16` } : undefined}
                 className={
-                  "flex w-full items-center justify-center gap-3 rounded-xl border-l-2 py-2.5 pl-[10px] pr-3 min-h-[44px] text-sm font-bold transition-colors duration-150 lg:justify-start " +
-                  (active
-                    ? "border-brand-green bg-ink/[0.035] text-ink"
-                    : "border-transparent text-ink/50 hover:bg-ink/[0.02] hover:text-ink")
+                  "flex w-full items-center justify-center gap-3 rounded-full px-2 py-2 min-h-[44px] text-sm font-bold transition-colors duration-150 lg:justify-start lg:pr-4 " +
+                  (active ? "text-ink" : "text-ink/50 hover:bg-ink/[0.03] hover:text-ink")
                 }
               >
-                <Icon
-                  name={item.icon}
-                  className={"h-5 w-5 shrink-0 " + (active ? "text-brand-green" : "")}
-                />
+                <span
+                  className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full transition-colors duration-150"
+                  style={active ? { backgroundColor: `${color}26`, color } : undefined}
+                >
+                  <Icon name={item.icon} className="h-[18px] w-[18px]" />
+                </span>
                 <span className="hidden lg:inline">{item.label}</span>
               </Link>
             );

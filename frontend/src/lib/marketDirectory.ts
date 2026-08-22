@@ -2,7 +2,14 @@
 
 export type VenueType = "local_market" | "supermarket";
 
-export type FoodCategory = "produce" | "provisions" | "protein" | "spices";
+export type FoodCategory =
+  | "produce"
+  | "provisions"
+  | "protein"
+  | "spices"
+  | "fish"
+  | "grains"
+  | "household";
 
 export type DirectoryMarket = {
   id: string;
@@ -40,7 +47,7 @@ export const DIRECTORY_MARKETS: DirectoryMarket[] = [
     status: "coming_soon",
     blurb: "Wholesale produce hub — peppers, tomatoes, and bulk restocks.",
     venueType: "local_market",
-    categories: ["produce"],
+    categories: ["produce", "fish", "grains"],
     image: "/quika-cat-protein.jpg",
   },
   {
@@ -51,7 +58,7 @@ export const DIRECTORY_MARKETS: DirectoryMarket[] = [
     status: "coming_soon",
     blurb: "Classic open-air shopping for families across Ibadan.",
     venueType: "local_market",
-    categories: ["produce", "provisions"],
+    categories: ["produce", "provisions", "grains"],
     image: "/quika-cat-pantry.jpg",
   },
   {
@@ -62,7 +69,7 @@ export const DIRECTORY_MARKETS: DirectoryMarket[] = [
     status: "coming_soon",
     blurb: "Capital city stalls for everyday groceries and specialty finds.",
     venueType: "local_market",
-    categories: ["provisions", "protein"],
+    categories: ["provisions", "protein", "household"],
     image: "/quika-trust-basket.jpg",
   },
   {
@@ -73,7 +80,7 @@ export const DIRECTORY_MARKETS: DirectoryMarket[] = [
     status: "pilot",
     blurb: "Fixed prices, labelled aisles — faster when you know exactly what you need.",
     venueType: "supermarket",
-    categories: ["provisions", "produce", "protein"],
+    categories: ["provisions", "produce", "protein", "household"],
     image: "/quika-cat-pantry.jpg",
   },
   {
@@ -84,7 +91,7 @@ export const DIRECTORY_MARKETS: DirectoryMarket[] = [
     status: "pilot",
     blurb: "Shelf prices you can trust — Quika still picks and delivers.",
     venueType: "supermarket",
-    categories: ["provisions", "produce"],
+    categories: ["provisions", "produce", "household"],
     image: "/quika-trust-basket.jpg",
   },
 ];
@@ -115,4 +122,21 @@ export function matchSlugToApiMarket<T extends { id: string; name: string; city?
 export function isLocalMarket(m: { venue_type?: string; venueType?: string }) {
   const v = m.venue_type || m.venueType || "local_market";
   return v === "local_market";
+}
+
+/** Best-effort match of a live API market row onto its marketing directory entry. */
+export function findDirectoryMarket(m: { name?: string | null }): DirectoryMarket | undefined {
+  return DIRECTORY_MARKETS.find(
+    (d) =>
+      m.name?.toLowerCase().includes(d.name.toLowerCase().replace(/\s+market$/, "").slice(0, 8)) ||
+      d.name.toLowerCase() === (m.name || "").toLowerCase() ||
+      m.name?.toLowerCase().includes(d.name.toLowerCase().slice(0, 10))
+  );
+}
+
+/** Cover image for any market row — directory photo, falling back by venue type. */
+export function coverImageForMarket(m: { name?: string | null; venue_type?: string | null }): string {
+  const dir = findDirectoryMarket(m);
+  if (dir?.image) return dir.image;
+  return (m.venue_type || "") === "supermarket" ? "/quika-cat-pantry.jpg" : "/quika-cat-produce.jpg";
 }

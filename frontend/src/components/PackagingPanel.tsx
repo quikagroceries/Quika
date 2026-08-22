@@ -76,7 +76,7 @@ function PackagingPanel({ order, onPacked }: any) {
   return (
     <Card className="border-2 border-brand-orange">
       <div className="mb-2 flex items-center justify-between">
-        <p className="text-lg font-bold text-slate-900">Packaging</p>
+        <p className="text-lg font-bold text-ink">Packaging</p>
         <span
           className={
             "rounded-full px-3 py-1 text-sm font-bold " +
@@ -84,13 +84,13 @@ function PackagingPanel({ order, onPacked }: any) {
               ? "bg-red-100 text-red-700"
               : nearOverrun
               ? "bg-amber-100 text-amber-700"
-              : "bg-slate-100 text-slate-600")
+              : "bg-[#f0eeeb] text-[#6b635a]")
           }
         >
           {formatRemaining(remaining)}
         </span>
       </div>
-      <p className="mb-3 text-sm text-slate-500">
+      <p className="mb-3 text-sm text-[#6b635a]">
         Aim to have the order packed within ~10 minutes of payment — a guide only, you can still hand over after it runs out.
       </p>
 
@@ -102,7 +102,7 @@ function PackagingPanel({ order, onPacked }: any) {
           type="button"
           onClick={() => fileInputRef.current?.click()}
           disabled={uploading}
-          className="flex h-16 w-16 flex-col items-center justify-center gap-1 rounded-lg border-2 border-dashed border-slate-300 text-slate-400 disabled:opacity-50"
+          className="flex h-16 w-16 flex-col items-center justify-center gap-1 rounded-lg border-2 border-dashed border-[#ddd6cb] text-[#8a8178] disabled:opacity-50"
         >
           <Icon name="camera" className="h-5 w-5" />
           <span className="text-[10px] font-semibold">{uploading ? "…" : "Add"}</span>

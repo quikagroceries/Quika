@@ -16,6 +16,9 @@ const POLL_MS = 5000;
 
 function Shopping({ orderId, onBack }: any) {
   const [order, setOrder] = useState<any>(null);
+  // Best-effort market name for the header - mirrors OrderDetail's own
+  // lookup (the order itself only carries market_id).
+  const [market, setMarket] = useState<any>(null);
   const [selected, setSelected] = useState<any[]>([]);   // item ids ticked for this stall
   const [account, setAccount] = useState("");      // vendor account number
   const [bankCode, setBankCode] = useState("");    // vendor bank code
@@ -90,6 +93,15 @@ function Shopping({ orderId, onBack }: any) {
   useEffect(() => {
     if (!order?.market_id) return;
     api.getMarketVendors(order.market_id).then(setVendors).catch(() => {});
+  }, [order?.market_id]);
+
+  useEffect(() => {
+    if (!order?.market_id) return;
+    api
+      .getMarkets()
+      .then((list: any[]) => setMarket(list.find((m) => m.id === order.market_id) || null))
+      .catch(() => {});
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- only re-fetch when the order's market changes
   }, [order?.market_id]);
 
   function preferredStallName(id) {
@@ -297,7 +309,7 @@ function Shopping({ orderId, onBack }: any) {
 
   if (!order) {
     return (
-      <div className="flex flex-col items-center gap-3 py-16 text-slate-500">
+      <div className="flex flex-col items-center gap-3 py-16 text-[#6b635a]">
         <svg className="h-8 w-8 animate-spin" viewBox="0 0 24 24" fill="none" aria-hidden="true">
           <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
           <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
@@ -337,18 +349,37 @@ function Shopping({ orderId, onBack }: any) {
     <div>
       <Notifications />
 
-      <div className="mb-3 flex items-center justify-between">
-        <Button variant="neutral" onClick={onBack}>← Back</Button>
-        {/* #1: chat is scoped to the shopping window - see isChatAvailable. */}
-        {isChatAvailable(order.status) && <ChatPanel orderId={orderId} />}
-      </div>
-
-      <div className="mb-4 flex items-center justify-between">
-        <div>
-          <h2 className="text-lg font-bold text-slate-900">Order {order.id.slice(0, 8)}…</h2>
+      {/* Same back-button + identity convention as the customer side's
+          OrderDetail: an icon button (not a bordered text button) and the
+          market's name leading, not a bare order id. */}
+      <div className="mb-4 flex items-center justify-between gap-3">
+        <button
+          type="button"
+          onClick={onBack}
+          aria-label="Back"
+          className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-ink/70 transition hover:bg-[#f0eeeb]"
+        >
+          <Icon name="chevronDown" className="h-5 w-5 rotate-90" />
+        </button>
+        <div className="min-w-0 flex-1">
+          <p className="truncate text-xs font-bold uppercase tracking-[0.1em] text-[#8a8178]">
+            {market?.name || "Order"} · #{order.id.slice(0, 8)}
+          </p>
+          <h2 className="truncate font-display text-lg font-extrabold tracking-tight text-ink">
+            {market?.name || `Order ${order.id.slice(0, 8)}…`}
+          </h2>
         </div>
         <StatusBadge status={order.status} />
       </div>
+
+      {/* #1: chat is scoped to the shopping window - see isChatAvailable.
+          Labeled, same as the customer side, so it's obvious a chat with
+          the customer exists rather than relying on a small icon. */}
+      {isChatAvailable(order.status) && (
+        <div className="mb-4">
+          <ChatPanel orderId={orderId} variant="button" label="Chat with customer" />
+        </div>
+      )}
 
       {error && (
         <p className="mb-4 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p>
@@ -409,7 +440,7 @@ function Shopping({ orderId, onBack }: any) {
                 </button>
               ) : (
                 <Card className="py-3">
-                  <p className="mb-2 text-sm font-bold text-slate-900">New stall at this market</p>
+                  <p className="mb-2 text-sm font-bold text-ink">New stall at this market</p>
                   <div className="space-y-2">
                     <Input
                       placeholder="Stall name"
@@ -422,7 +453,7 @@ function Shopping({ orderId, onBack }: any) {
                       onChange={(e) => setStallDesc(e.target.value)}
                     />
                   </div>
-                  <p className="mt-2 text-xs text-slate-400">
+                  <p className="mt-2 text-xs text-[#8a8178]">
                     We&apos;ll tag this stall&apos;s location from your phone automatically — no extra step.
                   </p>
                   <div className="mt-3 flex gap-2">
@@ -467,7 +498,7 @@ function Shopping({ orderId, onBack }: any) {
               const overagePending = !bought && item.availability === "overage_pending";
               const actionable = isShopping && !bought && !dropped && !waitingOnCustomer && !overagePending;
               return (
-                <Card key={item.id} className={(bought || dropped) ? "bg-slate-50 py-3" : "py-3"}>
+                <Card key={item.id} className={(bought || dropped) ? "bg-[#f7f5f2] py-3" : "py-3"}>
                   <div className="flex items-center gap-2">
                     {actionable && (
                       <label className="-m-2 flex h-11 w-11 shrink-0 cursor-pointer items-center justify-center">
@@ -485,19 +516,19 @@ function Shopping({ orderId, onBack }: any) {
                       </span>
                     )}
                     {dropped && (
-                      <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-slate-200 text-slate-400">
+                      <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#e8e4df] text-[#8a8178]">
                         <Icon name="trash" className="h-4 w-4" />
                       </span>
                     )}
                     <div className="min-w-0 flex-1">
-                      <div className={"font-semibold " + (bought || dropped ? "text-slate-400 line-through" : "text-slate-900")}>
+                      <div className={"font-semibold " + (bought || dropped ? "text-[#8a8178] line-through" : "text-ink")}>
                         {item.description}
                       </div>
                       {item.requested_note && actionable && (
-                        <div className="text-sm text-slate-500">{item.requested_note}</div>
+                        <div className="text-sm text-[#6b635a]">{item.requested_note}</div>
                       )}
                       {item.listed_price != null && actionable && (
-                        <div className="text-sm text-slate-500">
+                        <div className="text-sm text-[#6b635a]">
                           Customer expected: ₦{item.listed_price}
                         </div>
                       )}
@@ -512,7 +543,7 @@ function Shopping({ orderId, onBack }: any) {
                         </div>
                       )}
                       {dropped && (
-                        <div className="text-sm font-semibold text-slate-400">Dropped by customer</div>
+                        <div className="text-sm font-semibold text-[#8a8178]">Dropped by customer</div>
                       )}
                       {waitingOnCustomer && (
                         <div className="text-sm font-semibold text-amber-700">Waiting for customer's decision</div>
@@ -548,7 +579,7 @@ function Shopping({ orderId, onBack }: any) {
               combined total to split evenly and fabricate per-item prices. */}
           {isShopping && selected.length > 0 && (
               <div className="mt-4 rounded-xl border-2 border-brand-orange bg-white p-4 shadow-sm">
-                <p className="mb-3 text-lg font-bold text-slate-900">
+                <p className="mb-3 text-lg font-bold text-ink">
                   Pay for {selected.length} item{selected.length === 1 ? "" : "s"} from this stall
                 </p>
                 <div className="space-y-2">
@@ -564,11 +595,11 @@ function Shopping({ orderId, onBack }: any) {
                   />
                 </div>
 
-                <div className="mt-3 space-y-2 border-t border-slate-100 pt-3">
+                <div className="mt-3 space-y-2 border-t border-[#ebe7e0] pt-3">
                   {selectedItems.map((it) => (
                     <div key={it.id}>
                       <div className="flex items-center gap-2">
-                        <span className="min-w-0 flex-1 truncate text-sm text-slate-700">{it.description}</span>
+                        <span className="min-w-0 flex-1 truncate text-sm text-ink/80">{it.description}</span>
                         <Input
                           placeholder="₦ price"
                           value={itemPrices[it.id] || ""}
@@ -596,15 +627,15 @@ function Shopping({ orderId, onBack }: any) {
                 </div>
 
                 {payTotal > 0 && (
-                  <div className="mt-3 flex justify-between border-t border-slate-100 pt-2 text-sm">
-                    <span className="text-slate-500">Total to this stall</span>
-                    <span className="font-bold text-slate-900">₦{payTotal.toFixed(2)}</span>
+                  <div className="mt-3 flex justify-between border-t border-[#ebe7e0] pt-2 text-sm">
+                    <span className="text-[#6b635a]">Total to this stall</span>
+                    <span className="font-bold text-ink">₦{payTotal.toFixed(2)}</span>
                   </div>
                 )}
 
                 {/* #6: optional proof-of-purchase photo, one per transfer -
                     best-effort only, never required to pay. */}
-                <div className="mt-3 flex items-center gap-2 border-t border-slate-100 pt-3">
+                <div className="mt-3 flex items-center gap-2 border-t border-[#ebe7e0] pt-3">
                   {photoUrl ? (
                     <img src={photoUrl} alt="" className="h-14 w-14 rounded-lg object-cover" />
                   ) : (
@@ -612,13 +643,13 @@ function Shopping({ orderId, onBack }: any) {
                       type="button"
                       onClick={() => photoInputRef.current?.click()}
                       disabled={photoUploading}
-                      className="flex h-14 w-14 flex-col items-center justify-center gap-1 rounded-lg border-2 border-dashed border-slate-300 text-slate-400 disabled:opacity-50"
+                      className="flex h-14 w-14 flex-col items-center justify-center gap-1 rounded-lg border-2 border-dashed border-[#ddd6cb] text-[#8a8178] disabled:opacity-50"
                     >
                       <Icon name="camera" className="h-5 w-5" />
                       <span className="text-[10px] font-semibold">{photoUploading ? "…" : "Add"}</span>
                     </button>
                   )}
-                  <span className="text-sm text-slate-500">Purchase photo (optional)</span>
+                  <span className="text-sm text-[#6b635a]">Purchase photo (optional)</span>
                   <input
                     ref={photoInputRef}
                     type="file"
@@ -661,7 +692,7 @@ function Shopping({ orderId, onBack }: any) {
               <div className="space-y-2">
                 {missingPhotoPurchases.map((p) => (
                   <div key={p.id} className="flex items-center justify-between rounded-lg bg-white px-3 py-2">
-                    <span className="text-sm font-semibold text-slate-700">₦{p.amount} — {p.account_number}</span>
+                    <span className="text-sm font-semibold text-ink/80">₦{p.amount} — {p.account_number}</span>
                     <Button
                       variant="neutral"
                       onClick={() => openAttachPhotoPicker(p.id)}

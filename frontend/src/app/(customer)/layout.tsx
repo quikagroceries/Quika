@@ -4,14 +4,16 @@ import { usePathname } from "next/navigation";
 import RequireAuth from "@/components/RequireAuth";
 import AppShell from "@/components/AppShell";
 import Notifications from "@/screens/Notifications";
-import { ActiveOrderBanner } from "@/components/ActiveOrderBanner";
 import { useAuth } from "@/components/AuthProvider";
 import { CUSTOMER_NAV } from "@/lib/nav";
 import { ShopProvider } from "@/components/shop/ShopContext";
 import ShopShell from "@/components/shop/ShopShell";
 
 function activeKeyFromPath(pathname: string) {
-  if (pathname.startsWith("/orders/")) return null;
+  // A single order's tracking screen - reachable from Track (most often) or
+  // History, but there's no dedicated nav item for it, so it identifies as
+  // Track rather than leaving the sidebar showing nothing active at all.
+  if (pathname.startsWith("/orders/")) return "track";
   if (pathname.startsWith("/track")) return "track";
   if (pathname.startsWith("/history")) return "history";
   if (pathname.startsWith("/wallet")) return "wallet";
@@ -76,9 +78,10 @@ export default function CustomerLayout({ children }: any) {
         onLogout={handleLogout}
         roleSwitch={roleSwitch}
         bottomNav
+        fullWidth
+        contentClassName="bg-white"
       >
         <Notifications />
-        <ActiveOrderBanner />
         {children}
       </AppShell>
     </RequireAuth>

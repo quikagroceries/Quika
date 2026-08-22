@@ -53,14 +53,14 @@ function AdminAnalytics() {
 
   return (
     <div>
-      <h1 className="mb-1 text-2xl font-extrabold tracking-tight text-slate-900 md:text-3xl">Analytics</h1>
-      <p className="mb-6 text-slate-500">Last 30 days, plus lifetime agent/market activity — computed only from what's actually recorded.</p>
+      <h1 className="mb-1 font-display text-3xl font-extrabold tracking-tight text-ink md:text-4xl">Analytics</h1>
+      <p className="mb-6 text-[#6b635a]">Last 30 days, plus lifetime agent/market activity — computed only from what's actually recorded.</p>
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         <Card>
-          <p className="mb-3 font-bold text-slate-900">Order volume</p>
+          <p className="mb-3 font-bold text-ink">Order volume</p>
           {volume.length === 0 ? (
-            <p className="py-8 text-center text-sm text-slate-400">No paid orders in the last 30 days.</p>
+            <p className="py-8 text-center text-sm text-[#8a8178]">No paid orders in the last 30 days.</p>
           ) : (
             <ResponsiveContainer width="100%" height={220}>
               <BarChart data={volume}>
@@ -75,9 +75,9 @@ function AdminAnalytics() {
         </Card>
 
         <Card>
-          <p className="mb-3 font-bold text-slate-900">Revenue (company share)</p>
+          <p className="mb-3 font-bold text-ink">Revenue (company share)</p>
           {revenue.length === 0 ? (
-            <p className="py-8 text-center text-sm text-slate-400">No paid orders in the last 30 days.</p>
+            <p className="py-8 text-center text-sm text-[#8a8178]">No paid orders in the last 30 days.</p>
           ) : (
             <ResponsiveContainer width="100%" height={220}>
               <LineChart data={revenue}>
@@ -94,14 +94,14 @@ function AdminAnalytics() {
 
       <div className="mt-4 grid grid-cols-1 gap-4 lg:grid-cols-[1fr_260px]">
         <Card>
-          <p className="mb-3 font-bold text-slate-900">Agent activity (lifetime)</p>
+          <p className="mb-3 font-bold text-ink">Agent activity (lifetime)</p>
           {agents.length === 0 ? (
-            <p className="text-sm text-slate-400">No agents yet.</p>
+            <p className="text-sm text-[#8a8178]">No agents yet.</p>
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-left text-sm">
                 <thead>
-                  <tr className="border-b border-slate-100 text-xs uppercase tracking-wide text-slate-400">
+                  <tr className="border-b border-[#ebe7e0] text-xs uppercase tracking-wide text-[#8a8178]">
                     <th className="py-2 pr-3 font-semibold">Agent</th>
                     <th className="py-2 pr-3 font-semibold">Completed</th>
                     <th className="py-2 font-semibold">Earnings</th>
@@ -109,10 +109,10 @@ function AdminAnalytics() {
                 </thead>
                 <tbody>
                   {agents.map((a) => (
-                    <tr key={a.agent_id} className="border-b border-slate-50 last:border-0">
-                      <td className="py-2 pr-3 font-semibold text-slate-900">{a.full_name || a.phone}</td>
-                      <td className="py-2 pr-3 text-slate-700">{a.completed_orders}</td>
-                      <td className="py-2 font-semibold text-slate-900">₦{a.earnings}</td>
+                    <tr key={a.agent_id} className="border-b border-[#ebe7e0] last:border-0">
+                      <td className="py-2 pr-3 font-semibold text-ink">{a.full_name || a.phone}</td>
+                      <td className="py-2 pr-3 text-ink/80">{a.completed_orders}</td>
+                      <td className="py-2 font-semibold text-ink">₦{a.earnings}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -122,9 +122,9 @@ function AdminAnalytics() {
         </Card>
 
         <Card>
-          <p className="mb-3 font-bold text-slate-900">Order outcomes</p>
+          <p className="mb-3 font-bold text-ink">Order outcomes</p>
           {rates.total_terminal === 0 ? (
-            <p className="text-sm text-slate-400">No orders have reached a final outcome yet.</p>
+            <p className="text-sm text-[#8a8178]">No orders have reached a final outcome yet.</p>
           ) : (
             <>
               <ResponsiveContainer width="100%" height={160}>
@@ -138,11 +138,11 @@ function AdminAnalytics() {
               <div className="mt-2 space-y-1 text-sm">
                 {rateSlices.map((s) => (
                   <div key={s.key} className="flex items-center justify-between">
-                    <span className="flex items-center gap-1.5 text-slate-600">
+                    <span className="flex items-center gap-1.5 text-[#6b635a]">
                       <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: RATE_COLORS[s.key] }} />
                       {rateLabels[s.key]}
                     </span>
-                    <span className="font-semibold text-slate-900">
+                    <span className="font-semibold text-ink">
                       {s.value} ({Math.round((s.value / rates.total_terminal) * 100)}%)
                     </span>
                   </div>
@@ -154,14 +154,14 @@ function AdminAnalytics() {
       </div>
 
       <Card className="mt-4">
-        <p className="mb-3 font-bold text-slate-900">Market activity (lifetime)</p>
+        <p className="mb-3 font-bold text-ink">Market activity (lifetime)</p>
         {marketsSorted.length === 0 ? (
-          <p className="text-sm text-slate-400">No paid orders yet.</p>
+          <p className="text-sm text-[#8a8178]">No paid orders yet.</p>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-left text-sm">
               <thead>
-                <tr className="border-b border-slate-100 text-xs uppercase tracking-wide text-slate-400">
+                <tr className="border-b border-[#ebe7e0] text-xs uppercase tracking-wide text-[#8a8178]">
                   <th className="py-2 pr-3 font-semibold">Market</th>
                   <th className="py-2 pr-3 font-semibold">Orders</th>
                   <th className="py-2 font-semibold">Float turnover</th>
@@ -169,10 +169,10 @@ function AdminAnalytics() {
               </thead>
               <tbody>
                 {marketsSorted.map((m) => (
-                  <tr key={m.market_id} className="border-b border-slate-50 last:border-0">
-                    <td className="py-2 pr-3 font-semibold text-slate-900">{marketName(m.market_id)}</td>
-                    <td className="py-2 pr-3 text-slate-700">{m.orders}</td>
-                    <td className="py-2 font-semibold text-slate-900">₦{m.float_turnover}</td>
+                  <tr key={m.market_id} className="border-b border-[#ebe7e0] last:border-0">
+                    <td className="py-2 pr-3 font-semibold text-ink">{marketName(m.market_id)}</td>
+                    <td className="py-2 pr-3 text-ink/80">{m.orders}</td>
+                    <td className="py-2 font-semibold text-ink">₦{m.float_turnover}</td>
                   </tr>
                 ))}
               </tbody>

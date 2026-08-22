@@ -23,7 +23,7 @@ function Modal({ open, onClose, title, children, className = "" }: any) {
 
   return (
     <div
-      className="fixed inset-0 z-[1900] flex items-end justify-center bg-slate-900/50 p-0 backdrop-blur-sm sm:items-center sm:p-4"
+      className="fixed inset-0 z-[1900] flex items-end justify-center bg-ink/50 p-0 backdrop-blur-sm sm:items-center sm:p-4"
       onClick={onClose}
     >
       <div
@@ -35,12 +35,12 @@ function Modal({ open, onClose, title, children, className = "" }: any) {
       >
         {(title || onClose) && (
           <div className="mb-3 flex items-center justify-between">
-            {title ? <p className="text-lg font-bold text-slate-900">{title}</p> : <span />}
+            {title ? <p className="text-lg font-bold text-ink">{title}</p> : <span />}
             {onClose && (
               <button
                 onClick={onClose}
                 aria-label="Close"
-                className="-m-2 flex h-9 w-9 items-center justify-center rounded-full text-slate-400 hover:bg-slate-100"
+                className="-m-2 flex h-9 w-9 items-center justify-center rounded-full text-[#8a8178] hover:bg-[#f0eeeb]"
               >
                 <Icon name="close" className="h-5 w-5" />
               </button>

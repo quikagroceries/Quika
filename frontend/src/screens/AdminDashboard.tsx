@@ -68,8 +68,8 @@ function AdminDashboard() {
 
   return (
     <div>
-      <h1 className="mb-1 text-2xl font-extrabold tracking-tight text-slate-900 md:text-3xl">Dashboard</h1>
-      <p className="mb-6 text-slate-500">The operational heartbeat — float, orders, and what needs attention.</p>
+      <h1 className="mb-1 font-display text-3xl font-extrabold tracking-tight text-ink md:text-4xl">Dashboard</h1>
+      <p className="mb-6 text-[#6b635a]">The operational heartbeat — float, orders, and what needs attention.</p>
 
       {error && <p className="mb-4 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p>}
 
@@ -79,9 +79,9 @@ function AdminDashboard() {
         </div>
       ) : (
         <>
-          <h2 className="mb-3 text-lg font-extrabold text-slate-900">Float health</h2>
+          <h2 className="mb-3 text-lg font-extrabold text-ink">Float health</h2>
           {markets.length === 0 ? (
-            <Card className="mb-8 text-slate-500">No markets yet — add one under Markets.</Card>
+            <Card className="mb-8 text-[#6b635a]">No markets yet — add one under Markets.</Card>
           ) : (
             <div className="mb-8 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
               {markets.map((m) => {
@@ -95,17 +95,17 @@ function AdminDashboard() {
                     className={low ? "border-2 border-red-400" : "border-2 border-transparent"}
                   >
                     <div className="flex items-center justify-between gap-2">
-                      <span className="truncate font-bold text-slate-900">{m.name}</span>
+                      <span className="truncate font-bold text-ink">{m.name}</span>
                       {low && (
                         <span className="flex shrink-0 items-center gap-1 rounded-full bg-red-50 px-2 py-0.5 text-xs font-bold text-red-600">
                           <Icon name="alert" className="h-3.5 w-3.5" /> Low
                         </span>
                       )}
                     </div>
-                    <div className={"mt-2 text-2xl font-extrabold " + (low ? "text-red-600" : "text-slate-900")}>
+                    <div className={"mt-2 text-2xl font-extrabold " + (low ? "text-red-600" : "text-ink")}>
                       {balance != null ? `₦${balance}` : "—"}
                     </div>
-                    <div className="text-sm text-slate-500">{m.city}, {m.state}</div>
+                    <div className="text-sm text-[#6b635a]">{m.city}, {m.state}</div>
                   </Card>
                 );
               })}
@@ -114,34 +114,34 @@ function AdminDashboard() {
 
           <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
             <Card interactive onClick={() => onNavigate("orders")}>
-              <div className="mb-1 flex items-center gap-2 text-slate-500">
+              <div className="mb-1 flex items-center gap-2 text-[#6b635a]">
                 <Icon name="basket" className="h-4 w-4" /> In-flight orders
               </div>
-              <div className="text-3xl font-extrabold text-slate-900">{inFlight.count}</div>
+              <div className="text-3xl font-extrabold text-ink">{inFlight.count}</div>
               <div className="mt-2 flex gap-3 text-sm">
-                <span className={inFlight.unassigned > 0 ? "font-bold text-amber-700" : "text-slate-400"}>
+                <span className={inFlight.unassigned > 0 ? "font-bold text-amber-700" : "text-[#8a8178]"}>
                   {inFlight.unassigned} unassigned
                 </span>
-                <span className={inFlight.stuck > 0 ? "font-bold text-red-600" : "text-slate-400"}>
+                <span className={inFlight.stuck > 0 ? "font-bold text-red-600" : "text-[#8a8178]"}>
                   {inFlight.stuck} stuck
                 </span>
               </div>
             </Card>
 
             <Card interactive onClick={() => onNavigate("users")}>
-              <div className="mb-1 flex items-center gap-2 text-slate-500">
+              <div className="mb-1 flex items-center gap-2 text-[#6b635a]">
                 <Icon name="flag" className="h-4 w-4" /> Flagged users
               </div>
-              <div className={"text-3xl font-extrabold " + (flagged.count > 0 ? "text-amber-700" : "text-slate-900")}>
+              <div className={"text-3xl font-extrabold " + (flagged.count > 0 ? "text-amber-700" : "text-ink")}>
                 {flagged.count}
               </div>
             </Card>
 
             <Card interactive onClick={() => onNavigate("agents")}>
-              <div className="mb-1 flex items-center gap-2 text-slate-500">
+              <div className="mb-1 flex items-center gap-2 text-[#6b635a]">
                 <Icon name="user" className="h-4 w-4" /> Pending agent applications
               </div>
-              <div className={"text-3xl font-extrabold " + (pendingApps.length > 0 ? "text-brand-orange" : "text-slate-900")}>
+              <div className={"text-3xl font-extrabold " + (pendingApps.length > 0 ? "text-brand-orange" : "text-ink")}>
                 {pendingApps.length}
               </div>
             </Card>

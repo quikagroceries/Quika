@@ -34,13 +34,13 @@ export default function AgentHistoryPage() {
     api.getMarkets().then(setMarkets).catch(() => {});
   }, [handleLogout]);
 
-  const marketName = (id) => markets.find((m) => m.id === id)?.name;
+  const marketFor = (id) => markets.find((m) => m.id === id);
   const visibleOrders = filterOrders(orders, statusFilter);
 
   return (
     <div>
-      <h1 className="mb-1 text-2xl font-extrabold tracking-tight text-slate-900 md:text-3xl">History</h1>
-      <p className="mb-6 text-slate-500">Every order you&apos;ve shopped, active or finished.</p>
+      <h1 className="mb-1 font-display text-3xl font-extrabold tracking-tight text-ink md:text-4xl">History</h1>
+      <p className="mb-6 text-[#6b635a]">Every order you&apos;ve shopped, active or finished.</p>
 
       {error && (
         <p className="mb-4 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p>
@@ -67,7 +67,7 @@ export default function AgentHistoryPage() {
           <HistoryOrderCard
             key={order.id}
             order={order}
-            marketName={marketName(order.market_id)}
+            market={marketFor(order.market_id)}
             counterpartLabel="Customer"
             counterpartId={order.customer_id}
             onClick={() => router.push(`/agent/orders/${order.id}`)}

@@ -55,12 +55,12 @@ function AdminAgents() {
 
   return (
     <div>
-      <h1 className="mb-1 text-2xl font-extrabold tracking-tight text-slate-900 md:text-3xl">Agents</h1>
-      <p className="mb-6 text-slate-500">Approve applicants and see who's covering each market.</p>
+      <h1 className="mb-1 font-display text-3xl font-extrabold tracking-tight text-ink md:text-4xl">Agents</h1>
+      <p className="mb-6 text-[#6b635a]">Approve applicants and see who's covering each market.</p>
 
       {error && <p className="mb-4 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p>}
 
-      <h2 className="mb-3 text-lg font-extrabold text-slate-900">Pending applications</h2>
+      <h2 className="mb-3 text-lg font-extrabold text-ink">Pending applications</h2>
       {applications === null ? (
         <div className="mb-8 space-y-2">{[0, 1].map((i) => <CardSkeleton key={i} />)}</div>
       ) : applications.length === 0 ? (
@@ -70,9 +70,9 @@ function AdminAgents() {
           {applications.map((a) => (
             <Card key={a.id} className="flex flex-wrap items-center justify-between gap-3">
               <div className="min-w-0">
-                <div className="font-semibold text-slate-900">Applicant {a.user_id.slice(0, 8)}…</div>
-                <div className="text-sm text-slate-500">{marketName(a.market_id)}</div>
-                {a.note && <div className="mt-1 text-sm text-slate-500">"{a.note}"</div>}
+                <div className="font-semibold text-ink">Applicant {a.user_id.slice(0, 8)}…</div>
+                <div className="text-sm text-[#6b635a]">{marketName(a.market_id)}</div>
+                {a.note && <div className="mt-1 text-sm text-[#6b635a]">"{a.note}"</div>}
               </div>
               <div className="flex shrink-0 gap-2">
                 <Button
@@ -96,16 +96,16 @@ function AdminAgents() {
         </div>
       )}
 
-      <h2 className="mb-3 text-lg font-extrabold text-slate-900">All agents</h2>
+      <h2 className="mb-3 text-lg font-extrabold text-ink">All agents</h2>
       {agents === null ? (
         <div className="space-y-2">{[0, 1].map((i) => <CardSkeleton key={i} />)}</div>
       ) : agents.length === 0 ? (
         <EmptyState icon="user" title="No agents yet" subtitle="Approved applicants will show up here." />
       ) : (
-        <div className="overflow-x-auto rounded-2xl bg-white shadow-card">
+        <div className="overflow-x-auto rounded-2xl border border-[#ebe7e0] bg-white shadow-sm">
           <table className="w-full min-w-[640px] text-left text-sm">
             <thead>
-              <tr className="border-b border-slate-100 text-xs uppercase tracking-wide text-slate-400">
+              <tr className="border-b border-[#ebe7e0] text-xs uppercase tracking-wide text-[#8a8178]">
                 <th className="px-4 py-3 font-semibold">Agent</th>
                 <th className="px-4 py-3 font-semibold">Market</th>
                 <th className="px-4 py-3 font-semibold">Status</th>
@@ -115,9 +115,9 @@ function AdminAgents() {
             </thead>
             <tbody>
               {agents.map((a) => (
-                <tr key={a.id} className="border-b border-slate-50 last:border-0">
-                  <td className="px-4 py-3 font-semibold text-slate-900">{a.full_name || a.phone}</td>
-                  <td className="px-4 py-3 text-slate-700">{marketName(a.assigned_market_id)}</td>
+                <tr key={a.id} className="border-b border-[#ebe7e0] last:border-0">
+                  <td className="px-4 py-3 font-semibold text-ink">{a.full_name || a.phone}</td>
+                  <td className="px-4 py-3 text-ink/80">{marketName(a.assigned_market_id)}</td>
                   <td className="px-4 py-3">
                     <span className={
                       "rounded-full px-2 py-0.5 text-xs font-bold " +
@@ -125,13 +125,13 @@ function AdminAgents() {
                         ? "bg-brand-green/10 text-brand-green"
                         : a.on_duty
                           ? "bg-amber-50 text-amber-700"
-                          : "bg-slate-100 text-slate-500")
+                          : "bg-[#f0eeeb] text-[#6b635a]")
                     }>
                       {!a.on_duty ? "Off duty" : a.is_available ? "Available" : "Busy"}
                     </span>
                   </td>
-                  <td className="px-4 py-3 text-slate-700">{a.completed_orders}</td>
-                  <td className="px-4 py-3 font-semibold text-slate-900">₦{a.earnings_total}</td>
+                  <td className="px-4 py-3 text-ink/80">{a.completed_orders}</td>
+                  <td className="px-4 py-3 font-semibold text-ink">₦{a.earnings_total}</td>
                 </tr>
               ))}
             </tbody>

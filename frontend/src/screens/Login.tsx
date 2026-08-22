@@ -6,6 +6,28 @@ import Button from "@/components/Button";
 import Card from "@/components/Card";
 import Input from "@/components/Input";
 
+const isDev = process.env.NODE_ENV !== "production";
+
+// Only meaningful for a phone number that has never signed up before - the
+// backend only honors `role` on account CREATION (see auth/service.py's
+// get_or_create_user), and only outside production. Picking a role for a
+// number that already has an account is silently ignored server-side, so
+// this is for spinning up a fresh test account per role, not for changing
+// an existing one.
+//
+// No "Agent" option here on purpose: an AGENT-role user also needs a
+// matching Agent record (assigned market, availability) that only the
+// admin-approved agent_applications workflow creates - self-assigning the
+// role here would produce a half-provisioned account that 404s the moment
+// it tries to do anything agent-shaped (e.g. toggling duty). Get a real
+// agent account by signing up as a customer, choosing "Become an agent" on
+// first login, and approving that application from an admin account - or,
+// for instant test accounts, POST /dev/seed on the backend.
+const DEV_ROLES = [
+  { key: "customer", label: "Customer" },
+  { key: "admin", label: "Admin" },
+];
+
 function formatRemaining(ms) {
   const total = Math.max(0, Math.ceil(ms / 1000));
   const m = Math.floor(total / 60);
@@ -19,6 +41,7 @@ function Login({ onLoggedIn }: any) {
   const [code, setCode] = useState("");
   const [step, setStep] = useState("phone");
   const [devOtp, setDevOtp] = useState(""); // dev-only: show the code on screen
+  const [devRole, setDevRole] = useState("customer"); // dev-only: role for a brand-new account
   // When the current code expires (epoch ms), and a live clock reading to
   // count down against - both null until a code has actually been sent.
   // Seeded null (never Date.now() during render) - the epoch is only ever
@@ -62,7 +85,7 @@ function Login({ onLoggedIn }: any) {
   async function verifyOtp() {
     setError(""); setBusy(true);
     try {
-      const data = await api.verifyOtp(phone, code);
+      const data = await api.verifyOtp(phone, code, isDev && devRole !== "customer" ? devRole : undefined);
       localStorage.setItem("quika_token", data.access_token);
       onLoggedIn(data.access_token); // tell App we're in
     } catch {
@@ -73,23 +96,53 @@ function Login({ onLoggedIn }: any) {
 
   return (
     <div className="mx-auto max-w-sm py-8">
-      <h1 className="mb-2 text-3xl font-extrabold tracking-tight text-slate-900">
+      <h1 className="mb-2 font-display text-3xl font-extrabold tracking-tight text-ink">
         Welcome to Quika
       </h1>
-      <p className="mb-8 text-slate-500">
+      <p className="mb-8 text-[#6b635a]">
         Recycled-float grocery shopping, run by real market agents.
       </p>
 
       <Card>
         {step === "phone" && (
           <div className="space-y-3">
-            <p className="text-slate-600">Enter your phone number to get a code.</p>
+            <p className="text-[#6b635a]">Enter your phone number to get a code.</p>
             <Input
               type="tel"
               placeholder="+234..."
               value={phone}
               onChange={(e) => setPhone(e.target.value)}
             />
+
+            {/* Dev-only: only takes effect for a phone number that has never
+                signed up before - the backend ignores it for an existing
+                account. Lets you spin up an agent/admin test login without
+                curl or hand-editing the database. */}
+            {isDev && (
+              <div>
+                <p className="mb-1.5 text-xs font-bold uppercase tracking-wide text-[#8a8178]">
+                  Dev only — role for a brand-new number
+                </p>
+                <div className="flex gap-2">
+                  {DEV_ROLES.map((r) => (
+                    <button
+                      key={r.key}
+                      type="button"
+                      onClick={() => setDevRole(r.key)}
+                      className={
+                        "flex-1 rounded-full px-3 py-1.5 text-sm font-bold transition " +
+                        (devRole === r.key
+                          ? "bg-ink text-white"
+                          : "bg-[#f0eeeb] text-ink hover:bg-[#e8e4df]")
+                      }
+                    >
+                      {r.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
             <Button onClick={requestOtp} busy={busy} fullWidth>
               Send code
             </Button>
@@ -98,14 +151,20 @@ function Login({ onLoggedIn }: any) {
 
         {step === "code" && (
           <div className="space-y-3">
-            <p className="text-slate-600">Enter the code sent to {phone}.</p>
+            <p className="text-[#6b635a]">Enter the code sent to {phone}.</p>
             {devOtp && (
-              <p className="text-sm text-slate-500">
-                Dev code: <b className="text-slate-700">{devOtp}</b>
+              <p className="text-sm text-[#6b635a]">
+                Dev code: <b className="text-ink">{devOtp}</b>
+              </p>
+            )}
+            {isDev && devRole !== "customer" && (
+              <p className="text-sm font-semibold text-brand-orange">
+                Signing in as: {DEV_ROLES.find((r) => r.key === devRole)?.label}
+                {" "}(only applies if this number has never signed up before)
               </p>
             )}
             {remainingMs != null && (
-              <p className={"text-sm font-semibold " + (codeExpired ? "text-red-600" : "text-slate-500")}>
+              <p className={"text-sm font-semibold " + (codeExpired ? "text-red-600" : "text-[#6b635a]")}>
                 {codeExpired
                   ? "Code expired — request a new one."
                   : `Code expires in ${formatRemaining(remainingMs)}`}
