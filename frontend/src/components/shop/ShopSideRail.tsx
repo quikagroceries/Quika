@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import Icon from "@/components/Icon";
 import { SIDEBAR_BRAND_EXTRA_ID, SIDEBAR_SHOP_EXTRA_ID } from "@/components/Sidebar";
@@ -109,29 +109,19 @@ function Tip({ children, className = "" }: { children: React.ReactNode; classNam
   );
 }
 
-function ChevronDown({ open = false }: { open?: boolean }) {
-  return (
-    <svg
-      viewBox="0 0 20 20"
-      className={"h-3.5 w-3.5 shrink-0 text-[#8a8178] transition " + (open ? "rotate-180" : "")}
-      fill="currentColor"
-      aria-hidden
-    >
-      <path
-        fillRule="evenodd"
-        d="M5.23 7.21a.75.75 0 011.06.02L10 11.17l3.71-3.94a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z"
-        clipRule="evenodd"
-      />
-    </svg>
-  );
-}
-
 /**
  * Workspace-style switcher, right below the logo — "which kind of shopping"
  * is a more fundamental choice than any of the nav items below it (Local
  * Markets bargains live; Supermarkets are fixed-price), so it gets the same
  * prominent, always-visible treatment a workspace switcher gets in Slack or
  * Notion, not a buried filter row.
+ *
+ * A segmented toggle, not a dropdown — there are exactly two options, so
+ * switching should be one click on the option you want, not open-then-
+ * choose. The dropdown this replaced needed two clicks and made you read
+ * which of two items was already selected before you could act; this one is
+ * scannable and switches on contact, the same one-tap pattern the mobile
+ * venue chips already used (see MarketPicker.tsx).
  */
 function VenueTypeSwitcher({
   venueType,
@@ -142,88 +132,34 @@ function VenueTypeSwitcher({
   venueCounts: { local_market: number; supermarket: number };
   onSelect: (id: VenueType) => void;
 }) {
-  const [open, setOpen] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (!open) return;
-    function onDoc(e: MouseEvent) {
-      if (!ref.current?.contains(e.target as Node)) setOpen(false);
-    }
-    function onKey(e: KeyboardEvent) {
-      if (e.key === "Escape") setOpen(false);
-    }
-    document.addEventListener("mousedown", onDoc);
-    document.addEventListener("keydown", onKey);
-    return () => {
-      document.removeEventListener("mousedown", onDoc);
-      document.removeEventListener("keydown", onKey);
-    };
-  }, [open]);
-
   const options = [
-    {
-      id: "local_market" as VenueType,
-      label: "Local Markets",
-      hint: `${venueCounts.local_market} live · bargain`,
-      icon: "basket" as const,
-    },
-    {
-      id: "supermarket" as VenueType,
-      label: "Supermarkets",
-      hint: `${venueCounts.supermarket} live · fixed price`,
-      icon: "store" as const,
-    },
+    { id: "local_market" as VenueType, label: "Local Markets", count: venueCounts.local_market, icon: "basket" as const },
+    { id: "supermarket" as VenueType, label: "Supermarkets", count: venueCounts.supermarket, icon: "store" as const },
   ];
-  const current = options.find((o) => o.id === venueType) || options[0];
 
   return (
-    <div className="relative px-3 pb-4" ref={ref}>
-      <button
-        type="button"
-        onClick={() => setOpen((o) => !o)}
-        aria-haspopup="listbox"
-        aria-expanded={open}
-        className={
-          "flex w-full items-center gap-2 rounded-xl border px-2.5 py-2 text-left transition " +
-          (open
-            ? "border-brand-orange/40 bg-[#fff8f5]"
-            : "border-[#ebe7e0] bg-[#faf9f7] hover:bg-[#f0eeeb]")
-        }
-      >
-        <Icon name={current.icon} className="h-4 w-4 shrink-0 text-brand-orange" />
-        <span className="min-w-0 flex-1 truncate text-sm font-bold text-ink">{current.label}</span>
-        <ChevronDown open={open} />
-      </button>
-
-      {open && (
-        <div
-          role="listbox"
-          aria-label="Shop from"
-          className="absolute left-3 right-3 top-[calc(100%-4px)] z-30 overflow-hidden rounded-xl border border-[#ebe7e0] bg-white py-1 shadow-[0_12px_28px_rgba(33,26,20,0.12)]"
-        >
-          {options.map((o) => (
+    <div className="px-3 pb-4">
+      <div role="group" aria-label="Shop from" className="flex gap-1 rounded-xl border border-[#ebe7e0] bg-[#faf9f7] p-1">
+        {options.map((o) => {
+          const active = o.id === venueType;
+          return (
             <button
               key={o.id}
               type="button"
-              role="option"
-              aria-selected={o.id === venueType}
-              onClick={() => {
-                onSelect(o.id);
-                setOpen(false);
-              }}
+              aria-pressed={active}
+              onClick={() => onSelect(o.id)}
               className={
-                "flex w-full items-center gap-2.5 px-3 py-2 text-left transition hover:bg-[#f7f5f2] " +
-                (o.id === venueType ? "text-brand-orange" : "text-ink")
+                "flex flex-1 min-w-0 flex-col items-center gap-0.5 rounded-lg px-2 py-2 text-center transition " +
+                (active ? "bg-white text-brand-orange shadow-sm" : "text-ink/55 hover:text-ink")
               }
             >
-              <Icon name={o.icon} className="h-4 w-4 shrink-0 opacity-70" />
-              <span className="min-w-0 flex-1 truncate text-sm font-semibold">{o.label}</span>
-              <span className="shrink-0 text-[0.7rem] font-medium text-[#8a8178]">{o.hint}</span>
+              <Icon name={o.icon} className="h-4 w-4" />
+              <span className="w-full truncate text-xs font-bold leading-none">{o.label}</span>
+              <span className="text-[0.65rem] font-medium leading-none opacity-70">{o.count} live</span>
             </button>
-          ))}
-        </div>
-      )}
+          );
+        })}
+      </div>
     </div>
   );
 }

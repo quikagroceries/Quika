@@ -11,20 +11,30 @@
       "static/chunks/main-app.js",
       "static/chunks/app/(customer)/layout.js"
     ],
-    "/(customer)/shop/page": [
+    "/(customer)/wallet/page": [
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
-      "static/chunks/app/(customer)/shop/page.js"
+      "static/chunks/app/(customer)/wallet/page.js"
     ],
     "/(customer)/settings/page": [
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
       "static/chunks/app/(customer)/settings/page.js"
     ],
-    "/setup/page": [
+    "/(customer)/history/page": [
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
-      "static/chunks/app/setup/page.js"
+      "static/chunks/app/(customer)/history/page.js"
+    ],
+    "/(customer)/track/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/(customer)/track/page.js"
+    ],
+    "/(customer)/shop/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/(customer)/shop/page.js"
     ],
     "/(agent)/layout": [
       "static/chunks/webpack.js",
@@ -50,11 +60,6 @@
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
       "static/chunks/app/(agent)/agent/settings/page.js"
-    ],
-    "/login/page": [
-      "static/chunks/webpack.js",
-      "static/chunks/main-app.js",
-      "static/chunks/app/login/page.js"
     ]
   }
 }

@@ -48,6 +48,7 @@ export const api = {
   myOrders: () => request("/orders/mine"),
 
   me: () => request("/auth/me"),
+  getHealth: () => request("/health"),
   updateProfile: (body) => request("/auth/me", { method: "PATCH", body }),
 
   getOrder: (id) => request(`/orders/${id}`),

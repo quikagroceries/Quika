@@ -7,14 +7,25 @@ import {
 } from "recharts";
 import { api } from "@/lib/api";
 import Card from "@/components/Card";
+import Icon from "@/components/Icon";
+import ChartTooltip from "@/components/ChartTooltip";
 import { CardSkeleton } from "@/components/Skeleton";
+import { CHART_STATUS, CHART_GRID, CHART_AXIS_TEXT } from "@/lib/adminUtils";
 
-// Quika brand colors for the primary series; muted/semantic colors for the
-// rates breakdown (green=completed, red=cancelled, amber=non-payment,
-// slate=disputed) - same semantics StatusBadge already uses app-wide.
+// Quika's own brand hues for the two single-series charts (order volume,
+// revenue) - a single series carries its identity in the card title, so it
+// needs no categorical assignment, just the brand's own hue. The rates
+// breakdown below is genuinely status data (completed/cancelled/non-payment/
+// disputed), so it uses the fixed, validated status palette instead - never
+// color alone, always paired with an icon + label.
 const ORANGE = "#E8541E";
 const GREEN = "#0E7A3C";
-const RATE_COLORS = { completed: "#0E7A3C", cancelled: "#DC2626", cancelled_unpaid: "#D97706", disputed: "#64748B" };
+const RATE_STYLE = {
+  completed: { color: CHART_STATUS.good, icon: "check" as const },
+  cancelled: { color: CHART_STATUS.critical, icon: "close" as const },
+  cancelled_unpaid: { color: CHART_STATUS.warning, icon: "clock" as const },
+  disputed: { color: CHART_STATUS.serious, icon: "alert" as const },
+};
 
 function formatShortDate(iso) {
   return new Date(iso).toLocaleDateString(undefined, { month: "short", day: "numeric" });
@@ -64,10 +75,10 @@ function AdminAnalytics() {
           ) : (
             <ResponsiveContainer width="100%" height={220}>
               <BarChart data={volume}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" vertical={false} />
-                <XAxis dataKey="label" tick={{ fontSize: 12, fill: "#64748b" }} />
-                <YAxis allowDecimals={false} tick={{ fontSize: 12, fill: "#64748b" }} width={30} />
-                <Tooltip />
+                <CartesianGrid strokeDasharray="3 3" stroke={CHART_GRID} vertical={false} />
+                <XAxis dataKey="label" tick={{ fontSize: 12, fill: CHART_AXIS_TEXT }} axisLine={{ stroke: CHART_GRID }} tickLine={false} />
+                <YAxis allowDecimals={false} tick={{ fontSize: 12, fill: CHART_AXIS_TEXT }} width={30} axisLine={false} tickLine={false} />
+                <Tooltip cursor={{ fill: "rgba(33,26,20,0.04)" }} content={<ChartTooltip formatter={(v: any) => [v, "orders"]} />} />
                 <Bar dataKey="orders" fill={ORANGE} radius={[4, 4, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
@@ -81,11 +92,11 @@ function AdminAnalytics() {
           ) : (
             <ResponsiveContainer width="100%" height={220}>
               <LineChart data={revenue}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" vertical={false} />
-                <XAxis dataKey="label" tick={{ fontSize: 12, fill: "#64748b" }} />
-                <YAxis tick={{ fontSize: 12, fill: "#64748b" }} width={50} tickFormatter={(v) => `₦${v}`} />
-                <Tooltip formatter={(v) => [`₦${v}`, "Company share"]} />
-                <Line type="monotone" dataKey="company_share" stroke={GREEN} strokeWidth={2.5} dot={false} />
+                <CartesianGrid strokeDasharray="3 3" stroke={CHART_GRID} vertical={false} />
+                <XAxis dataKey="label" tick={{ fontSize: 12, fill: CHART_AXIS_TEXT }} axisLine={{ stroke: CHART_GRID }} tickLine={false} />
+                <YAxis tick={{ fontSize: 12, fill: CHART_AXIS_TEXT }} width={50} tickFormatter={(v) => `₦${v}`} axisLine={false} tickLine={false} />
+                <Tooltip content={<ChartTooltip formatter={(v: any) => [`₦${v}`, "company share"]} />} />
+                <Line type="monotone" dataKey="company_share" stroke={GREEN} strokeWidth={2.5} dot={false} activeDot={{ r: 5 }} />
               </LineChart>
             </ResponsiveContainer>
           )}
@@ -98,7 +109,34 @@ function AdminAnalytics() {
           {agents.length === 0 ? (
             <p className="text-sm text-[#8a8178]">No agents yet.</p>
           ) : (
-            <div className="overflow-x-auto">
+            <>
+              {/* Summary before detail: a ranking (who earned the most) is
+                  a magnitude-by-category job - a horizontal bar leaderboard
+                  reads faster than scanning a sorted table column. Capped
+                  at the top 8 - past that a bar chart of names just becomes
+                  a long scrollable list with extra pixels, no faster than
+                  the table already below it; the full table stays the
+                  complete record regardless of agent count. */}
+              <ResponsiveContainer width="100%" height={Math.max(100, Math.min(agents.length, 8) * 36)}>
+                <BarChart data={agents.slice(0, 8)} layout="vertical" margin={{ left: 8, right: 16 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke={CHART_GRID} horizontal={false} />
+                  <XAxis type="number" tick={{ fontSize: 12, fill: CHART_AXIS_TEXT }} tickFormatter={(v) => `₦${v}`} axisLine={false} tickLine={false} />
+                  <YAxis
+                    type="category"
+                    dataKey={(a: any) => a.full_name || a.phone}
+                    width={110}
+                    tick={{ fontSize: 12, fill: CHART_AXIS_TEXT }}
+                    axisLine={false}
+                    tickLine={false}
+                  />
+                  <Tooltip cursor={{ fill: "rgba(33,26,20,0.04)" }} content={<ChartTooltip formatter={(v: any) => [`₦${v}`, "earnings"]} />} />
+                  <Bar dataKey="earnings" fill={GREEN} radius={[0, 4, 4, 0]} maxBarSize={18} />
+                </BarChart>
+              </ResponsiveContainer>
+              {agents.length > 8 && (
+                <p className="mb-3 mt-1 text-xs text-[#8a8178]">Top 8 of {agents.length} agents shown — full list below.</p>
+              )}
+            <div className="mt-3 overflow-x-auto">
               <table className="w-full text-left text-sm">
                 <thead>
                   <tr className="border-b border-[#ebe7e0] text-xs uppercase tracking-wide text-[#8a8178]">
@@ -118,6 +156,7 @@ function AdminAnalytics() {
                 </tbody>
               </table>
             </div>
+            </>
           )}
         </Card>
 
@@ -130,16 +169,18 @@ function AdminAnalytics() {
               <ResponsiveContainer width="100%" height={160}>
                 <PieChart>
                   <Pie data={rateSlices} dataKey="value" nameKey="key" innerRadius={40} outerRadius={70} paddingAngle={2}>
-                    {rateSlices.map((s) => <Cell key={s.key} fill={RATE_COLORS[s.key]} />)}
+                    {rateSlices.map((s) => <Cell key={s.key} fill={RATE_STYLE[s.key].color} stroke="#fff" strokeWidth={2} />)}
                   </Pie>
-                  <Tooltip formatter={(v, n) => [v, rateLabels[n]]} />
+                  <Tooltip content={<ChartTooltip formatter={(v: any, n: any) => [v, rateLabels[n]]} />} />
                 </PieChart>
               </ResponsiveContainer>
               <div className="mt-2 space-y-1 text-sm">
                 {rateSlices.map((s) => (
                   <div key={s.key} className="flex items-center justify-between">
                     <span className="flex items-center gap-1.5 text-[#6b635a]">
-                      <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: RATE_COLORS[s.key] }} />
+                      <span className="shrink-0" style={{ color: RATE_STYLE[s.key].color }}>
+                        <Icon name={RATE_STYLE[s.key].icon} className="h-3.5 w-3.5" />
+                      </span>
                       {rateLabels[s.key]}
                     </span>
                     <span className="font-semibold text-ink">
@@ -158,7 +199,33 @@ function AdminAnalytics() {
         {marketsSorted.length === 0 ? (
           <p className="text-sm text-[#8a8178]">No paid orders yet.</p>
         ) : (
-          <div className="overflow-x-auto">
+          <>
+            {/* Orders-by-market only, not float turnover alongside it in the
+                same chart - those are two different units (count vs.
+                currency) for the same categories, and a dual-axis chart is
+                the #1 dataviz mistake precisely because it invites reading
+                one bar's height against the wrong scale. Turnover stays a
+                table column instead. */}
+            <ResponsiveContainer width="100%" height={Math.max(100, Math.min(marketsSorted.length, 8) * 36)}>
+              <BarChart data={marketsSorted.slice(0, 8)} layout="vertical" margin={{ left: 8, right: 16 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke={CHART_GRID} horizontal={false} />
+                <XAxis type="number" allowDecimals={false} tick={{ fontSize: 12, fill: CHART_AXIS_TEXT }} axisLine={false} tickLine={false} />
+                <YAxis
+                  type="category"
+                  dataKey={(m: any) => marketName(m.market_id)}
+                  width={140}
+                  tick={{ fontSize: 12, fill: CHART_AXIS_TEXT }}
+                  axisLine={false}
+                  tickLine={false}
+                />
+                <Tooltip cursor={{ fill: "rgba(33,26,20,0.04)" }} content={<ChartTooltip formatter={(v: any) => [v, "orders"]} />} />
+                <Bar dataKey="orders" fill={ORANGE} radius={[0, 4, 4, 0]} maxBarSize={18} />
+              </BarChart>
+            </ResponsiveContainer>
+            {marketsSorted.length > 8 && (
+              <p className="mb-3 mt-1 text-xs text-[#8a8178]">Top 8 of {marketsSorted.length} markets shown — full list below.</p>
+            )}
+          <div className="mt-3 overflow-x-auto">
             <table className="w-full text-left text-sm">
               <thead>
                 <tr className="border-b border-[#ebe7e0] text-xs uppercase tracking-wide text-[#8a8178]">
@@ -178,6 +245,7 @@ function AdminAnalytics() {
               </tbody>
             </table>
           </div>
+          </>
         )}
       </Card>
     </div>

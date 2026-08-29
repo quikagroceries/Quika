@@ -11,6 +11,8 @@ import PackagingPanel from "@/components/PackagingPanel";
 import StatusBadge from "@/components/StatusBadge";
 import Icon from "@/components/Icon";
 import { isChatAvailable } from "@/lib/orderStatus";
+import { marketTone, TONE_COVER } from "@/lib/vendorVisuals";
+import { coverImageForMarket } from "@/lib/marketDirectory";
 
 const POLL_MS = 5000;
 
@@ -345,31 +347,86 @@ function Shopping({ orderId, onBack }: any) {
   // purchase is still missing one - this drives that list and the gate.
   const missingPhotoPurchases = purchases.filter((p) => !p.photo_ref);
 
+  // Written from the agent's own point of view, not reused customer copy -
+  // "Agent is shopping — 1 of 2 bought" reads oddly in the third person on
+  // the agent's own screen; a direct progress readout is both more natural
+  // and more useful to glance at mid-shop.
+  const boughtCount = items.filter((it) => it.confirmed_price != null).length;
+  const heroHeadline =
+    order.status === "agent_assigned" ? "Ready to shop"
+    : order.status === "shopping" ? `${boughtCount} of ${items.length} bought`
+    : order.status === "paid" ? "Pack & dispatch"
+    : order.status === "packed" ? "Packed — awaiting pickup"
+    : order.status === "out_for_delivery" ? "Out for delivery"
+    : order.status === "delivered" || order.status === "closed" ? "Delivered"
+    : order.status === "cancelled_unpaid" ? "Balance not paid"
+    : "Order status";
+
+  const heroBg = market ? TONE_COVER[marketTone(market.name, market.city)].bg : "#211A14";
+  const heroBody =
+    order.status === "agent_assigned"
+      ? "Start shopping when you're ready — bargain live, buy, and keep proof of purchase."
+      : order.status === "shopping"
+        ? "Tick items as you buy them and pay each stall directly below."
+        : order.status === "paid"
+          ? "Pack this order and hand it to the courier."
+          : order.status === "cancelled_unpaid"
+            ? "The balance window lapsed — return any goods you already bought."
+            : "Live status for this order.";
+
   return (
     <div>
       <Notifications />
 
-      {/* Same back-button + identity convention as the customer side's
-          OrderDetail: an icon button (not a bordered text button) and the
-          market's name leading, not a bare order id. */}
-      <div className="mb-4 flex items-center justify-between gap-3">
-        <button
-          type="button"
-          onClick={onBack}
-          aria-label="Back"
-          className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-ink/70 transition hover:bg-[#f0eeeb]"
-        >
-          <Icon name="chevronDown" className="h-5 w-5 rotate-90" />
-        </button>
-        <div className="min-w-0 flex-1">
-          <p className="truncate text-xs font-bold uppercase tracking-[0.1em] text-[#8a8178]">
-            {market?.name || "Order"} · #{order.id.slice(0, 8)}
-          </p>
-          <h2 className="truncate font-display text-lg font-extrabold tracking-tight text-ink">
-            {market?.name || `Order ${order.id.slice(0, 8)}…`}
-          </h2>
+      {/* Same hero treatment as the customer/admin order screens - market
+          identity + a live status line, not a bare "Order xxx…" row, so
+          this reads as the same product regardless of which side of the
+          order you're on. Back floats over the banner itself. */}
+      <div
+        className="relative mb-4 min-h-[160px] overflow-hidden rounded-2xl shadow-md sm:min-h-[200px]"
+        style={{ backgroundColor: heroBg }}
+      >
+        {market && (
+          <div className="pointer-events-none absolute inset-y-0 right-0 w-full sm:w-[55%]">
+            <img
+              src={coverImageForMarket(market)}
+              alt={market.name}
+              className="h-full w-full object-cover object-center"
+            />
+            <div
+              className="absolute inset-0"
+              style={{ background: `linear-gradient(90deg, ${heroBg} 0%, ${heroBg} 12%, ${heroBg}cc 28%, ${heroBg}66 48%, transparent 72%)` }}
+            />
+            <div
+              className="absolute inset-0 sm:hidden"
+              style={{ background: `linear-gradient(90deg, ${heroBg} 0%, ${heroBg}e6 35%, ${heroBg}99 55%, transparent 85%)` }}
+            />
+          </div>
+        )}
+
+        <div className="relative z-20 px-4 pt-4 sm:px-5 sm:pt-5">
+          <button
+            type="button"
+            onClick={onBack}
+            aria-label="Back"
+            className="flex h-10 w-10 items-center justify-center rounded-full bg-white/90 text-ink shadow-sm backdrop-blur-sm transition hover:bg-white"
+          >
+            <Icon name="chevronDown" className="h-5 w-5 rotate-90" />
+          </button>
         </div>
-        <StatusBadge status={order.status} />
+
+        <div className="relative z-10 flex w-full flex-col justify-center gap-1.5 px-5 pb-5 pt-3 sm:w-[60%] sm:px-6 sm:pb-6">
+          <div className="flex flex-wrap items-center gap-2">
+            <p className="text-xs font-bold uppercase tracking-[0.14em] text-white/55">
+              {market?.name || "Order"} · #{order.id.slice(0, 8)}
+            </p>
+            <StatusBadge status={order.status} />
+          </div>
+          <h2 className="font-display text-xl font-extrabold leading-[1.1] tracking-tight text-white sm:text-2xl">
+            {heroHeadline}
+          </h2>
+          <p className="text-sm leading-relaxed text-white/70 sm:text-base line-clamp-2">{heroBody}</p>
+        </div>
       </div>
 
       {/* #1: chat is scoped to the shopping window - see isChatAvailable.

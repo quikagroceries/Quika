@@ -8,6 +8,9 @@ import EmptyState from "@/components/EmptyState";
 import Icon from "@/components/Icon";
 import Input from "@/components/Input";
 import { CardSkeleton } from "@/components/Skeleton";
+import MarketArt from "@/components/shop/MarketArt";
+import { marketTone } from "@/lib/vendorVisuals";
+import { coverImageForMarket } from "@/lib/marketDirectory";
 import { LOW_FLOAT_BALANCE } from "@/lib/adminUtils";
 
 // Shared by create and edit - same fields either way, just prefilled and
@@ -163,37 +166,52 @@ function AdminMarkets() {
                 error={formError}
               />
             ) : (
-              <Card key={m.id} className={m.is_active ? "" : "opacity-60"}>
-                <div className="flex items-start justify-between gap-2">
-                  <div className="min-w-0">
-                    <div className="truncate font-bold text-ink">{m.name}</div>
-                    <div className="text-sm text-[#6b635a]">{m.city}, {m.state}</div>
-                  </div>
+              <div
+                key={m.id}
+                className={
+                  "overflow-hidden rounded-2xl border border-[#ebe7e0] bg-white shadow-sm " +
+                  (m.is_active ? "" : "opacity-60")
+                }
+              >
+                <div className="relative aspect-[16/9]">
+                  <MarketArt
+                    tone={marketTone(m.name, m.city)}
+                    title={m.name}
+                    image={coverImageForMarket(m)}
+                    className="h-full w-full"
+                  />
                   {!m.is_active && (
-                    <span className="shrink-0 rounded-full bg-[#f0eeeb] px-2 py-0.5 text-xs font-bold text-[#6b635a]">Inactive</span>
+                    <span className="absolute right-2 top-2 rounded-full bg-white/95 px-2 py-0.5 text-xs font-bold text-[#6b635a] shadow-sm">
+                      Inactive
+                    </span>
                   )}
                 </div>
 
-                <div className="mt-3 flex items-center justify-between">
-                  <span className="text-sm text-[#6b635a]">Float balance</span>
-                  <span className={
-                    "font-bold " +
-                    (floatByMarket[m.id] != null && Number(floatByMarket[m.id]) < LOW_FLOAT_BALANCE
-                      ? "text-red-600" : "text-ink")
-                  }>
-                    {floatByMarket[m.id] != null ? `₦${floatByMarket[m.id]}` : "—"}
-                  </span>
-                </div>
+                <div className="p-4">
+                  <div className="truncate font-bold text-ink">{m.name}</div>
+                  <div className="text-sm text-[#6b635a]">{m.city}, {m.state}</div>
 
-                <div className="mt-3 flex gap-2">
-                  <Button variant="neutral" onClick={() => { setEditingId(m.id); setFormError(""); }} className="flex-1 text-sm">
-                    Edit
-                  </Button>
-                  <Button variant="neutral" onClick={() => handleToggleActive(m)} disabled={busy} className="flex-1 text-sm">
-                    {m.is_active ? "Deactivate" : "Activate"}
-                  </Button>
+                  <div className="mt-3 flex items-center justify-between">
+                    <span className="text-sm text-[#6b635a]">Float balance</span>
+                    <span className={
+                      "font-bold " +
+                      (floatByMarket[m.id] != null && Number(floatByMarket[m.id]) < LOW_FLOAT_BALANCE
+                        ? "text-red-600" : "text-ink")
+                    }>
+                      {floatByMarket[m.id] != null ? `₦${floatByMarket[m.id]}` : "—"}
+                    </span>
+                  </div>
+
+                  <div className="mt-3 flex gap-2">
+                    <Button variant="neutral" onClick={() => { setEditingId(m.id); setFormError(""); }} className="flex-1 text-sm">
+                      Edit
+                    </Button>
+                    <Button variant="neutral" onClick={() => handleToggleActive(m)} disabled={busy} className="flex-1 text-sm">
+                      {m.is_active ? "Deactivate" : "Activate"}
+                    </Button>
+                  </div>
                 </div>
-              </Card>
+              </div>
             )
           )}
         </div>

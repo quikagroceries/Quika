@@ -903,7 +903,7 @@ function MarketPicker({
     <div className="flex min-h-[calc(100vh-4rem)]">
       {rail}
 
-      <div className="min-w-0 flex-1 bg-white px-4 py-5 md:px-6 lg:px-8">
+      <div className="shop-texture min-w-0 flex-1 px-4 py-5 md:px-6 lg:px-8">
         {/* Mobile: venue chips only on browse; section tools when deeper */}
         {!inShell && (
           <div className="mb-3 flex gap-2 overflow-x-auto pb-1 lg:hidden [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">

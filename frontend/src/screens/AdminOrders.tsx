@@ -10,6 +10,9 @@ import Icon from "@/components/Icon";
 import { CardSkeleton } from "@/components/Skeleton";
 import StatusBadge from "@/components/StatusBadge";
 import { formatAge, isStuckOrder } from "@/lib/adminUtils";
+import { marketTone, TONE_COVER } from "@/lib/vendorVisuals";
+import { coverImageForMarket } from "@/lib/marketDirectory";
+import { summarizeOrderStatus } from "@/lib/orderStatus";
 
 const POLL_MS = 15000;
 
@@ -49,36 +52,94 @@ export function OrderDetailPanel({ orderId, markets, agents, onBack, onAssigned 
   const market = markets.find((m) => m.id === order?.market_id);
   const marketAgents = agents.filter((a) => a.assigned_market_id === order?.market_id);
 
+  if (!order) {
+    return (
+      <div>
+        <Button variant="neutral" onClick={onBack} className="mb-4">← Back to orders</Button>
+        <CardSkeleton />
+      </div>
+    );
+  }
+
+  const heroBg = market ? TONE_COVER[marketTone(market.name, market.city)].bg : "#211A14";
+
   return (
     <div>
-      <Button variant="neutral" onClick={onBack} className="mb-4">← Back to orders</Button>
+      {/* Same hero treatment as the customer-facing order screen (see
+          screens/OrderDetail.tsx) - market identity + a live status line,
+          not a bare "Order xxx…" line, so an admin looking at one order
+          sees the same product the customer/agent see, not a different
+          back-office skin bolted on. Back floats over the banner itself
+          rather than its own row above it, same reasoning as the customer
+          version. */}
+      <div
+        className="relative mb-4 min-h-[160px] overflow-hidden rounded-2xl shadow-md sm:min-h-[200px]"
+        style={{ backgroundColor: heroBg }}
+      >
+        {market && (
+          <div className="pointer-events-none absolute inset-y-0 right-0 w-full sm:w-[55%]">
+            <img
+              src={coverImageForMarket(market)}
+              alt={market.name}
+              className="h-full w-full object-cover object-center"
+            />
+            <div
+              className="absolute inset-0"
+              style={{ background: `linear-gradient(90deg, ${heroBg} 0%, ${heroBg} 12%, ${heroBg}cc 28%, ${heroBg}66 48%, transparent 72%)` }}
+            />
+            <div
+              className="absolute inset-0 sm:hidden"
+              style={{ background: `linear-gradient(90deg, ${heroBg} 0%, ${heroBg}e6 35%, ${heroBg}99 55%, transparent 85%)` }}
+            />
+          </div>
+        )}
 
-      {!order ? (
-        <CardSkeleton />
-      ) : (
-        <div className="space-y-4">
-          <div className="flex items-center justify-between">
-            <h2 className="text-lg font-bold text-ink">Order {order.id.slice(0, 8)}…</h2>
+        <div className="relative z-20 px-4 pt-4 sm:px-5 sm:pt-5">
+          <button
+            type="button"
+            onClick={onBack}
+            aria-label="Back to orders"
+            className="flex h-10 w-10 items-center justify-center rounded-full bg-white/90 text-ink shadow-sm backdrop-blur-sm transition hover:bg-white"
+          >
+            <Icon name="chevronDown" className="h-5 w-5 rotate-90" />
+          </button>
+        </div>
+
+        <div className="relative z-10 flex w-full flex-col justify-center gap-1.5 px-5 pb-5 pt-3 sm:w-[60%] sm:px-6 sm:pb-6">
+          <div className="flex flex-wrap items-center gap-2">
+            <p className="text-xs font-bold uppercase tracking-[0.14em] text-white/55">
+              {market?.name || "Order"} · #{order.id.slice(0, 8)}
+            </p>
             <StatusBadge status={order.status} />
           </div>
+          <h2 className="font-display text-xl font-extrabold leading-[1.1] tracking-tight text-white sm:text-2xl">
+            {summarizeOrderStatus({ ...order, marketName: market?.name })}
+          </h2>
+        </div>
+      </div>
 
-          {error && <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p>}
+      {error && <p className="mb-4 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p>}
 
-          <Card>
-            <div className="space-y-1 text-ink/80">
-              <div className="flex justify-between"><span>Market</span><span className="font-semibold">{market ? `${market.name}, ${market.city}` : order.market_id.slice(0, 8) + "…"}</span></div>
-              <div className="flex justify-between"><span>Customer</span><span className="font-semibold">{order.customer_id.slice(0, 8)}…</span></div>
-              <div className="flex justify-between"><span>Agent</span><span className="font-semibold">{order.agent_id ? order.agent_id.slice(0, 8) + "…" : "Unassigned"}</span></div>
-              <div className="flex justify-between"><span>Created</span><span className="font-semibold">{new Date(order.created_at).toLocaleString()}</span></div>
-              {order.grand_total > 0 && (
-                <div className="flex justify-between"><span>Grand total</span><span className="font-semibold">₦{order.grand_total}</span></div>
-              )}
-              {order.courier_reference && (
-                <div className="flex justify-between"><span>Courier ref</span><span className="font-semibold">{order.courier_reference}</span></div>
-              )}
-            </div>
-          </Card>
+      {/* Same "what's happening" (wide, left) / "manage this order"
+          (narrow, right) split as the customer screen - items are the
+          status feed here, assignment + the raw record are the admin
+          actions/reference. */}
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1fr_320px] lg:items-start">
+        <Card className="order-2 lg:order-1">
+          <p className="mb-2 font-bold text-ink">Items ({(order.items || []).length})</p>
+          <div className="space-y-2">
+            {(order.items || []).map((it) => (
+              <div key={it.id} className="flex items-center justify-between border-b border-[#ebe7e0] pb-2 text-sm last:border-0">
+                <span className="min-w-0 flex-1 truncate text-ink/80">{it.description}</span>
+                <span className="shrink-0 font-semibold text-ink">
+                  {it.confirmed_price != null ? `₦${it.confirmed_price}` : it.availability}
+                </span>
+              </div>
+            ))}
+          </div>
+        </Card>
 
+        <div className="order-1 flex flex-col gap-4 lg:order-2">
           {!order.agent_id && (
             <Card className="border-2 border-amber-400">
               <p className="mb-2 font-bold text-ink">Assign an agent</p>
@@ -107,20 +168,22 @@ export function OrderDetailPanel({ orderId, markets, agents, onBack, onAssigned 
           )}
 
           <Card>
-            <p className="mb-2 font-bold text-ink">Items ({(order.items || []).length})</p>
-            <div className="space-y-2">
-              {(order.items || []).map((it) => (
-                <div key={it.id} className="flex items-center justify-between border-b border-[#ebe7e0] pb-2 text-sm last:border-0">
-                  <span className="min-w-0 flex-1 truncate text-ink/80">{it.description}</span>
-                  <span className="shrink-0 font-semibold text-ink">
-                    {it.confirmed_price != null ? `₦${it.confirmed_price}` : it.availability}
-                  </span>
-                </div>
-              ))}
+            <p className="mb-2 font-bold text-ink">Order record</p>
+            <div className="space-y-1 text-ink/80">
+              <div className="flex justify-between"><span>Market</span><span className="font-semibold">{market ? `${market.name}, ${market.city}` : order.market_id.slice(0, 8) + "…"}</span></div>
+              <div className="flex justify-between"><span>Customer</span><span className="font-semibold">{order.customer_id.slice(0, 8)}…</span></div>
+              <div className="flex justify-between"><span>Agent</span><span className="font-semibold">{order.agent_id ? order.agent_id.slice(0, 8) + "…" : "Unassigned"}</span></div>
+              <div className="flex justify-between"><span>Created</span><span className="font-semibold">{new Date(order.created_at).toLocaleString()}</span></div>
+              {order.grand_total > 0 && (
+                <div className="flex justify-between"><span>Grand total</span><span className="font-semibold">₦{order.grand_total}</span></div>
+              )}
+              {order.courier_reference && (
+                <div className="flex justify-between"><span>Courier ref</span><span className="font-semibold">{order.courier_reference}</span></div>
+              )}
             </div>
           </Card>
         </div>
-      )}
+      </div>
     </div>
   );
 }

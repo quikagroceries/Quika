@@ -28,6 +28,8 @@ export default function AdminLayout({ children }: any) {
         activeKey={activeKeyFromPath(pathname)}
         user={user}
         onLogout={handleLogout}
+        fullWidth
+        contentClassName="bg-white"
       >
         {children}
       </AppShell>

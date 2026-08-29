@@ -18,7 +18,11 @@ const STATUS_TONE = {
   locked: "bg-red-100 text-red-700",
 };
 
-function Settings({ user, onUserUpdated, onLogout }: any) {
+// `extra` is an optional slot for a persona-specific card (e.g. Admin's own
+// system-status card) rendered after Account, in the same column - keeps
+// this one screen shared across all three personas instead of forking it,
+// while still letting one of them add something the others don't need.
+function Settings({ user, onUserUpdated, onLogout, extra }: any) {
   const isCustomer = (user.role || "").toLowerCase() === "customer";
   const [fullName, setFullName] = useState(user.full_name || "");
   const [address, setAddress] = useState(user.default_delivery_address || "");
@@ -261,6 +265,8 @@ function Settings({ user, onUserUpdated, onLogout }: any) {
               )}
             </Card>
           )}
+
+          {extra}
         </div>
       </div>
     </div>

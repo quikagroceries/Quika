@@ -31,3 +31,26 @@ export function formatAge(ms) {
 // top-up soon" line. A flat placeholder, not derived from real spend
 // patterns yet.
 export const LOW_FLOAT_BALANCE = 20000;
+
+// Fixed status palette for admin charts (dataviz skill) - distinct from any
+// categorical series color, never themed, always paired with an icon+label
+// (never color alone). Same four roles StatusBadge already uses in spirit
+// (good/problem/pending), just the validated chart-safe steps.
+export const CHART_STATUS = {
+  good: "#0ca30c",
+  warning: "#fab219",
+  serious: "#ec835a",
+  critical: "#d03b3b",
+};
+
+// The standard status-critical red above sits too close to Quika's own
+// brand orange to reliably tell apart (validate_palette.js: ΔE 7.7 normal-
+// vision, below the 15 floor) - this step is validated specifically against
+// that orange (ΔE 20.1) for the one chart that puts them side by side (the
+// float-balance bars, most of which are the brand hue).
+export const CHART_CRITICAL_VS_ORANGE = "#991B1B";
+
+// Chart chrome shared by every admin chart - brand-muted tones instead of
+// recharts' generic slate defaults, so the charts read as part of THIS app.
+export const CHART_GRID = "#ebe7e0";
+export const CHART_AXIS_TEXT = "#8a8178";

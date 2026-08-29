@@ -1,1 +1,9 @@
-{}
+{
+  "screens/ChatPanel.tsx -> @/screens/Call": {
+    "id": "screens/ChatPanel.tsx -> @/screens/Call",
+    "files": [
+      "static/css/_app-pages-browser_src_screens_Call_tsx.css",
+      "static/chunks/_app-pages-browser_src_screens_Call_tsx.js"
+    ]
+  }
+}
