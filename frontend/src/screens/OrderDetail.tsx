@@ -389,11 +389,11 @@ function OrderDetail({ orderId, onBack, onTopUpWallet }: any) {
   const fees = Number(order.combined_fee) + Number(order.emtl_total) + Number(order.transfer_fees_total);
   const goodsEstimate = Math.max(0, Number(order.estimated_value) - DELIVERY_QUOTE - COMBINED_FEE_ESTIMATE);
   // Derived from the REAL order, never hardcoded - a flagged (must_prepay)
-  // customer's deposit is 100% of the estimate, not the normal 20%, and a
-  // fixed "20%" string here would just be wrong for them. See
+  // customer's deposit is 100% of the estimate, not the normal DEPOSIT_RATE,
+  // and a fixed percentage string here would just be wrong for them. See
   // orders.fees.required_deposit for the source of truth this mirrors.
-  const depositPct = Number(order.estimated_value) > 0
-    ? Math.round((Number(order.deposit_amount) / Number(order.estimated_value)) * 100)
+  const depositPct = goodsEstimate > 0
+    ? Math.round((Number(order.deposit_amount) / goodsEstimate) * 100)
     : 0;
   const isPaidOrLater = PAID_OR_LATER.has(order.status);
   const pendingDecisionCount = items.filter((it) => it.availability === "unavailable").length;

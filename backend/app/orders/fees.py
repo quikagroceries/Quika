@@ -35,8 +35,8 @@ EMTL_PER_TRANSFER = Decimal("50.00")
 EMTL_THRESHOLD = Decimal("10000.00")     # applies to transfers >= this
 
 # --- Deposit policy ---
-DEPOSIT_THRESHOLD = Decimal("30000.00")  # estimates above this need a deposit
-DEPOSIT_RATE = Decimal("0.20")           # 20% of the goods estimate
+DEPOSIT_THRESHOLD = Decimal("10000.00")  # estimates above this need a deposit
+DEPOSIT_RATE = Decimal("0.30")           # 30% of the goods estimate
 
 
 def _money(value: Decimal) -> Decimal:

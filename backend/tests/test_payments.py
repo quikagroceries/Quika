@@ -242,7 +242,7 @@ async def test_deposit_checkout_verify_on_return(client, db_session_factory, mon
 
     cust_h = {"Authorization": f"Bearer {cust_token}"}
 
-    # Goods total well past the 30,000 deposit threshold.
+    # Goods total well past the 10,000 deposit threshold.
     r = await client.post("/orders", headers=cust_h, json={
         "market_id": str(market_id),
         "listed_items_total": "78000.00",
@@ -250,7 +250,7 @@ async def test_deposit_checkout_verify_on_return(client, db_session_factory, mon
     })
     oid = r.json()["id"]
     deposit = Decimal(r.json()["deposit_amount"])
-    assert deposit == Decimal("15600.00")
+    assert deposit == Decimal("23400.00")
 
     r = await client.post(
         f"/payments/orders/{oid}/deposit/checkout", headers=cust_h,

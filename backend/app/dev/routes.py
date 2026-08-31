@@ -31,7 +31,9 @@ def _guard() -> None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Not found")
 
 
-async def _make_user(db, phone, role) -> User:
+async def _make_user(
+    db, phone, role, full_name: str | None = None, default_delivery_address: str | None = None
+) -> User:
     phone = normalize_phone(phone)
     result = await db.execute(select(User).where(User.phone == phone))
     user = result.scalar_one_or_none()
@@ -39,11 +41,19 @@ async def _make_user(db, phone, role) -> User:
         user = User(
             phone=phone, role=role, status=UserStatus.ACTIVE,
             is_phone_verified=True, basket_cap_kobo=settings.default_basket_cap_kobo,
+            full_name=full_name, default_delivery_address=default_delivery_address,
         )
         db.add(user)
         await db.flush()
     else:
         user.role = role
+        # Backfill so personas seeded before this field existed also skip
+        # the frontend's onboarding redirect (AuthProvider sends anyone
+        # without a full_name to /setup).
+        if full_name and not user.full_name:
+            user.full_name = full_name
+        if default_delivery_address and not user.default_delivery_address:
+            user.default_delivery_address = default_delivery_address
     return user
 
 
@@ -168,9 +178,15 @@ async def _upsert_vendors(db: AsyncSession, market: Market) -> list[dict]:
 async def seed(db: AsyncSession = Depends(get_db)):
     """Create admin + agent + customer + markets, seed float, return tokens."""
     _guard()
-    admin = await _make_user(db, "+2340000000001", UserRole.ADMIN)
-    agent_user = await _make_user(db, "+2340000000002", UserRole.AGENT)
-    customer = await _make_user(db, "+2340000000003", UserRole.CUSTOMER)
+    admin = await _make_user(db, "+2340000000001", UserRole.ADMIN, full_name="Dev Admin")
+    agent_user = await _make_user(
+        db, "+2340000000002", UserRole.AGENT,
+        full_name="Dev Agent", default_delivery_address="12 Agent Lodge, Lagos Island",
+    )
+    customer = await _make_user(
+        db, "+2340000000003", UserRole.CUSTOMER,
+        full_name="Dev Customer", default_delivery_address="45 Customer Close, Ikeja, Lagos",
+    )
 
     markets_out = []
     vendors_out: dict[str, list] = {}
