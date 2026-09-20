@@ -141,7 +141,7 @@ export function DesktopTopBar({
               <Icon name="plus" className="h-3.5 w-3.5" />
               {ctaLabel}
             </Link>
-          ) : (
+          ) : shop ? (
             <Link
               href="/shop"
               className="hidden items-center gap-1.5 rounded-full bg-brand-orange px-4 py-2 text-xs font-bold text-[#1A1A1A] shadow-xs transition hover:bg-brand-orange-dark active:bg-brand-orange-dark sm:inline-flex"
@@ -151,18 +151,20 @@ export function DesktopTopBar({
               </svg>
               <span>New Order</span>
             </Link>
-          )}
+          ) : null}
 
           {/* Live Active Order Pulse (if user has active shopping order) -
               compact mode specifically to leave the search bar room. */}
-          <HeaderLiveOrderPill compact />
+          {shop && <HeaderLiveOrderPill compact />}
 
           {/* Wallet Balance Chip - wrapped (not classed directly) so
               `hidden`/`lg:block` don't fight the component's own hardcoded
               `flex` at identical specificity, which is unreliable. */}
-          <div className="hidden lg:block">
-            <HeaderWalletChip />
-          </div>
+          {shop && (
+            <div className="hidden lg:block">
+              <HeaderWalletChip />
+            </div>
+          )}
 
           {/* Bag trigger - same control ShopHeader's own basket button
               uses (border-line-strong, bg-surface, the item-count badge),

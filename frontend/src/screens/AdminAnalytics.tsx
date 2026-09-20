@@ -1,5 +1,6 @@
 'use client';
 
+import AdminPageHeader from "@/components/admin/AdminPageHeader";
 import { useEffect, useState } from "react";
 import {
   ResponsiveContainer, LineChart, Line, BarChart, Bar,
@@ -18,7 +19,7 @@ import { CHART_STATUS, CHART_GRID, CHART_AXIS_TEXT } from "@/lib/adminUtils";
 // breakdown below is genuinely status data (completed/cancelled/non-payment/
 // disputed), so it uses the fixed, validated status palette instead - never
 // color alone, always paired with an icon + label.
-const ORANGE = "#E8541E";
+const ORANGE = "#EE9A5A";
 const GREEN = "#0E7A3C";
 const RATE_STYLE = {
   completed: { color: CHART_STATUS.good, icon: "check" as const },
@@ -64,8 +65,7 @@ function AdminAnalytics() {
 
   return (
     <div>
-      <h1 className="mb-1 font-display text-3xl font-extrabold tracking-tight text-ink md:text-4xl">Analytics</h1>
-      <p className="mb-6 text-muted">Last 30 days, plus lifetime agent/market activity — computed only from what's actually recorded.</p>
+      <AdminPageHeader icon="trending" section="Insights" title="Analytics" description="Last 30 days, plus lifetime agent/market activity — computed only from what&apos;s actually recorded." />
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         <Card>

@@ -1,5 +1,8 @@
 'use client';
 
+import StatTile from "@/components/StatTile";
+import { usePageSearch } from "@/components/PageSearchContext";
+import AdminPageHeader from "@/components/admin/AdminPageHeader";
 import { useEffect, useState } from "react";
 import { api } from "@/lib/api";
 import Button from "@/components/Button";
@@ -23,6 +26,7 @@ function AdminUsers() {
   const [confirmingId, setConfirmingId] = useState<any>(null);
   const [busyId, setBusyId] = useState<any>(null);
   const [error, setError] = useState("");
+  const search = usePageSearch("Search flagged users…");
 
   async function refresh() {
     try {
@@ -53,8 +57,13 @@ function AdminUsers() {
 
   return (
     <div>
-      <h1 className="mb-1 font-display text-3xl font-extrabold tracking-tight text-ink md:text-4xl">Users</h1>
-      <p className="mb-6 text-muted">Customers flagged for non-payment history — why, and the option to pardon.</p>
+      <AdminPageHeader icon="flag" section="People" title="Users" description="Customers flagged for non-payment history — why, and the option to pardon.">
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+          <StatTile label="Flagged customers" value={users?.length ?? "—"} />
+          <StatTile label="Must prepay" value={users ? users.filter((u) => u.must_prepay).length : "—"} />
+          <StatTile label="Locked" value={users ? users.filter((u) => u.status === "locked").length : "—"} />
+        </div>
+      </AdminPageHeader>
 
       {error && <p className="mb-4 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p>}
 
@@ -64,7 +73,7 @@ function AdminUsers() {
         <EmptyState icon="flag" title="No flagged users" subtitle="Customers with non-payment history will show up here." />
       ) : (
         <div className="space-y-2">
-          {users.map((u) => (
+          {users.filter((u) => !search || [u.full_name, u.phone].some((v) => String(v || "").toLowerCase().includes(search))).map((u) => (
             <Card key={u.id} className="flex flex-wrap items-center justify-between gap-3">
               <div className="min-w-0">
                 <div className="font-semibold text-ink">{u.full_name || u.phone}</div>

@@ -1,5 +1,7 @@
 'use client';
 
+import StatTile from "@/components/StatTile";
+import AdminPageHeader from "@/components/admin/AdminPageHeader";
 import { useEffect, useState } from "react";
 import { api } from "@/lib/api";
 import Button from "@/components/Button";
@@ -118,8 +120,20 @@ function AdminFloat() {
 
   return (
     <div>
-      <h1 className="mb-1 font-display text-3xl font-extrabold tracking-tight text-ink md:text-4xl">Float</h1>
-      <p className="mb-6 text-muted">Working capital per market — top up, move between pools, and the movement trail.</p>
+      <AdminPageHeader icon="wallet" section="Finance" title="Float" description="Working capital per market — top up, move between pools, and the movement trail.">
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+          <StatTile label="Markets" value={markets ? markets.length : "—"} />
+          <StatTile
+            label="Total float"
+            value={markets ? "₦" + Object.values(balances).reduce((n: number, b: any) => n + (Number(b) || 0), 0).toLocaleString() : "—"}
+            tone="green"
+          />
+          <StatTile
+            label="Low float"
+            value={markets ? markets.filter((m) => balances[m.id] != null && Number(balances[m.id]) < LOW_FLOAT_BALANCE).length : "—"}
+          />
+        </div>
+      </AdminPageHeader>
 
       {error && <p className="mb-4 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p>}
 

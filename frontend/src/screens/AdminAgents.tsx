@@ -1,5 +1,9 @@
 'use client';
 
+import StatTile from "@/components/StatTile";
+import SectionHeader from "@/components/SectionHeader";
+import { usePageSearch } from "@/components/PageSearchContext";
+import AdminPageHeader from "@/components/admin/AdminPageHeader";
 import { useEffect, useState } from "react";
 import { api } from "@/lib/api";
 import Button from "@/components/Button";
@@ -15,6 +19,7 @@ function AdminAgents() {
   const [markets, setMarkets] = useState<any[]>([]);
   const [busyId, setBusyId] = useState<any>(null);
   const [error, setError] = useState("");
+  const search = usePageSearch("Search agents…");
 
   async function refresh() {
     try {
@@ -55,12 +60,18 @@ function AdminAgents() {
 
   return (
     <div>
-      <h1 className="mb-1 font-display text-3xl font-extrabold tracking-tight text-ink md:text-4xl">Agents</h1>
-      <p className="mb-6 text-muted">Approve applicants and see who's covering each market.</p>
+      <AdminPageHeader icon="user" section="People" title="Agents" description="Approve applicants and see who&apos;s covering each market.">
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+          <StatTile label="Pending applications" value={applications?.length ?? "—"} />
+          <StatTile label="Agents" value={agents?.length ?? "—"} />
+          <StatTile label="Available now" value={agents ? agents.filter((a) => a.on_duty && a.is_available).length : "—"} tone="green" />
+          <StatTile label="Completed runs" value={agents ? agents.reduce((n, a) => n + (a.completed_orders || 0), 0) : "—"} />
+        </div>
+      </AdminPageHeader>
 
       {error && <p className="mb-4 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p>}
 
-      <h2 className="mb-3 text-lg font-extrabold text-ink">Pending applications</h2>
+      <SectionHeader icon="flag" title="Pending applications" subtitle="Approve or reject new agents." className="mb-3" />
       {applications === null ? (
         <div className="mb-8 space-y-2">{[0, 1].map((i) => <CardSkeleton key={i} />)}</div>
       ) : applications.length === 0 ? (
@@ -96,7 +107,7 @@ function AdminAgents() {
         </div>
       )}
 
-      <h2 className="mb-3 text-lg font-extrabold text-ink">All agents</h2>
+      <SectionHeader icon="user" title="All agents" subtitle="Duty status, completed runs and lifetime earnings." className="mb-3" />
       {agents === null ? (
         <div className="space-y-2">{[0, 1].map((i) => <CardSkeleton key={i} />)}</div>
       ) : agents.length === 0 ? (
@@ -114,7 +125,7 @@ function AdminAgents() {
               </tr>
             </thead>
             <tbody>
-              {agents.map((a) => (
+              {agents.filter((a) => !search || [a.full_name, a.phone, marketName(a.assigned_market_id)].some((v) => String(v || "").toLowerCase().includes(search))).map((a) => (
                 <tr key={a.id} className="border-b border-line last:border-0">
                   <td className="px-4 py-3 font-semibold text-ink">{a.full_name || a.phone}</td>
                   <td className="px-4 py-3 text-ink/80">{marketName(a.assigned_market_id)}</td>

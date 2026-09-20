@@ -1,5 +1,5 @@
 import React from 'react';
-import { Card } from '../Card';
+import Card from '../Card';
 
 export interface TestimonialCardProps {
   name: string;
@@ -89,3 +89,5 @@ export function TestimonialCard({
     </Card>
   );
 }
+
+export default TestimonialCard;

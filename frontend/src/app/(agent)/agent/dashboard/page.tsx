@@ -5,12 +5,16 @@ import { useRouter } from "next/navigation";
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip } from "recharts";
 import { api } from "@/lib/api";
 import Card from "@/components/Card";
+import HeroBanner from "@/components/HeroBanner";
+import SectionHeader from "@/components/SectionHeader";
+import StatTile from "@/components/StatTile";
+import wallet from "@/assets/illustrations/scene-agent-laptop-delivery.png";
 import EmptyState from "@/components/EmptyState";
 import ChartTooltip from "@/components/ChartTooltip";
 import { CardSkeleton } from "@/components/Skeleton";
 import { CHART_GRID, CHART_AXIS_TEXT } from "@/lib/adminUtils";
 
-const ORANGE = "#E8541E";
+const ORANGE = "#EE9A5A";
 
 // Real data, not a fabricated stat: the last 14 days' earnings, bucketed
 // from the same completed_orders list the card list below already renders -
@@ -76,8 +80,33 @@ export default function AgentDashboardPage() {
 
   return (
     <div>
-      <h1 className="mb-1 font-display text-3xl font-extrabold tracking-tight text-ink md:text-4xl">Dashboard</h1>
-      <p className="mb-6 text-muted">Your earnings, tasks, and availability.</p>
+      <HeroBanner
+        eyebrow="Earnings"
+        title={summary ? `₦${summary.earnings_today} earned today.` : "Your earnings"}
+        body="Your earnings, tasks and availability, all in one place."
+        illustration={wallet}
+        illustrationAlt="Agent earnings"
+        actions={
+          summary ? (
+            <div className="flex items-center gap-3 rounded-2xl bg-sunken-2/70 px-4 py-2">
+              <div>
+                <p className="text-sm font-bold text-ink">Available for new orders</p>
+                <p className="text-xs text-muted">Pauses new assignments only.</p>
+              </div>
+              <AvailabilitySwitch on={summary.is_available} onToggle={handleToggleAvailability} busy={availBusy} />
+            </div>
+          ) : undefined
+        }
+      >
+        {summary && (
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+            <StatTile label="This week" value={`₦${summary.earnings_week}`} tone="green" />
+            <StatTile label="All time" value={`₦${summary.earnings_total}`} tone="green" />
+            <StatTile label="Ready to shop" value={summary.ready_to_shop_count} />
+            <StatTile label="In progress" value={summary.in_progress_count} />
+          </div>
+        )}
+      </HeroBanner>
 
       {summaryError && (
         <p className="mb-4 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{summaryError}</p>
@@ -89,26 +118,6 @@ export default function AgentDashboardPage() {
         </div>
       ) : (
         <>
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-            {/* Same premium "money card" language as the customer Wallet
-                card (grain texture + soft glow) instead of a flat gradient
-                box - this is the same kind of figure (a balance an agent
-                actually cares about), so it gets the same treatment. */}
-            <Card className="market-grain panel-orange-rich relative overflow-hidden text-white shadow-md">
-              <span className="pointer-events-none absolute -right-8 -top-10 h-32 w-32 rounded-full bg-white/15 blur-2xl" />
-              <div className="relative text-sm font-semibold text-white/80">Today</div>
-              <div className="relative font-display text-3xl font-extrabold tabular-nums">₦{summary.earnings_today}</div>
-            </Card>
-            <Card>
-              <div className="text-sm text-muted">This week</div>
-              <div className="text-3xl font-bold text-ink">₦{summary.earnings_week}</div>
-            </Card>
-            <Card>
-              <div className="text-sm text-muted">All time</div>
-              <div className="text-3xl font-bold text-ink">₦{summary.earnings_total}</div>
-            </Card>
-          </div>
-
           {/* Real trend, not decoration - the same 14 completed_orders the
               list below renders, just bucketed by paid_at day instead of
               listed one row per order. */}
@@ -118,7 +127,7 @@ export default function AgentDashboardPage() {
             if (!hasAny) return null;
             return (
               <Card className="mt-4">
-                <p className="mb-3 font-bold text-ink">Earnings, last 14 days</p>
+                <SectionHeader icon="chart" title="Earnings, last 14 days" className="mb-3" />
                 <ResponsiveContainer width="100%" height={180}>
                   <BarChart data={days}>
                     <CartesianGrid strokeDasharray="3 3" stroke={CHART_GRID} vertical={false} />
@@ -132,28 +141,7 @@ export default function AgentDashboardPage() {
             );
           })()}
 
-          <div className="mt-4 grid grid-cols-2 gap-3 text-center">
-            <Card className="py-3">
-              <div className="text-xl font-extrabold text-ink">{summary.ready_to_shop_count}</div>
-              <div className="text-xs text-muted">Ready to shop</div>
-            </Card>
-            <Card className="py-3">
-              <div className="text-xl font-extrabold text-ink">{summary.in_progress_count}</div>
-              <div className="text-xs text-muted">In progress</div>
-            </Card>
-          </div>
-
-          <Card className="mt-4 flex items-center justify-between gap-4">
-            <div>
-              <p className="font-semibold text-ink">Available for new orders</p>
-              <p className="text-sm text-muted">
-                Pauses new assignments only — never affects an order you&apos;re already shopping.
-              </p>
-            </div>
-            <AvailabilitySwitch on={summary.is_available} onToggle={handleToggleAvailability} busy={availBusy} />
-          </Card>
-
-          <h2 className="mb-3 mt-8 text-lg font-extrabold text-ink">Completed orders</h2>
+          <SectionHeader icon="check" title="Completed orders" subtitle="Paid runs and what you earned." className="mb-3 mt-8" />
           {summary.completed_orders.length === 0 ? (
             <EmptyState icon="clock" title="No completed orders yet" subtitle="Orders you've been paid for will show up here." />
           ) : (

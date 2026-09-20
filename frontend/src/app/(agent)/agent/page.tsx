@@ -4,6 +4,11 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { api } from "@/lib/api";
 import Card from "@/components/Card";
+import HeroBanner from "@/components/HeroBanner";
+import SectionHeader from "@/components/SectionHeader";
+import StatTile from "@/components/StatTile";
+import agentScene from "@/assets/illustrations/scene-agent-laptop-delivery.png";
+import cartVendor from "@/assets/illustrations/market-cart-vendor.png";
 import StatusBadge from "@/components/StatusBadge";
 import EmptyState from "@/components/EmptyState";
 import { CardSkeleton } from "@/components/Skeleton";
@@ -20,9 +25,9 @@ function isNeedsAttention(o) {
 }
 
 const TONE_STYLES = {
-  ready: "border-brand-orange",
-  progress: "border-brand-green",
-  attention: "border-red-400",
+  ready: "border-brand-orange/60",
+  progress: "border-line",
+  attention: "border-red-300",
 };
 
 function TaskCard({ order, marketName, onClick, tone }: any) {
@@ -49,8 +54,12 @@ function TaskSection({ title, subtitle, orders, tone, marketName, onOpen }: any)
   if (orders.length === 0) return null;
   return (
     <div className="mb-8">
-      <h2 className="mb-1 text-lg font-extrabold text-ink">{title}</h2>
-      <p className="mb-3 text-sm text-muted">{subtitle}</p>
+      <SectionHeader
+        icon={tone === "attention" ? "alert" : tone === "ready" ? "basket" : "clock"}
+        title={title}
+        subtitle={subtitle}
+        className="mb-3"
+      />
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
         {orders.map((o) => (
           <TaskCard key={o.id} order={o} tone={tone} marketName={marketName(o.market_id)} onClick={() => onOpen(o.id)} />
@@ -92,8 +101,30 @@ export default function AgentHomePage() {
 
   return (
     <div>
-      <h1 className="mb-1 font-display text-3xl font-extrabold tracking-tight text-ink md:text-4xl">Home</h1>
-      <p className="mb-6 text-muted">Your tasks, most urgent first.</p>
+      <HeroBanner
+        eyebrow={actionable.length > 0 ? `${actionable.length} task${actionable.length === 1 ? "" : "s"} waiting` : "Agent home"}
+        live={actionable.length > 0}
+        title={
+          loading
+            ? "Loading your tasks…"
+            : needsAttention.length > 0
+              ? "Something needs your attention."
+              : readyToShop.length > 0
+                ? "A list is waiting for you."
+                : inProgress.length > 0
+                  ? "You're mid-run. Keep going."
+                  : "All clear for now."
+        }
+        body="Your tasks, most urgent first. Open one to see the list, chat with the customer and start shopping."
+        illustration={readyToShop.length + inProgress.length > 0 ? agentScene : cartVendor}
+        illustrationAlt="An agent shopping the market"
+      >
+        <div className="grid grid-cols-3 gap-3">
+          <StatTile label="Ready to shop" value={readyToShop.length} />
+          <StatTile label="In progress" value={inProgress.length} />
+          <StatTile label="Needs attention" value={needsAttention.length} />
+        </div>
+      </HeroBanner>
 
       {error && (
         <p className="mb-4 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p>

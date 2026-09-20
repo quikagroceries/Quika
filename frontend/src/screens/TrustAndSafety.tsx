@@ -2,13 +2,13 @@
 
 import Link from "next/link";
 import { motion, useReducedMotion } from "framer-motion";
-import ClipReveal from "@/components/marketing/ClipReveal";
+import AnnouncementBar from "@/components/marketing/AnnouncementBar";
 import HelpWidget from "@/components/marketing/HelpWidget";
 import MarketingFooter from "@/components/marketing/MarketingFooter";
 import MarketingHeader from "@/components/marketing/MarketingHeader";
-import { EASE, HeroIn, Reveal, Stagger, StaggerItem } from "@/components/marketing/motion";
+import { EASE, HeroIn, Reveal, Stagger, StaggerItem, ClipReveal } from "@/components/marketing/motion";
 import SplitReveal from "@/components/marketing/SplitReveal";
-import TiltCard from "@/components/marketing/TiltCard";
+import StickyCta from "@/components/marketing/StickyCta";
 
 const TRAIL = [
   {
@@ -71,6 +71,7 @@ export default function TrustAndSafety() {
 
   return (
     <div className="force-light min-h-screen bg-canvas text-ink">
+      <AnnouncementBar />
       <MarketingHeader />
 
       {/* HERO — canvas + ink type like home */}
@@ -181,7 +182,7 @@ export default function TrustAndSafety() {
             return (
               <div key={item.title} className="grid items-center gap-8 lg:grid-cols-2 lg:gap-14">
                 <Reveal y={40} scale={0.96} className={flip ? "lg:order-2" : ""}>
-                  <TiltCard max={5}>
+                  <div className="transition hover:-translate-y-1">
                     <div className="relative overflow-hidden rounded-[1.75rem] shadow-[0_1px_2px_rgba(33,26,20,0.06)]">
                       {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img src={item.img} alt="" className="aspect-[16/11] w-full object-cover" />
@@ -190,7 +191,7 @@ export default function TrustAndSafety() {
                         0{i + 1}
                       </span>
                     </div>
-                  </TiltCard>
+                  </div>
                 </Reveal>
                 <Reveal y={28} delay={0.08} className={flip ? "lg:order-1" : ""}>
                   <p className="text-sm font-semibold uppercase tracking-wide text-brand-orange">
@@ -217,25 +218,47 @@ export default function TrustAndSafety() {
             </h2>
           </Reveal>
 
-          <Stagger className="mt-10 grid gap-6 sm:grid-cols-3" stagger={0.1}>
+          <Stagger className="mt-10 grid gap-6 sm:grid-cols-2" stagger={0.08}>
             {[
               {
-                t: "An item's unavailable",
-                d: "Your agent flags it before buying a substitute — you decide, not them.",
+                icon: "📦",
+                t: "Missing item",
+                d: "If an item can't be found, your agent flags it before buying a substitute. You decide — not them. Unspent funds are returned to your wallet within 24 hours.",
+                badge: "Resolved within the run",
+                badgeColor: "bg-brand-green/10 text-brand-green",
               },
               {
-                t: "A price runs over budget",
-                d: "Spending is capped. Anything above the cap needs your explicit OK before it's spent.",
+                icon: "🕐",
+                t: "Late delivery",
+                d: "If a run runs long, you'll see live updates in the app. If it misses the promised window, contact support for a service fee refund — no questions asked.",
+                badge: "Service fee refundable",
+                badgeColor: "bg-brand-orange/10 text-brand-orange-dark",
               },
               {
-                t: "Something arrives wrong",
-                d: "Raise it against the order's own trail — list, transfers, and photos — not a blank complaint.",
+                icon: "🥩",
+                t: "Quality dispute",
+                d: "Photo proof is captured at market and before packing. If what arrives doesn't match the photos, raise a dispute against the order trail — not a blank complaint.",
+                badge: "Photo trail as evidence",
+                badgeColor: "bg-gold/20 text-ink",
+              },
+              {
+                icon: "🛡️",
+                t: "Agent conduct",
+                d: "Every agent is verified before activation. If you have a concern about conduct during a run, report directly to us — the agent's account is paused pending review.",
+                badge: "Account paused immediately",
+                badgeColor: "bg-brand-orange-dark/10 text-brand-orange-dark",
               },
             ].map((item) => (
               <StaggerItem key={item.t} y={28} scale={0.97}>
-                <div className="rounded-2xl bg-white p-5 shadow-[0_1px_2px_rgba(33,26,20,0.06)] ring-1 ring-ink/5">
-                  <h3 className="font-display text-base font-bold text-ink">{item.t}</h3>
-                  <p className="mt-2 text-sm leading-relaxed text-ink/60">{item.d}</p>
+                <div className="flex h-full flex-col rounded-2xl bg-white p-6 shadow-[0_1px_2px_rgba(33,26,20,0.06)] ring-1 ring-ink/5">
+                  <div className="mb-3 flex items-start justify-between gap-3">
+                    <span className="text-2xl" role="img" aria-hidden>{item.icon}</span>
+                    <span className={`inline-block rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wide ${item.badgeColor}`}>
+                      {item.badge}
+                    </span>
+                  </div>
+                  <h3 className="font-display text-base font-extrabold text-ink">{item.t}</h3>
+                  <p className="mt-2 flex-grow text-sm leading-relaxed text-ink/60">{item.d}</p>
                 </div>
               </StaggerItem>
             ))}
@@ -284,6 +307,7 @@ export default function TrustAndSafety() {
 
       <MarketingFooter />
       <HelpWidget />
+      <StickyCta label="Open Qyka" href="/shop" />
     </div>
   );
 }

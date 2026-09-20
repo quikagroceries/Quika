@@ -76,3 +76,5 @@ export function StickyCta({
     </div>
   );
 }
+
+export default StickyCta;

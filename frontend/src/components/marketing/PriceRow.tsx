@@ -69,3 +69,5 @@ export function PriceRow({
     </div>
   );
 }
+
+export default PriceRow;

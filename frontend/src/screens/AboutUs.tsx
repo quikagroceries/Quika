@@ -3,13 +3,13 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { type MouseEvent } from "react";
-import ClipReveal from "@/components/marketing/ClipReveal";
+import AnnouncementBar from "@/components/marketing/AnnouncementBar";
 import HelpWidget from "@/components/marketing/HelpWidget";
 import MarketingFooter from "@/components/marketing/MarketingFooter";
 import MarketingHeader from "@/components/marketing/MarketingHeader";
-import { HeroIn, Reveal, Stagger, StaggerItem } from "@/components/marketing/motion";
+import { HeroIn, Reveal, Stagger, StaggerItem, ClipReveal } from "@/components/marketing/motion";
 import SplitReveal from "@/components/marketing/SplitReveal";
-import TiltCard from "@/components/marketing/TiltCard";
+import StickyCta from "@/components/marketing/StickyCta";
 import { hashFromHref, scrollToSection } from "@/lib/scrollToSection";
 
 const BELIEFS = [
@@ -78,6 +78,7 @@ export default function AboutUs() {
 
   return (
     <div className="force-light min-h-screen bg-canvas text-ink">
+      <AnnouncementBar />
       <MarketingHeader />
 
       {/* HERO — homepage pattern */}
@@ -180,7 +181,7 @@ export default function AboutUs() {
                       </p>
                     </div>
                     <div className="max-w-2xl">
-                      <h3 className="font-display text-2xl font-bold tracking-tight sm:text-3xl">
+                      <h3 className="font-display text-2xl font-extrabold tracking-tight sm:text-3xl">
                         {beat.title}
                       </h3>
                       <p className="mt-3 text-base leading-relaxed text-ink/65">{beat.body}</p>
@@ -208,13 +209,13 @@ export default function AboutUs() {
           <Stagger className="mt-12 grid gap-5 sm:grid-cols-2 lg:grid-cols-4" stagger={0.1}>
             {BELIEFS.map((item) => (
               <StaggerItem key={item.title} y={32} scale={0.96}>
-                <TiltCard max={5}>
+                <div className="transition hover:-translate-y-1 hover:shadow-card">
                   <div className="h-full rounded-2xl bg-white p-6 shadow-[0_1px_2px_rgba(33,26,20,0.06)] ring-1 ring-ink/5">
                     <div className={"mb-5 h-1.5 w-14 " + item.bar} />
-                    <h3 className="font-display text-lg font-bold text-ink">{item.title}</h3>
+                    <h3 className="font-display text-lg font-extrabold text-ink">{item.title}</h3>
                     <p className="mt-3 text-sm leading-relaxed text-ink/60">{item.body}</p>
                   </div>
-                </TiltCard>
+                </div>
               </StaggerItem>
             ))}
           </Stagger>
@@ -305,6 +306,7 @@ export default function AboutUs() {
 
       <MarketingFooter />
       <HelpWidget />
+      <StickyCta label="Join the waitlist" href="/#customers" />
     </div>
   );
 }

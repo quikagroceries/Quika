@@ -1,5 +1,7 @@
 'use client';
 
+import StatTile from "@/components/StatTile";
+import AdminPageHeader from "@/components/admin/AdminPageHeader";
 import { useEffect, useState } from "react";
 import { api } from "@/lib/api";
 import Button from "@/components/Button";
@@ -122,17 +124,25 @@ function AdminMarkets() {
 
   return (
     <div>
-      <div className="mb-6 flex items-center justify-between">
-        <div>
-          <h1 className="font-display text-3xl font-extrabold tracking-tight text-ink md:text-4xl">Markets</h1>
-          <p className="mt-1 text-muted">Where agents shop — this is what sets up a pilot market.</p>
+      <AdminPageHeader
+        icon="store"
+        section="Operations"
+        title="Markets"
+        description="Where agents shop — this is what sets up a pilot market."
+        actions={
+          !creating ? (
+            <Button onClick={() => setCreating(true)} className="shrink-0">
+              <Icon name="plus" className="h-4 w-4" /> New market
+            </Button>
+          ) : undefined
+        }
+      >
+        <div className="grid grid-cols-3 gap-3">
+          <StatTile label="Markets" value={markets ? markets.length : "—"} />
+          <StatTile label="Active" value={markets ? markets.filter((m) => m.is_active).length : "—"} tone="green" />
+          <StatTile label="Inactive" value={markets ? markets.filter((m) => !m.is_active).length : "—"} />
         </div>
-        {!creating && (
-          <Button onClick={() => setCreating(true)} className="shrink-0">
-            <Icon name="plus" className="h-4 w-4" /> New market
-          </Button>
-        )}
-      </div>
+      </AdminPageHeader>
 
       {error && <p className="mb-4 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p>}
 

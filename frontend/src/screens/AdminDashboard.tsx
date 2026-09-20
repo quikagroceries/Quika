@@ -1,5 +1,7 @@
 'use client';
 
+import StatTile from "@/components/StatTile";
+import AdminPageHeader from "@/components/admin/AdminPageHeader";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
@@ -12,7 +14,7 @@ import ChartTooltip from "@/components/ChartTooltip";
 import { CardSkeleton } from "@/components/Skeleton";
 import { isStuckOrder, LOW_FLOAT_BALANCE, CHART_CRITICAL_VS_ORANGE, CHART_GRID, CHART_AXIS_TEXT } from "@/lib/adminUtils";
 
-const ORANGE = "#E8541E";
+const ORANGE = "#EE9A5A";
 
 const POLL_MS = 15000;
 
@@ -74,8 +76,14 @@ function AdminDashboard() {
 
   return (
     <div>
-      <h1 className="mb-1 font-display text-3xl font-extrabold tracking-tight text-ink md:text-4xl">Dashboard</h1>
-      <p className="mb-6 text-muted">The operational heartbeat — float, orders, and what needs attention.</p>
+      <AdminPageHeader icon="chart" section="Overview" title="Dashboard" description="The operational heartbeat — float, orders, and what needs attention.">
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+          <StatTile label="Orders in flight" value={inFlight ? inFlight.orders.length : "—"} />
+          <StatTile label="Stuck orders" value={inFlight ? inFlight.stuck : "—"} />
+          <StatTile label="Flagged customers" value={flagged?.users ? flagged.users.length : "—"} />
+          <StatTile label="Pending agents" value={pendingApps ? pendingApps.length : "—"} />
+        </div>
+      </AdminPageHeader>
 
       {error && <p className="mb-4 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p>}
 

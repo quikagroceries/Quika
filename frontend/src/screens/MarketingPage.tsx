@@ -1,55 +1,162 @@
 "use client";
 
-import { useEffect, useState, type FormEvent, type MouseEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
+import { AnimatePresence, MotionConfig, motion } from "framer-motion";
 import Link from "next/link";
-import CountUpNumber from "@/components/marketing/CountUpNumber";
-import DeviceMockup from "@/components/marketing/DeviceMockup";
-import HelpWidget from "@/components/marketing/HelpWidget";
-import ImagePlaceholder from "@/components/marketing/ImagePlaceholder";
-import MarketShopPicker from "@/components/marketing/MarketShopPicker";
-import MarketingFooter from "@/components/marketing/MarketingFooter";
-import MarketingHeader from "@/components/marketing/MarketingHeader";
-import { HeroIn, Reveal, Stagger, StaggerItem, ClipReveal } from "@/components/marketing/motion";
-import SplitReveal from "@/components/marketing/SplitReveal";
+import Image from "next/image";
+import { useRouter } from "next/navigation";
+
 import { DIRECTORY_MARKETS } from "@/lib/marketDirectory";
-import { hashFromHref, scrollToSection } from "@/lib/scrollToSection";
-import { FAQS, HELP_TOPICS, PILOT } from "@/lib/helpContent";
+import { saveGuestDraft } from "@/lib/guestDraft";
+import MarketingHeader from "@/components/marketing/MarketingHeader";
+import MarketingFooter from "@/components/marketing/MarketingFooter";
+import HelpWidget from "@/components/marketing/HelpWidget";
+import LanguagePrompt from "@/components/marketing/LanguagePrompt";
+import { useT } from "@/lib/locale";
+import { Reveal, Stagger, StaggerItem } from "@/components/marketing/motion";
+import {
+  ADD_ITEM_EVENT,
+  ChatDemo,
+  DeliveryLine,
+  DriveIn,
+  DrawUnderline,
+  DropIn,
+  Float,
+  FlyLayer,
+  PopIn,
+  WordReveal,
+  useTypedPlaceholder,
+} from "@/components/marketing/anim";
 
-function FaqAccordion() {
+import marketStall from "@/assets/illustrations/market-stall-produce.png";
+import scooter from "@/assets/illustrations/rider-scooter-basket-1.png";
+import produceCrate from "@/assets/illustrations/produce-crate.png";
+import tomatoes from "@/assets/illustrations/tomatoes.png";
+import garlic from "@/assets/illustrations/garlic.png";
+import bananas from "@/assets/illustrations/bananas-1.png";
+import pepper from "@/assets/illustrations/pepper.png";
+import onion from "@/assets/illustrations/onion.png";
+import garri from "@/assets/illustrations/garri.png";
+import riceBag from "@/assets/illustrations/rice-bag.png";
+import crayfish from "@/assets/illustrations/crayfish.png";
+import eggs from "@/assets/illustrations/eggs.png";
+import milk from "@/assets/illustrations/milk-carton-1.png";
+import bread from "@/assets/illustrations/bread-loaf-1.png";
+import chicken from "@/assets/illustrations/roast-chicken.png";
+import okra from "@/assets/illustrations/okra.png";
+import carrot from "@/assets/illustrations/carrot.png";
+import personList from "@/assets/illustrations/person-shopping-list.png";
+import conversation from "@/assets/illustrations/agent-customer-conversation.png";
+import delivery from "@/assets/illustrations/delivery-map-route.png";
+import handoff from "@/assets/illustrations/order-handoff-vendor-customer.png";
+import agentScene from "@/assets/illustrations/scene-agent-laptop-delivery.png";
+import riderBike from "@/assets/illustrations/rider-bicycle.png";
+import stallProduce from "@/assets/illustrations/market-stall-produce.png";
+import stallFish from "@/assets/illustrations/vendor-stall-fish.png";
+import stallDairy from "@/assets/illustrations/vendor-stall-dairy.png";
+import stallPantry from "@/assets/illustrations/vendor-stall-pantry-jars.png";
+import stallScale from "@/assets/illustrations/vendor-weighing-scale.png";
+import cartVendor from "@/assets/illustrations/market-cart-vendor.png";
+import badgeFresh from "@/assets/illustrations/badge-fresh-guarantee.png";
+import badgeLive from "@/assets/illustrations/badge-real-time-updates.png";
+import badgeHuman from "@/assets/illustrations/badge-human-first-shopping.png";
+import badgeSupport from "@/assets/illustrations/badge-24-7-support.png";
+import squiggle1 from "@/assets/illustrations/decorative-squiggle-1.png";
+import squiggle2 from "@/assets/illustrations/decorative-squiggle-2.png";
+import basket from "@/assets/illustrations/grocery-basket.png";
+
+// What people tap to start a list - Chowdeck's cuisine strip, but for the
+// market. Tapping one drops it straight into the list box above.
+const QUICK_ITEMS = [
+  { label: "Tomatoes", add: "Tomatoes, 1 basket", src: tomatoes },
+  { label: "Pepper", add: "Fresh pepper, 1 paint", src: pepper },
+  { label: "Onions", add: "Onions, 1 bag", src: onion },
+  { label: "Garri", add: "Garri, 2 cups", src: garri },
+  { label: "Rice", add: "Rice, 1 bag", src: riceBag },
+  { label: "Crayfish", add: "Crayfish, 1 cup", src: crayfish },
+  { label: "Eggs", add: "Eggs, 1 crate", src: eggs },
+  { label: "Chicken", add: "Chicken, 1 whole", src: chicken },
+  { label: "Milk", add: "Milk, 2 cartons", src: milk },
+  { label: "Bread", add: "Bread, 2 loaves", src: bread },
+  { label: "Okra", add: "Okra, 1 bowl", src: okra },
+  { label: "Carrots", add: "Carrots, 1 kg", src: carrot },
+  { label: "Bananas", add: "Bananas, 1 bunch", src: bananas },
+];
+
+const STEPS = [
+  {
+    n: "1",
+    title: "Write your list",
+    body: "Type it like you'd text a friend. No sign-up needed to start.",
+    art: personList,
+    tint: "bg-surface",
+  },
+  {
+    n: "2",
+    title: "Meet your agent",
+    body: "A real person in the market picks it up, chats with you and sends photos.",
+    art: conversation,
+    tint: "bg-[#FBE7D5]",
+  },
+  {
+    n: "3",
+    title: "Get it delivered",
+    body: "Pay only for what's bought. Track your order all the way to your door.",
+    art: delivery,
+    tint: "bg-surface",
+  },
+];
+
+const TRUST = [
+  { title: "Pay for what's bought", body: "Unspent cash goes straight back to your wallet.", art: badgeFresh },
+  { title: "Live updates", body: "Photos, prices and swaps, in real time, in chat.", art: badgeLive },
+  { title: "A person, not a robot", body: "Rated agents who know the stalls and bargain fairly.", art: badgeHuman },
+  { title: "Help when you need it", body: "Support is a message away, any time.", art: badgeSupport },
+];
+
+const MARKET_ART = [stallProduce, stallFish, stallDairy, stallPantry, stallScale, cartVendor];
+
+function FaqList() {
   const [open, setOpen] = useState<number | null>(0);
-
+  const items = useT().faq.items;
   return (
-    <div className="divide-y divide-ink/10 border-y border-ink/10">
-      {FAQS.map((item, i) => {
+    <div className="divide-y divide-line rounded-3xl border border-line bg-surface px-5 shadow-sm sm:px-8">
+      {items.map((item, i) => {
         const isOpen = open === i;
         return (
           <div key={item.q}>
             <button
               type="button"
-              aria-expanded={isOpen}
               onClick={() => setOpen(isOpen ? null : i)}
-              className="flex w-full items-start justify-between gap-6 py-5 text-left transition hover:text-brand-orange focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gold sm:py-6"
+              aria-expanded={isOpen}
+              className="flex w-full items-center justify-between gap-4 py-5 text-left"
             >
-              <span className="font-display text-lg font-bold tracking-tight text-ink sm:text-xl">
-                {item.q}
-              </span>
+              <span className="font-display text-lg font-bold text-ink">{item.q}</span>
               <span
                 className={
-                  "mt-1 flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-ink/15 text-ink transition " +
-                  (isOpen ? "rotate-45 border-brand-orange text-brand-orange" : "")
+                  "flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-sunken text-ink transition-transform duration-300 " +
+                  (isOpen ? "rotate-45 bg-brand-orange" : "")
                 }
-                aria-hidden
               >
-                <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2.4">
+                <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2.5">
                   <path d="M12 5v14M5 12h14" strokeLinecap="round" />
                 </svg>
               </span>
             </button>
-            {isOpen && (
-              <p className="max-w-2xl pb-6 text-base leading-relaxed text-ink/60 sm:pb-7">
-                {item.a}
-              </p>
-            )}
+            <AnimatePresence initial={false}>
+              {isOpen && (
+                <motion.div
+                  key="a"
+                  initial={{ height: 0, opacity: 0 }}
+                  animate={{ height: "auto", opacity: 1 }}
+                  exit={{ height: 0, opacity: 0 }}
+                  transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
+                  className="overflow-hidden"
+                >
+                  <p className="max-w-2xl pb-5 leading-relaxed text-muted">{item.a}</p>
+                </motion.div>
+              )}
+            </AnimatePresence>
           </div>
         );
       })}
@@ -57,613 +164,477 @@ function FaqAccordion() {
   );
 }
 
-function WaitlistInline({ inputId = "waitlist-email" }: { inputId?: string }) {
-  const [email, setEmail] = useState("");
-  const [sent, setSent] = useState(false);
-  const [marketLabel, setMarketLabel] = useState(PILOT);
+// The hero's action card: the same first step as the app (write a list),
+// carried straight into /shop as a guest draft - so the landing page IS
+// step 1, not a picture of it.
+function ListStarter({ id }: { id: string }) {
+  const router = useRouter();
+  const t = useT();
+  const [text, setText] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [focused, setFocused] = useState(false);
+  const [flash, setFlash] = useState(false);
+  const ref = useRef<HTMLTextAreaElement>(null);
+  const placeholder = useTypedPlaceholder(t.hero.placeholders, !text && !focused);
 
-  useEffect(() => {
-    function syncMarket() {
-      const id = new URLSearchParams(window.location.search).get("market");
-      if (!id) return;
-      const match = DIRECTORY_MARKETS.find((m) => m.id === id);
-      if (match) setMarketLabel(match.name);
-    }
-    syncMarket();
-    window.addEventListener("qyka-market-change", syncMarket);
-    window.addEventListener("popstate", syncMarket);
-    return () => {
-      window.removeEventListener("qyka-market-change", syncMarket);
-      window.removeEventListener("popstate", syncMarket);
-    };
-  }, []);
-
-  function submit(e: FormEvent) {
-    e.preventDefault();
-    if (!email.trim()) return;
-    const subject = encodeURIComponent(`Qyka waitlist — ${marketLabel}`);
-    const body = encodeURIComponent(
-      `Join waitlist for ${marketLabel}.\n\nEmail: ${email.trim()}\n`
-    );
-    window.location.href = `mailto:hello@quika.ng?subject=${subject}&body=${body}`;
-    setSent(true);
+  function addItem(line: string) {
+    setText((t) => (t.trim() ? t.replace(/\n*$/, "\n") + line : line));
+    ref.current?.focus();
+    setFlash(true);
+    setTimeout(() => setFlash(false), 700);
   }
 
-  if (sent) {
-    return <p className="text-sm font-semibold text-brand-green">Opening your mail app…</p>;
+  // The "What are you cooking?" strip further down feeds this same box.
+  useEffect(() => {
+    const onAdd = (e: Event) => addItem((e as CustomEvent<{ line: string }>).detail.line);
+    window.addEventListener(ADD_ITEM_EVENT, onAdd);
+    return () => window.removeEventListener(ADD_ITEM_EVENT, onAdd);
+  }, []);
+
+  async function start(e?: FormEvent) {
+    e?.preventDefault();
+    setBusy(true);
+    try {
+      if (text.trim()) {
+        // Loaded on demand so the landing page doesn't ship the list builder.
+        const { buildDraft } = await import("@/components/ListBuilder");
+        const draft = buildDraft("freetext", [{ item: "", price: "", qty: "1", note: "" }], text.trim(), "");
+        saveGuestDraft({ marketId: null, step: "list", stagedList: draft, address: "", marketSlug: null });
+      }
+    } catch {
+      /* fall through - the shop still opens, just with an empty list */
+    }
+    router.push("/shop");
   }
 
   return (
-    <form onSubmit={submit} className="flex w-full max-w-md overflow-hidden rounded-full bg-white shadow-[0_10px_30px_rgba(33,26,20,0.1)] ring-1 ring-ink/5">
-      <label className="sr-only" htmlFor={inputId}>Email for waitlist</label>
-      <input
-        id={inputId}
-        type="email"
-        required
-        value={email}
-        onChange={(e) => setEmail(e.target.value)}
-        placeholder={`Waitlist for ${marketLabel}…`}
-        className="min-h-[52px] flex-1 bg-transparent px-5 text-sm text-ink outline-none placeholder:text-ink/40"
+    <form
+      onSubmit={start}
+      className="rounded-3xl border border-line bg-surface p-4 shadow-lg sm:p-5"
+      aria-label="Start your list"
+    >
+      <label htmlFor={id} className="mb-2 flex items-center gap-2 font-display text-sm font-bold text-ink">
+        <span className="flex h-2 w-2 animate-pulse rounded-full bg-brand-orange" />
+        {t.hero.listLabel}
+      </label>
+      <textarea
+        id={id}
+        ref={ref}
+        value={text}
+        onChange={(e) => setText(e.target.value)}
+        rows={3}
+        placeholder={placeholder}
+        onFocus={() => setFocused(true)}
+        onBlur={() => setFocused(false)}
+        className={
+          "w-full resize-none rounded-2xl border bg-canvas px-4 py-3 text-base text-ink transition-shadow duration-300 placeholder:text-faint focus:border-brand-orange focus:outline-none focus:ring-2 focus:ring-brand-orange " +
+          (flash ? "border-brand-orange ring-4 ring-brand-orange/40" : "border-line-strong")
+        }
       />
       <button
         type="submit"
-        className="m-1.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-brand-orange text-[#1A1A1A] transition hover:bg-brand-orange-dark focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gold"
-        aria-label="Join waitlist"
+        disabled={busy}
+        className="group/cta mt-3 inline-flex min-h-[52px] w-full items-center justify-center gap-2 rounded-2xl bg-brand-orange px-6 font-display text-lg font-bold text-[#1A1A1A] shadow-sm transition hover:bg-brand-orange-dark active:scale-[0.98] disabled:opacity-60"
       >
-        <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2.5">
-          <circle cx="11" cy="11" r="7" />
-          <path d="m20 20-3.5-3.5" strokeLinecap="round" />
+        {busy ? t.hero.opening : t.hero.button}
+        <svg viewBox="0 0 24 24" className="h-5 w-5 transition-transform group-hover/cta:translate-x-1" fill="none" stroke="currentColor" strokeWidth="2.5">
+          <path d="M5 12h14M13 6l6 6-6 6" strokeLinecap="round" strokeLinejoin="round" />
         </svg>
       </button>
+      <p className="mt-3 text-center text-xs text-faint">{t.hero.fine}</p>
+      <QuickPicks onPick={addItem} />
     </form>
   );
 }
 
-function handleInPageAnchor(e: MouseEvent<HTMLAnchorElement>) {
-  const hash = hashFromHref(e.currentTarget.getAttribute("href") || "");
-  if (!hash) return;
-  e.preventDefault();
-  scrollToSection(hash);
-  window.history.pushState(null, "", `/#${hash}`);
-}
-
-const STATS = [
-  { value: 0, suffix: "", label: "unauthorized cash on any run — transfer only" },
-  { value: 100, suffix: "%", label: "of vendor payments photographed as proof" },
-  { value: 3, suffix: "", label: "ways to work with Qyka — shop, agent, or rider" },
-] as const;
-
-type StartCard = {
-  id: string;
-  eyebrow: string;
-  title: string;
-  body: string;
-  cta: string;
-  href: string;
-  img?: string;
-  imgAlt?: string;
-  placeholder?: { label: string; file: string };
-  tone: "orange" | "ink" | "green";
-};
-
-const START_CARDS: StartCard[] = [
-  {
-    id: "customers",
-    eyebrow: "Customers",
-    title: "Get your groceries, without the trip.",
-    body: "Send a free-text list — market or supermarket — pick where to shop it, and deposit to lock the run.",
-    cta: "Open Qyka",
-    href: "/shop",
-    img: "/qyka-hero-person.jpg",
-    imgAlt: "Customer with a market shopping list",
-    tone: "orange",
-  },
-  {
-    id: "agents",
-    eyebrow: "Agents",
-    title: "Earn shopping a market you already know.",
-    body: "Accept proposed runs, bargain the stalls, pay vendors by transfer, and get paid on completed deliveries.",
-    cta: "Become an Agent",
-    href: "/for-agents",
-    img: "/qyka-cat-produce.jpg",
-    imgAlt: "Agent shopping fresh produce at a market stall",
-    tone: "ink",
-  },
-  {
-    id: "riders",
-    eyebrow: "Riders",
-    title: "Deliver market hauls, earn on your own schedule.",
-    body: "Pick up a packed order at the market gate and ride it home. Flexible hours, paid per completed delivery.",
-    cta: "Become a Rider",
-    href: "/for-riders",
-    placeholder: { label: "Rider on a delivery bike with packed market bags", file: "/qyka-rider-hero.jpg" },
-    tone: "green",
-  },
-];
-
-const TONE_BG: Record<StartCard["tone"], string> = {
-  orange: "bg-brand-orange",
-  ink: "bg-ink",
-  green: "bg-brand-green",
-};
-
-function StartTile({ card }: { card: StartCard }) {
+function QuickPicks({ onPick }: { onPick: (line: string) => void }) {
+  const t = useT();
   return (
-    <div>
-    <Link
-      href={card.href}
-      data-cursor={card.cta}
-      className="group relative flex min-h-[420px] flex-col overflow-hidden rounded-2xl text-white shadow-[0_1px_2px_rgba(33,26,20,0.06)] transition hover:shadow-[0_24px_48px_-12px_rgba(33,26,20,0.35)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-gold"
-    >
-      <div className={"absolute inset-0 " + TONE_BG[card.tone]} />
-      <div className="absolute inset-0">
-        {card.img ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            src={card.img}
-            alt={card.imgAlt || ""}
-            className="h-full w-full object-cover opacity-90 transition duration-500 group-hover:scale-105 group-hover:opacity-100"
-          />
-        ) : (
-          <ImagePlaceholder
-            label={card.placeholder!.label}
-            file={card.placeholder!.file}
-            tone="dark"
-            align="top"
-            className="h-full w-full"
-          />
-        )}
-        <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/25 to-transparent" />
+    <div className="mt-4 border-t border-dashed border-line pt-4">
+      <p className="mb-2 text-xs font-semibold text-muted">{t.hero.tapToAdd}</p>
+      <div className="flex flex-wrap gap-2">
+        {QUICK_ITEMS.slice(0, 8).map((q) => (
+          <button
+            key={q.label}
+            type="button"
+            onClick={() => onPick(q.add)}
+            className="rounded-full border border-line bg-canvas px-3 py-1.5 text-sm font-semibold text-ink transition hover:border-brand-orange hover:bg-[#FBE7D5]"
+          >
+            + {q.label}
+          </button>
+        ))}
       </div>
-
-      <div className="relative z-[1] mt-auto flex flex-col gap-2 p-7 sm:p-8">
-        <p className="text-xs font-bold uppercase tracking-[0.16em] text-white/70">{card.eyebrow}</p>
-        <h3 className="font-display text-2xl font-extrabold leading-tight tracking-tight sm:text-[1.65rem]">
-          {card.title}
-        </h3>
-        <p className="max-w-sm text-sm leading-relaxed text-white/75">{card.body}</p>
-        <span className="mt-3 inline-flex items-center gap-2 font-display text-sm font-bold">
-          {card.cta}
-          <svg viewBox="0 0 24 24" className="h-4 w-4 transition group-hover:translate-x-1" fill="none" stroke="currentColor" strokeWidth="2.4" aria-hidden>
-            <path d="M5 12h14M13 6l6 6-6 6" strokeLinecap="round" strokeLinejoin="round" />
-          </svg>
-        </span>
-      </div>
-    </Link>
     </div>
   );
 }
 
-const CATEGORIES = [
-  { img: "/qyka-cat-produce.jpg", title: "Fresh produce", body: "Tomatoes, peppers, leafy greens — bargained by weight at the market." },
-  { img: "/qyka-cat-protein.jpg", title: "Proteins & fish", body: "Meat, fish, and poultry, priced the way the stall sells it." },
-  { img: "/qyka-cat-pantry.jpg", title: "Pantry & provisions", body: "Rice, garri, oil, and the rest of the weekly list." },
-  {
-    placeholder: { label: "Supermarket shelf goods — toiletries, cleaning, packaged food", file: "/qyka-cat-supermarket.jpg" },
-    title: "Household & supermarket",
-    body: "Toiletries, cleaning supplies, and packaged groceries at fixed shelf prices.",
-  },
-] as const;
+function HeroArt() {
+  const t = useT();
+  return (
+    <div className="relative mx-auto aspect-square w-full max-w-[34rem]">
+      <motion.div
+        className="absolute inset-[6%] rounded-[3rem] bg-brand-orange/30"
+        initial={{ rotate: -4, scale: 0.92, opacity: 0 }}
+        animate={{ rotate: 3, scale: 1, opacity: 1 }}
+        transition={{ duration: 0.9, ease: [0.22, 1, 0.36, 1] }}
+      />
+      <motion.div
+        className="absolute inset-[12%] rounded-[3rem] bg-surface shadow-sm"
+        initial={{ rotate: 4, scale: 0.94, opacity: 0 }}
+        animate={{ rotate: -3, scale: 1, opacity: 1 }}
+        transition={{ duration: 0.9, delay: 0.1, ease: [0.22, 1, 0.36, 1] }}
+      />
+      <Image src={squiggle1} alt="" aria-hidden className="absolute -left-2 top-[8%] w-14 -rotate-12 opacity-40" />
+      <Image src={squiggle2} alt="" aria-hidden className="absolute -right-2 bottom-[30%] w-14 rotate-12 opacity-40" />
 
-const TRUST_POINTS = [
-  { t: "Agents hold no cash", d: "Every vendor is paid by bank transfer — nothing changes hands off the books." },
-  { t: "Photo proof on every spend", d: "Each transfer is logged with a photo of what it bought." },
-  { t: "Capped spending", d: "Hard ceilings on every run — overages need your explicit OK first." },
-  { t: "Deposit before assignment", d: "Runs only start once payment clears, so there's no ambiguity on either side." },
-] as const;
+      <PopIn className="absolute left-[16%] top-[14%] w-[68%]" delay={0.25} from={{ scale: 0.85, y: 24 }}>
+        <Float amp={5} dur={5}>
+          <Image src={marketStall} alt="A market stall stacked with fresh produce" priority className="w-full" />
+        </Float>
+      </PopIn>
+      <PopIn className="absolute bottom-[14%] right-[4%] w-[30%]" delay={0.6}>
+        <Float amp={4} dur={4.4} delay={0.4}>
+          <Image src={produceCrate} alt="" aria-hidden className="w-full rotate-6" />
+        </Float>
+      </PopIn>
+      <DriveIn className="absolute bottom-[4%] left-[2%] w-[42%]" delay={0.5}>
+        <Float amp={3} dur={2.6}>
+          <Image src={scooter} alt="" aria-hidden className="w-full" />
+        </Float>
+      </DriveIn>
+      <PopIn className="absolute left-[2%] top-[30%] w-[15%]" delay={0.75}>
+        <Float amp={7} dur={3.6}><Image src={tomatoes} alt="" aria-hidden className="w-full -rotate-12" /></Float>
+      </PopIn>
+      <PopIn className="absolute right-[2%] top-[10%] w-[13%]" delay={0.85}>
+        <Float amp={6} dur={4.2} delay={0.3}><Image src={garlic} alt="" aria-hidden className="w-full rotate-12" /></Float>
+      </PopIn>
+      <PopIn className="absolute right-[10%] top-[52%] w-[16%]" delay={0.95}>
+        <Float amp={6} dur={3.9} delay={0.7}><Image src={bananas} alt="" aria-hidden className="w-full -rotate-6" /></Float>
+      </PopIn>
+
+      <PopIn className="absolute left-[4%] top-[6%]" delay={1.1} from={{ scale: 0.6, y: -10 }}>
+        <div className="flex items-center gap-2 rounded-full border border-line bg-surface px-3 py-1.5 shadow-md">
+          <Image src={badgeFresh} alt="" aria-hidden className="h-6 w-6 object-contain" />
+          <span className="text-xs font-bold text-ink">{t.hero.pickedFresh}</span>
+        </div>
+      </PopIn>
+      <PopIn className="absolute bottom-[26%] right-0" delay={1.3} from={{ scale: 0.6, y: 10 }}>
+        <div className="flex items-center gap-2 rounded-full border border-line bg-surface px-3 py-1.5 shadow-md">
+          <Image src={badgeLive} alt="" aria-hidden className="h-6 w-6 object-contain" />
+          <span className="text-xs font-bold text-ink">{t.hero.liveUpdates}</span>
+        </div>
+      </PopIn>
+    </div>
+  );
+}
 
 export default function MarketingPage() {
-  useEffect(() => {
-    const scrollFromHash = (behavior: ScrollBehavior = "smooth") => {
-      const fromStorage = sessionStorage.getItem("qyka-scroll-to");
-      if (fromStorage) {
-        sessionStorage.removeItem("qyka-scroll-to");
-        requestAnimationFrame(() => scrollToSection(fromStorage, behavior));
-        return;
-      }
-      const id = window.location.hash.replace(/^#/, "");
-      if (id) requestAnimationFrame(() => scrollToSection(id, behavior));
-    };
-
-    scrollFromHash("smooth");
-
-    const onHashChange = () => scrollFromHash("smooth");
-    window.addEventListener("hashchange", onHashChange);
-    return () => window.removeEventListener("hashchange", onHashChange);
-  }, []);
+  const mainRef = useRef<HTMLElement>(null);
+  const t = useT();
+  const openCount = DIRECTORY_MARKETS.filter((m) => m.status === "pilot").length;
 
   return (
-    <div className="force-light min-h-screen bg-canvas text-ink">
+    <MotionConfig reducedMotion="user">
+    <div className="min-h-screen bg-canvas text-ink">
       <MarketingHeader />
+      <FlyLayer targetId="hero-list" />
 
-      {/* HERO — split: headline + market picker on the left, real product UI on the right */}
-      <section className="relative overflow-hidden bg-canvas">
-        <div className="relative z-[1] mx-auto grid max-w-6xl items-center gap-12 px-4 pb-16 pt-16 sm:px-6 lg:grid-cols-[1.05fr_0.95fr] lg:gap-10 lg:pb-20 lg:pt-20">
-          <div>
-            <HeroIn y={20}>
-              <p className="text-sm font-semibold uppercase tracking-wide text-brand-green">
-                Pre-pilot · Groceries, from open-air markets to supermarkets
-              </p>
-            </HeroIn>
-            <SplitReveal
-              as="h1"
-              mode="load"
-              delay={0.08}
-              className="mt-3 font-serif text-5xl italic leading-[1.05] tracking-tight text-ink sm:text-6xl lg:text-[4rem]"
-            >
-              Your groceries, <span className="text-brand-orange">shopped right</span>.
-            </SplitReveal>
-            <HeroIn y={20} delay={0.16}>
-              <p className="mt-5 max-w-lg text-base leading-relaxed text-ink/60 sm:text-lg">
-                Send a free-text list for anything on it — market produce or supermarket
-                staples. A local agent shops it and pays by transfer. A rider brings it to
-                your door. No cash on the street.
-              </p>
-            </HeroIn>
-            <HeroIn y={16} delay={0.24} className="mt-8 max-w-xl">
-              <HeroCtas />
-            </HeroIn>
-            <HeroIn y={12} delay={0.32}>
-              <p className="mt-3 text-xs font-medium text-ink/40">
-                Pilot markets open Qyka today; everyone else joins the waitlist.
-              </p>
-            </HeroIn>
-          </div>
-
-          <HeroIn y={32} delay={0.2} className="relative mx-auto w-full max-w-sm lg:mx-0 lg:max-w-none">
-            <div className="relative mx-auto w-full max-w-[300px]">
-              <DeviceMockup />
-              <div className="absolute -left-10 -top-4 hidden -rotate-3 rounded-xl bg-white px-4 py-3 shadow-[0_16px_36px_rgba(33,26,20,0.16)] sm:block">
-                <p className="text-xs font-bold text-ink">₦500 pepper</p>
-                <p className="text-[0.7rem] text-ink/50">added to list</p>
-              </div>
-              <div className="absolute -right-12 -bottom-4 hidden rotate-2 rounded-xl bg-ink px-4 py-3 text-white shadow-[0_16px_36px_rgba(33,26,20,0.24)] sm:block">
-                <p className="text-xs font-bold">Transfer sent</p>
-                <p className="text-[0.7rem] text-white/60">photo attached</p>
-              </div>
-            </div>
-          </HeroIn>
-        </div>
-
-        {/* Stat strip */}
-        <div className="border-t border-ink/8 bg-canvas-deep/60">
-          <Stagger className="mx-auto grid max-w-6xl grid-cols-1 divide-y divide-ink/8 px-4 sm:grid-cols-3 sm:divide-x sm:divide-y-0 sm:px-6" stagger={0.1}>
-            {STATS.map((s) => (
-              <StaggerItem key={s.label} y={16} scale={0.98}>
-                <div className="flex items-center gap-3 px-1 py-5 sm:flex-col sm:items-start sm:px-6">
-                  <CountUpNumber
-                    value={s.value}
-                    suffix={s.suffix}
-                    className="font-serif text-3xl italic text-ink sm:text-4xl"
-                  />
-                  <span className="text-sm text-ink/55 sm:mt-1">{s.label}</span>
-                </div>
-              </StaggerItem>
-            ))}
-          </Stagger>
-        </div>
-      </section>
-
-
-      {/* GET STARTED — three audiences, Uber/Bolt-style split */}
-      <section id="get-started" className="relative scroll-mt-28 bg-canvas px-4 py-20 sm:px-6 sm:py-24">
-        <div className="mx-auto max-w-6xl">
-          <Reveal y={24} className="max-w-2xl">
-            <p className="text-sm font-semibold uppercase tracking-wide text-brand-orange">Get started</p>
-            <SplitReveal as="h2" className="mt-2 font-serif text-4xl italic tracking-tight text-ink sm:text-5xl">
-              Three ways to work with Qyka.
-            </SplitReveal>
-            <p className="mt-3 text-base text-ink/60 sm:text-lg">
-              Shop a market, run one, or deliver one — pick where you fit in.
-            </p>
-          </Reveal>
-
-          <Stagger className="mt-10 grid gap-5 lg:grid-cols-3" stagger={0.1}>
-            {START_CARDS.map((card) => (
-              <StaggerItem key={card.id} y={32} scale={0.97}>
-                <StartTile card={card} />
-              </StaggerItem>
-            ))}
-          </Stagger>
-        </div>
-      </section>
-
-      {/* ACTION — market-first entry, repeated for scrollers who skipped the hero */}
-      {/* brand-orange is a light peach fill now, not the old dark indigo —
-          content here needs dark ink text, and the picker's "inverse"
-          (white-text-on-dark) tone no longer applies. */}
-      <section id="action" className="relative scroll-mt-28 bg-brand-orange px-4 py-16 sm:px-6 sm:py-20">
-        <Reveal className="mx-auto max-w-6xl" y={28}>
-          <div className="grid gap-10 text-ink lg:grid-cols-[1fr_1fr] lg:items-center lg:gap-16">
+      <main ref={mainRef} className="relative">
+        <DeliveryLine targetRef={mainRef} />
+        {/* HERO */}
+        <section className="relative overflow-hidden">
+          <div className="pointer-events-none absolute -right-24 -top-24 h-96 w-96 rounded-full bg-brand-orange/15 blur-3xl" />
+          <div className="mx-auto grid max-w-6xl items-center gap-10 px-4 pb-14 pt-8 sm:px-6 sm:pt-12 lg:grid-cols-2 lg:gap-12 lg:pb-20 lg:pt-16">
             <div>
-              <p className="text-sm font-semibold uppercase tracking-wide text-ink/70">Shop your groceries</p>
-              <SplitReveal as="h2" className="mt-2 font-serif text-4xl italic leading-tight tracking-tight sm:text-5xl">
-                Enter the market or supermarket you buy from.
-              </SplitReveal>
-              <p className="mt-4 max-w-md text-base text-ink/70 sm:text-lg">
-                Qyka is built around specific markets and supermarkets, not delivery zones. Pick
-                yours to open the app, or join the waitlist if it isn&apos;t live yet.
-              </p>
+              <span className="inline-flex items-center gap-2 rounded-full border border-brand-orange/30 bg-brand-orange/15 px-3 py-1 text-xs font-bold text-brand-orange-dark">
+                <span className="h-2 w-2 animate-pulse rounded-full bg-brand-orange" />
+                {t.hero.badge}
+              </span>
+              <h1 className="mt-4 font-display text-[clamp(2.5rem,6.5vw,4.5rem)] font-extrabold leading-[1.02] tracking-tight text-ink">
+                <WordReveal key={t.hero.titleA} text={t.hero.titleA} />{" "}
+                {(() => {
+                  // Underline just the closing word(s): an underline under a
+                  // long, wrapped phrase stretches into a full-width bar.
+                  const w = t.hero.titleB.split(" ");
+                  const k = w.length >= 3 ? 2 : w.length;
+                  const lead = w.slice(0, w.length - k).join(" ");
+                  const tail = w.slice(w.length - k).join(" ");
+                  return (
+                    <>
+                      {lead && <WordReveal key={lead} text={lead} delay={0.2} />}{lead && " "}
+                      <span className="relative inline-block">
+                        <WordReveal key={tail} text={tail} delay={0.3} />
+                        <DrawUnderline delay={0.95} />
+                      </span>
+                    </>
+                  );
+                })()}
+              </h1>
+              <Reveal y={16} delay={0.35}>
+                <p className="mt-4 max-w-md text-lg text-muted">
+                  {t.hero.sub}
+                </p>
+              </Reveal>
+              <div className="mt-7 max-w-md">
+                <ListStarter id="hero-list" />
+              </div>
             </div>
-            <div className="lg:justify-self-end lg:pr-2">
-              <MarketShopPicker inputId="action-market-picker" />
-            </div>
+            <HeroArt />
           </div>
-        </Reveal>
-      </section>
+        </section>
 
-
-      {/* CATEGORIES */}
-      <section className="relative bg-canvas px-4 py-20 sm:px-6 sm:py-24">
-        <div className="mx-auto max-w-6xl">
-          <Reveal y={24} className="max-w-xl">
-            <p className="text-sm font-semibold uppercase tracking-wide text-brand-green">Groceries</p>
-            <SplitReveal as="h2" className="mt-2 font-serif text-4xl italic tracking-tight text-ink sm:text-5xl">
-              Everything on your list, one run.
-            </SplitReveal>
-            <p className="mt-3 text-base text-ink/60 sm:text-lg">
-              Fresh market produce, bargained at the stalls, or fixed-price supermarket
-              staples — Qyka shops both.
-            </p>
-          </Reveal>
-
-          <Stagger className="mt-10 grid gap-5 sm:grid-cols-2 lg:grid-cols-4" stagger={0.12}>
-            {CATEGORIES.map((c) => (
-              <StaggerItem key={c.title} y={28} scale={0.97}>
-                <a
-                  href="#action"
-                  onClick={handleInPageAnchor}
-                  data-cursor="Shop"
-                  className="group block overflow-hidden rounded-2xl bg-white shadow-[0_1px_2px_rgba(33,26,20,0.06)] ring-1 ring-ink/5 transition hover:shadow-[0_16px_36px_-8px_rgba(33,26,20,0.2)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-gold"
+        {/* SHOP BY ITEM - Chowdeck-style scroller */}
+        <section className="border-y border-line bg-surface">
+          <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6">
+            <Reveal y={14}><h2 className="mb-4 font-display text-xl font-extrabold text-ink sm:text-2xl">{t.strip.title}</h2></Reveal>
+            <div className="[scrollbar-width:none] [&::-webkit-scrollbar]:hidden -mx-4 flex snap-x gap-3 overflow-x-auto px-4 pb-1 sm:mx-0 sm:px-0">
+              {QUICK_ITEMS.map((q) => (
+                <button
+                  key={q.label}
+                  type="button"
+                  onClick={(e) => {
+                    const r = e.currentTarget.getBoundingClientRect();
+                    window.dispatchEvent(
+                      new CustomEvent(ADD_ITEM_EVENT, {
+                        detail: { line: q.add, src: q.src.src, from: { left: r.left + r.width / 2 - 28, top: r.top + 16, width: r.width, height: r.height } },
+                      })
+                    );
+                    window.scrollTo({ top: 0, behavior: "smooth" });
+                  }}
+                  className="group flex w-24 shrink-0 snap-start flex-col items-center gap-2 sm:w-28"
                 >
-                  <ClipReveal className="aspect-[4/3] overflow-hidden">
-                    {"img" in c ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img
-                        src={c.img}
-                        alt=""
-                        className="h-full w-full object-cover transition duration-500 group-hover:scale-105"
-                      />
-                    ) : (
-                      <ImagePlaceholder label={c.placeholder.label} file={c.placeholder.file} className="h-full w-full" />
-                    )}
-                  </ClipReveal>
-                  <div className="p-5">
-                    <h3 className="font-display text-lg font-bold text-ink">{c.title}</h3>
-                    <p className="mt-1 text-sm text-ink/55">{c.body}</p>
-                    <span className="mt-3 inline-flex items-center gap-1.5 text-sm font-bold text-brand-orange">
-                      Choose where to shop
-                      <svg viewBox="0 0 24 24" className="h-3.5 w-3.5 transition group-hover:translate-x-1" fill="none" stroke="currentColor" strokeWidth="2.6" aria-hidden>
-                        <path d="M5 12h14M13 6l6 6-6 6" strokeLinecap="round" strokeLinejoin="round" />
-                      </svg>
-                    </span>
-                  </div>
-                </a>
-              </StaggerItem>
-            ))}
-          </Stagger>
-        </div>
-      </section>
-
-      {/* TRUST — flat white band, proof-photo mosaic instead of a single hero shot.
-          No dark surfaces anywhere in this palette. */}
-      <section id="trust" className="relative scroll-mt-28 bg-surface text-ink">
-        <div className="mx-auto grid max-w-6xl gap-12 px-4 py-20 sm:px-6 sm:py-24 lg:grid-cols-[0.9fr_1.1fr] lg:gap-16">
-          <Reveal y={24}>
-            <p className="text-sm font-semibold uppercase tracking-wide text-brand-orange-dark">Trust & safety</p>
-            <SplitReveal as="h2" className="mt-2 font-serif text-4xl italic leading-tight tracking-tight sm:text-5xl">
-              Built for markets with no catalogue and no receipts by default.
-            </SplitReveal>
-            <p className="mt-4 max-w-md text-ink/65">
-              Qyka&apos;s differentiator isn&apos;t speed — it&apos;s how money moves when there&apos;s no
-              storefront to fall back on.
-            </p>
-            <Link
-              href="/trust-and-safety"
-              className="mt-5 inline-flex text-sm font-bold text-brand-orange-dark hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-gold"
-            >
-              Read Trust &amp; Safety →
-            </Link>
-
-            <Stagger className="mt-10 space-y-6" stagger={0.1}>
-              {TRUST_POINTS.map((f) => (
-                <StaggerItem key={f.t} x={0} y={16} scale={0.98}>
-                  <div className="flex gap-3">
-                    <span className="mt-1 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-brand-green">
-                      <svg viewBox="0 0 24 24" className="h-3.5 w-3.5" fill="none" stroke="white" strokeWidth="3">
-                        <path d="M5 13l4 4L19 7" strokeLinecap="round" strokeLinejoin="round" />
-                      </svg>
-                    </span>
-                    <div>
-                      <p className="font-display font-bold">{f.t}</p>
-                      <p className="text-sm text-ink/55">{f.d}</p>
-                    </div>
-                  </div>
-                </StaggerItem>
-              ))}
-            </Stagger>
-          </Reveal>
-
-          <Reveal y={32} delay={0.1} className="grid grid-cols-2 gap-3 sm:gap-4">
-            {[
-              { src: "/qyka-trust-basket.jpg", alt: "Packed market basket ready for delivery" },
-              { src: "/qyka-cat-produce.jpg", alt: "Fresh produce bought for a run" },
-              { src: "/qyka-cat-protein.jpg", alt: "Protein purchased at a market stall" },
-              { src: "/qyka-cat-pantry.jpg", alt: "Pantry items ready to pack" },
-            ].map((img, i) => (
-              <ClipReveal
-                key={img.src}
-                delay={i * 0.08}
-                direction={i % 2 === 0 ? "left" : "right"}
-                className={"aspect-square w-full overflow-hidden rounded-xl " + (i % 2 === 1 ? "mt-6" : "")}
-              >
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={img.src} alt={img.alt} className="h-full w-full object-cover" />
-              </ClipReveal>
-            ))}
-          </Reveal>
-        </div>
-      </section>
-
-
-      {/* HELP — replaces the old step-by-step walkthrough */}
-      <section id="help" className="relative scroll-mt-28 bg-canvas px-4 py-20 sm:px-6 sm:py-24">
-        <div className="mx-auto max-w-6xl">
-          <Reveal y={24} className="max-w-2xl">
-            <p className="text-sm font-semibold uppercase tracking-wide text-brand-green">Help</p>
-            <SplitReveal as="h2" className="mt-2 font-serif text-4xl italic tracking-tight text-ink sm:text-5xl">
-              Answers, sorted by what you&apos;re trying to do.
-            </SplitReveal>
-            <p className="mt-3 text-base text-ink/60 sm:text-lg">
-              Pick a topic, or skip straight to a real person.
-            </p>
-          </Reveal>
-
-          <Stagger className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3" stagger={0.08}>
-            {HELP_TOPICS.map((topic) => {
-              const hash = hashFromHref(topic.href);
-              const content = (
-                <>
-                  <h3 className="font-display text-lg font-bold text-ink">{topic.title}</h3>
-                  <p className="mt-1.5 text-sm leading-relaxed text-ink/55">{topic.body}</p>
-                  <span className="mt-4 inline-flex items-center gap-1.5 text-sm font-bold text-brand-orange">
-                    Go
-                    <svg viewBox="0 0 24 24" className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth="2.6" aria-hidden>
-                      <path d="M5 12h14M13 6l6 6-6 6" strokeLinecap="round" strokeLinejoin="round" />
-                    </svg>
+                  <span className="flex h-24 w-24 items-center justify-center rounded-full bg-canvas ring-1 ring-line transition group-hover:bg-[#FBE7D5] group-hover:ring-brand-orange sm:h-28 sm:w-28">
+                    <Image src={q.src} alt="" className="h-14 w-14 object-contain transition duration-300 group-hover:-rotate-6 group-hover:scale-[1.15] group-active:scale-90 sm:h-16 sm:w-16" />
                   </span>
-                </>
-              );
-              const className =
-                "block h-full rounded-2xl border border-ink/8 bg-white p-6 transition hover:border-brand-orange/30 hover:shadow-[0_12px_28px_-8px_rgba(33,26,20,0.16)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-gold";
-              return (
-                <StaggerItem key={topic.title} y={24} scale={0.98}>
-                  {hash ? (
-                    <a href={topic.href} onClick={handleInPageAnchor} className={className}>
-                      {content}
-                    </a>
-                  ) : topic.href.startsWith("mailto:") ? (
-                    <a href={topic.href} className={className}>
-                      {content}
-                    </a>
-                  ) : (
-                    <Link href={topic.href} className={className}>
-                      {content}
-                    </Link>
-                  )}
-                </StaggerItem>
-              );
-            })}
-          </Stagger>
-        </div>
-      </section>
-
-      {/* FAQ */}
-      <section id="faq" className="relative scroll-mt-28 bg-canvas px-4 py-20 sm:px-6 sm:py-24">
-        <div className="mx-auto grid max-w-6xl gap-12 lg:grid-cols-[0.85fr_1.15fr] lg:gap-16">
-          <Reveal y={24} className="lg:pt-2">
-            <p className="text-sm font-semibold uppercase tracking-wide text-brand-green">FAQ</p>
-            <SplitReveal as="h2" className="mt-2 font-serif text-4xl italic tracking-tight text-ink sm:text-6xl">
-              Questions, <span className="text-brand-orange">answered</span>.
-            </SplitReveal>
-            <p className="mt-4 max-w-md text-base text-ink/60 sm:text-lg">
-              How lists, money, agents, and riders work on Qyka — before you join the waitlist.
-            </p>
-            <a
-              href="mailto:hello@quika.ng?subject=Qyka%20question"
-              className="mt-6 inline-flex text-sm font-bold text-brand-orange hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gold"
-            >
-              Still curious? Email us →
-            </a>
-          </Reveal>
-
-          <Reveal y={28} delay={0.08}>
-            <FaqAccordion />
-          </Reveal>
-        </div>
-      </section>
-
-
-      {/* CLOSE — flat white band, primary CTA plus quieter secondary asks.
-          No dark surfaces anywhere in this palette — differentiation from
-          the cream page comes from bg-surface (white), not a dark fill. */}
-      <section id="start" className="relative scroll-mt-28 bg-surface px-4 py-20 text-ink sm:px-6 sm:py-24">
-        <div className="mx-auto max-w-6xl">
-          <Reveal y={24} className="max-w-2xl">
-            <p className="text-sm font-semibold uppercase tracking-wide text-ink/60">Start here</p>
-            <SplitReveal as="h2" className="mt-2 font-serif text-4xl italic leading-tight tracking-tight sm:text-5xl">
-              Your list. Our agents. Your door.
-            </SplitReveal>
-            <p className="mt-4 max-w-md text-base text-ink/70 sm:text-lg">
-              Free-text grocery orders — market or supermarket. Shopped and paid by transfer,
-              rider home.
-            </p>
-            <Stagger className="mt-8 flex flex-wrap gap-3" stagger={0.1}>
-              <StaggerItem y={12} scale={0.96}>
-                <Link
-                  href="/shop"
-                  className="inline-flex min-h-[48px] items-center rounded-full bg-brand-orange px-6 font-display text-sm font-bold text-[#1A1A1A] transition hover:bg-brand-orange-dark focus-visible:outline focus-visible:outline-2 focus-visible:outline-gold"
-                >
-                  Open Qyka
-                </Link>
-              </StaggerItem>
-              <StaggerItem y={12} scale={0.96}>
-                <a
-                  href="#action"
-                  onClick={handleInPageAnchor}
-                  className="inline-flex min-h-[48px] items-center rounded-full border-2 border-ink/15 px-6 font-display text-sm font-bold text-ink transition hover:bg-ink/5 focus-visible:outline focus-visible:outline-2 focus-visible:outline-gold"
-                >
-                  Choose a market
-                </a>
-              </StaggerItem>
-            </Stagger>
-          </Reveal>
-
-          <Reveal y={20} delay={0.1} className="mt-14 grid gap-6 border-t border-ink/10 pt-10 sm:grid-cols-3">
-            <div>
-              <p className="font-display font-bold">Join the waitlist</p>
-              <p className="mt-1 text-sm text-ink/60">Not in {PILOT} yet? We&apos;ll email you the moment it opens.</p>
-              <div className="mt-4">
-                <WaitlistInline inputId="waitlist-email-close" />
-              </div>
+                  <span className="text-sm font-semibold text-ink">{q.label}</span>
+                </button>
+              ))}
             </div>
-            <div>
-              <p className="font-display font-bold">Work with Qyka</p>
-              <p className="mt-1 text-sm text-ink/60">Shop for us or deliver for us.</p>
-              <div className="mt-4 flex flex-wrap gap-2">
-                <Link href="/for-agents" className="inline-flex min-h-[40px] items-center rounded-full bg-brand-orange/10 px-4 text-sm font-bold text-brand-orange-dark transition hover:bg-brand-orange/20">
-                  Become an Agent
-                </Link>
-                <Link href="/for-riders" className="inline-flex min-h-[40px] items-center rounded-full bg-brand-orange/10 px-4 text-sm font-bold text-brand-orange-dark transition hover:bg-brand-orange/20">
-                  Become a Rider
-                </Link>
-              </div>
-            </div>
-            <div>
-              <p className="font-display font-bold">Partners & investors</p>
-              <p className="mt-1 text-sm text-ink/60">Request the deck — float pools, deposits, transfer rails.</p>
-              <a
-                href="mailto:partners@quika.ng?subject=Qyka%20deck%20request"
-                className="mt-4 inline-flex min-h-[40px] items-center rounded-full bg-brand-orange/10 px-4 text-sm font-bold text-brand-orange-dark transition hover:bg-brand-orange/20"
+          </div>
+        </section>
+
+        {/* HOW IT WORKS */}
+        <section id="how-it-works" className="scroll-mt-24 mx-auto max-w-6xl px-4 py-16 sm:px-6 sm:py-24">
+          <Reveal className="max-w-xl">
+            <p className="font-display text-sm font-bold uppercase tracking-[0.12em] text-brand-orange-dark">{t.how.eyebrow}</p>
+            <h2 className="mt-2 font-display text-[clamp(2rem,4.5vw,3.25rem)] font-extrabold leading-tight tracking-tight">
+              {t.how.title}
+            </h2>
+          </Reveal>
+          <Stagger className="mt-10 grid gap-5 md:grid-cols-3" stagger={0.14}>
+            {STEPS.map((s, si) => (
+              <StaggerItem key={s.n} y={40}>
+              <div
+                className={"relative flex h-full flex-col overflow-hidden rounded-3xl border border-line p-6 shadow-sm transition-transform duration-300 hover:-translate-y-1 sm:p-7 " + s.tint}
               >
-                Contact / request the deck →
-              </a>
+                <span className="flex h-10 w-10 items-center justify-center rounded-full bg-brand-orange font-display text-lg font-extrabold text-[#1A1A1A]">
+                  {s.n}
+                </span>
+                <h3 className="mt-4 font-display text-2xl font-extrabold">{t.how.steps[si].title}</h3>
+                <p className="mt-2 text-muted">{t.how.steps[si].body}</p>
+                <Float amp={5} dur={3.6 + si * 0.5} className="mt-6"><Image src={s.art} alt="" aria-hidden className="h-44 w-full object-contain" /></Float>
+              </div>
+              </StaggerItem>
+            ))}
+          </Stagger>
+        </section>
+
+        {/* MARKETS */}
+        <section id="markets" className="scroll-mt-24 border-y border-line bg-surface">
+          <div className="mx-auto max-w-6xl px-4 py-16 sm:px-6 sm:py-24">
+            <div className="flex flex-wrap items-end justify-between gap-4">
+              <Reveal className="max-w-xl">
+                <p className="font-display text-sm font-bold uppercase tracking-[0.12em] text-brand-orange-dark">{t.markets.eyebrow}</p>
+                <h2 className="mt-2 font-display text-[clamp(2rem,4.5vw,3.25rem)] font-extrabold leading-tight tracking-tight">
+                  {t.markets.title}
+                </h2>
+                <p className="mt-2 text-muted">
+                  {t.markets.sub(openCount)}
+                </p>
+              </Reveal>
+              <Link href="/markets" className="font-display font-bold text-brand-orange-dark hover:underline">
+                {t.markets.all}
+              </Link>
             </div>
-          </Reveal>
-        </div>
-      </section>
+            <Stagger className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3" stagger={0.09}>
+              {DIRECTORY_MARKETS.slice(0, 6).map((m, i) => {
+                const open = m.status === "pilot";
+                return (
+                  <StaggerItem key={m.id} y={32}>
+                  <Link
+                    href={open ? `/shop?market=${m.id}` : `/markets/${m.id}`}
+                    className="group flex h-full flex-col overflow-hidden rounded-3xl border border-line bg-canvas transition hover:-translate-y-1 hover:shadow-md"
+                  >
+                    <div className="flex h-40 items-center justify-center bg-[#FBE7D5]/70">
+                      <Image
+                        src={MARKET_ART[i % MARKET_ART.length]}
+                        alt=""
+                        aria-hidden
+                        className="h-32 w-auto object-contain transition group-hover:scale-105"
+                      />
+                    </div>
+                    <div className="flex flex-1 flex-col p-5">
+                      <div className="flex items-start justify-between gap-3">
+                        <h3 className="font-display text-xl font-extrabold">{m.name}</h3>
+                        <span
+                          className={
+                            "shrink-0 rounded-full px-2.5 py-1 text-[0.7rem] font-bold " +
+                            (open ? "bg-brand-green/15 text-brand-green" : "bg-brand-orange/20 text-brand-orange-dark")
+                          }
+                        >
+                          {open && <span className="mr-1 inline-block h-1.5 w-1.5 animate-pulse rounded-full bg-brand-green align-middle" />}
+                          {open ? t.markets.open : t.markets.soon}
+                        </span>
+                      </div>
+                      <p className="mt-1 text-sm text-faint">
+                        {m.city} · {m.venueType === "supermarket" ? t.markets.supermarket : t.markets.local}
+                      </p>
+                      <p className="mt-2 line-clamp-2 text-muted">{m.blurb}</p>
+                      <span className="mt-4 font-display text-sm font-bold text-ink">
+                        {open ? t.markets.startHere : t.markets.notify}
+                      </span>
+                    </div>
+                  </Link>
+                  </StaggerItem>
+                );
+              })}
+            </Stagger>
+          </div>
+        </section>
+
+        {/* TRUST */}
+        <section className="mx-auto max-w-6xl px-4 py-16 sm:px-6 sm:py-24">
+          <div className="relative overflow-hidden rounded-[2rem] border border-line bg-surface p-6 shadow-sm sm:p-10 lg:p-12">
+            <div className="pointer-events-none absolute -right-20 -top-20 h-72 w-72 rounded-full bg-brand-orange/10 blur-3xl" />
+            <div className="relative grid items-center gap-10 lg:grid-cols-2">
+              <Reveal x={-30} y={0}>
+                <p className="font-display text-sm font-bold uppercase tracking-[0.12em] text-brand-orange-dark">{t.trust.eyebrow}</p>
+                <h2 className="mt-2 font-display text-[clamp(2rem,4.5vw,3.25rem)] font-extrabold leading-tight tracking-tight">
+                  {t.trust.title}
+                </h2>
+                <div className="mt-8 grid gap-5 sm:grid-cols-2">
+                  {TRUST.map((tr, ti) => (
+                    <div key={ti} className="flex gap-3">
+                      <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-canvas ring-1 ring-line">
+                        <Image src={tr.art} alt="" aria-hidden className="h-8 w-8 object-contain" />
+                      </span>
+                      <div>
+                        <h3 className="font-display font-bold text-ink">{t.trust.points[ti].title}</h3>
+                        <p className="text-sm text-muted">{t.trust.points[ti].body}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </Reveal>
+              <Reveal x={30} y={0} className="relative">
+                <div className="absolute inset-4 rotate-2 rounded-[2rem] bg-brand-orange/25" />
+                <Float amp={5} dur={5}>
+                  <Image
+                    src={handoff}
+                    alt="An agent handing groceries over to a customer"
+                    className="relative mx-auto w-full max-w-md object-contain"
+                  />
+                </Float>
+                <ChatDemo key={t.trust.chat[0]} lines={t.trust.chat} className="absolute -bottom-2 left-0 sm:left-2" />
+              </Reveal>
+            </div>
+          </div>
+        </section>
+
+        {/* EARN */}
+        <section className="mx-auto max-w-6xl px-4 pb-16 sm:px-6 sm:pb-24">
+          <div className="grid gap-5 md:grid-cols-2">
+            <Reveal x={-36} y={0} className="h-full">
+            <div className="relative flex h-full flex-col overflow-hidden rounded-[2rem] bg-brand-orange p-7 sm:p-9">
+              <h2 className="font-display text-3xl font-extrabold leading-tight text-[#1A1A1A] sm:text-4xl">
+                {t.earn.agent.title}
+              </h2>
+              <p className="mt-2 max-w-sm text-[#1A1A1A]/80">{t.earn.agent.body}</p>
+              <Link
+                href="/for-agents"
+                className="mt-6 inline-flex min-h-[48px] w-fit items-center rounded-full bg-surface px-6 font-display font-bold text-ink shadow-sm transition hover:bg-canvas active:scale-[0.98]"
+              >
+                {t.earn.agent.cta}
+              </Link>
+              <div className="mt-6 rounded-3xl bg-surface p-3">
+                <Float amp={4} dur={3.8}><Image src={agentScene} alt="" aria-hidden className="h-44 w-full object-contain" /></Float>
+              </div>
+            </div>
+            </Reveal>
+            <Reveal x={36} y={0} className="h-full">
+            <div className="relative flex h-full flex-col overflow-hidden rounded-[2rem] border border-line bg-surface p-7 shadow-sm sm:p-9">
+              <h2 className="font-display text-3xl font-extrabold leading-tight text-ink sm:text-4xl">
+                {t.earn.rider.title}
+              </h2>
+              <p className="mt-2 max-w-sm text-muted">{t.earn.rider.body}</p>
+              <Link
+                href="/for-riders"
+                className="mt-6 inline-flex min-h-[48px] w-fit items-center rounded-full bg-brand-orange px-6 font-display font-bold text-[#1A1A1A] shadow-sm transition hover:bg-brand-orange-dark active:scale-[0.98]"
+              >
+                {t.earn.rider.cta}
+              </Link>
+              <Float amp={4} dur={3.2}><Image src={riderBike} alt="" aria-hidden className="mt-6 h-52 w-full object-contain object-bottom" /></Float>
+            </div>
+            </Reveal>
+          </div>
+        </section>
+
+        {/* FAQ */}
+        <section id="faq" className="scroll-mt-24 border-t border-line bg-surface">
+          <div className="mx-auto grid max-w-6xl gap-10 px-4 py-16 sm:px-6 sm:py-24 lg:grid-cols-[1fr_1.6fr]">
+            <div>
+              <p className="font-display text-sm font-bold uppercase tracking-[0.12em] text-brand-orange-dark">{t.faq.eyebrow}</p>
+              <h2 className="mt-2 font-display text-[clamp(2rem,4.5vw,3.25rem)] font-extrabold leading-tight tracking-tight">
+                {t.faq.title}
+              </h2>
+              <p className="mt-2 text-muted">{t.faq.lede}</p>
+              <Link href="/help" className="mt-4 inline-block font-display font-bold text-brand-orange-dark hover:underline">
+                {t.faq.link}
+              </Link>
+            </div>
+            <FaqList />
+          </div>
+        </section>
+
+        {/* FINAL CTA */}
+        <section className="mx-auto max-w-6xl px-4 py-16 sm:px-6 sm:py-24">
+          <div className="relative overflow-hidden rounded-[2rem] bg-[#FBE7D5] p-7 sm:p-12">
+            <Image src={squiggle1} alt="" aria-hidden className="absolute -left-3 top-6 w-16 -rotate-12 opacity-40" />
+            <PopIn inView className="absolute -bottom-6 right-4 hidden w-56 md:block" from={{ scale: 0.8, y: 30 }}>
+              <Image src={basket} alt="" aria-hidden className="w-full rotate-6" />
+            </PopIn>
+            <DropIn className="absolute bottom-[6.5rem] right-[9.5rem] hidden w-14 md:block" delay={0.5}>
+              <Image src={tomatoes} alt="" aria-hidden className="w-full -rotate-12" />
+            </DropIn>
+            <DropIn className="absolute bottom-[8rem] right-[5rem] hidden w-12 md:block" delay={0.75}>
+              <Image src={garlic} alt="" aria-hidden className="w-full rotate-12" />
+            </DropIn>
+            <DropIn className="absolute bottom-[5.5rem] right-[12rem] hidden w-12 md:block" delay={1}>
+              <Image src={pepper} alt="" aria-hidden className="w-full -rotate-6" />
+            </DropIn>
+            <Reveal className="relative max-w-xl">
+              <h2 className="font-display text-[clamp(2rem,5vw,3.5rem)] font-extrabold leading-tight tracking-tight text-ink">
+                {t.cta.title}
+              </h2>
+              <p className="mt-3 text-lg text-ink/70">{t.cta.body}</p>
+              <Link
+                href="/shop"
+                className="mt-7 inline-flex min-h-[56px] items-center gap-2 rounded-full bg-brand-orange px-8 font-display text-lg font-bold text-[#1A1A1A] shadow-md transition hover:bg-brand-orange-dark active:scale-[0.98]"
+              >
+                {t.cta.button}
+                <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2.5">
+                  <path d="M5 12h14M13 6l6 6-6 6" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              </Link>
+            </Reveal>
+          </div>
+        </section>
+      </main>
 
       <MarketingFooter />
       <HelpWidget />
+      <LanguagePrompt />
     </div>
-  );
-}
-
-/** Market-first entry — same control as the orange shop band. */
-function HeroCtas() {
-  return (
-    <div className="max-w-xl">
-      <MarketShopPicker inputId="hero-market-picker" />
-    </div>
+    </MotionConfig>
   );
 }

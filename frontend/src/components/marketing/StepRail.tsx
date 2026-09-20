@@ -11,7 +11,7 @@ export type Step = {
 };
 
 export type StepRailProps = {
-  steps: Step[];
+  steps: readonly Step[];
   renderFragment?: (fragment: string, isActive: boolean) => ReactNode;
   className?: string;
 };

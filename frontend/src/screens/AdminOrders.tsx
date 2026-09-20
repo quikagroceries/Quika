@@ -1,5 +1,9 @@
 'use client';
 
+import StatTile from "@/components/StatTile";
+import FilterPills from "@/components/FilterPills";
+import { usePageSearch } from "@/components/PageSearchContext";
+import AdminPageHeader from "@/components/admin/AdminPageHeader";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { api } from "@/lib/api";
@@ -197,6 +201,8 @@ function AdminOrders() {
   const [markets, setMarkets] = useState<any[]>([]);
   const [now, setNow] = useState<any>(null);
   const [error, setError] = useState("");
+  const [filter, setFilter] = useState("all");
+  const search = usePageSearch("Search orders, markets, agents…");
 
   async function refresh() {
     try {
@@ -221,10 +227,41 @@ function AdminOrders() {
 
   const marketName = (id) => markets.find((m) => m.id === id)?.name || id.slice(0, 8) + "…";
 
+  const all: any[] = data?.orders ?? [];
+  const unassigned = all.filter((o) => !o.agent_id).length;
+  const stuckCount = now != null ? all.filter((o) => isStuckOrder(o, now)).length : 0;
+  const shoppingCount = all.filter((o) => o.status === "shopping").length;
+  const visible = all.filter((o) => {
+    if (filter === "unassigned" && o.agent_id) return false;
+    if (filter === "stuck" && !(now != null && isStuckOrder(o, now))) return false;
+    if (!search) return true;
+    return [o.status, marketName(o.market_id), o.agent_id, o.customer_id, o.id].some((v) =>
+      String(v || "").toLowerCase().includes(search)
+    );
+  });
+
   return (
     <div>
-      <h1 className="mb-1 font-display text-3xl font-extrabold tracking-tight text-ink md:text-4xl">Orders</h1>
-      <p className="mb-6 text-muted">Every order still in flight — not yet delivered, closed, or cancelled.</p>
+      <AdminPageHeader icon="basket" section="Operations" title="Orders" description="Every order still in flight — not yet delivered, closed, or cancelled.">
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+          <StatTile label="In flight" value={all.length} />
+          <StatTile label="Being shopped" value={shoppingCount} />
+          <StatTile label="Unassigned" value={unassigned} />
+          <StatTile label="Stuck" value={stuckCount} />
+        </div>
+      </AdminPageHeader>
+
+      {data && all.length > 0 && (
+        <FilterPills
+          options={[
+            { key: "all", label: `All (${all.length})` },
+            { key: "unassigned", label: `Unassigned (${unassigned})` },
+            { key: "stuck", label: `Stuck (${stuckCount})` },
+          ]}
+          value={filter}
+          onChange={setFilter}
+        />
+      )}
 
       {error && <p className="mb-4 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p>}
 
@@ -232,6 +269,8 @@ function AdminOrders() {
         <div className="space-y-3">{[0, 1, 2].map((i) => <CardSkeleton key={i} />)}</div>
       ) : data.orders.length === 0 ? (
         <EmptyState icon="basket" title="Nothing in flight" subtitle="Every order is delivered, closed, or cancelled." />
+      ) : visible.length === 0 ? (
+        <EmptyState icon="basket" title="No matching orders" subtitle="Try a different filter or search." />
       ) : (
         <div className="overflow-x-auto rounded-3xl border border-line bg-surface shadow-sm">
           <table className="w-full min-w-[720px] text-left text-sm">
@@ -246,7 +285,7 @@ function AdminOrders() {
               </tr>
             </thead>
             <tbody>
-              {data.orders.map((o) => {
+              {visible.map((o) => {
                 const stuck = now != null && isStuckOrder(o, now);
                 return (
                   <tr
