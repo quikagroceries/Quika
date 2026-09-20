@@ -1,7 +1,0 @@
-{
-  "/login/page": "app/login/page.js",
-  "/(customer)/track/page": "app/(customer)/track/page.js",
-  "/(customer)/settings/page": "app/(customer)/settings/page.js",
-  "/(agent)/agent/page": "app/(agent)/agent/page.js",
-  "/(customer)/wallet/page": "app/(customer)/wallet/page.js"
-}
