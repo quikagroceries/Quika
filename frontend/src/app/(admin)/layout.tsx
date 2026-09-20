@@ -29,7 +29,7 @@ export default function AdminLayout({ children }: any) {
         user={user}
         onLogout={handleLogout}
         fullWidth
-        contentClassName="bg-white"
+        contentClassName="bg-canvas"
       >
         {children}
       </AppShell>

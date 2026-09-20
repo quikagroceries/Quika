@@ -13,7 +13,7 @@ function PaymentChooser({ amountDue, walletBalance, onPayWallet, onPayTransfer, 
 
   return (
     <div>
-      <div className="mb-3 flex items-center justify-between text-[#6b635a]">
+      <div className="mb-3 flex items-center justify-between text-muted">
         <span>Wallet balance</span>
         <span className="font-semibold text-ink">
           {loadingBalance ? "…" : `₦${Number(walletBalance).toFixed(2)}`}
@@ -33,7 +33,7 @@ function PaymentChooser({ amountDue, walletBalance, onPayWallet, onPayTransfer, 
           Pay from wallet
         </Button>
         {insufficient && (
-          <p className="text-center text-sm text-amber-700">
+          <p className="text-center text-sm text-brand-orange-dark">
             Insufficient balance — pay by transfer or top up.
           </p>
         )}

@@ -63,17 +63,26 @@ function TimelineRow({ label, timestamp, done, current, isLast, children }: any)
         <span
           className={
             "flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-sm font-bold " +
-            (done ? "bg-brand-green text-white" : current ? "bg-brand-orange text-white" : "bg-[#f0eeeb] text-[#8a8178]")
+            (done ? "bg-brand-green text-white" : current ? "bg-brand-orange text-[#1A1A1A]" : "bg-sunken text-faint")
           }
         >
           {done ? <Icon name="check" className="h-4 w-4" /> : <span className="h-2 w-2 rounded-full bg-current" />}
         </span>
-        {!isLast && <div className={"my-1 w-0.5 flex-1 rounded-full " + (done ? "bg-brand-green" : "bg-[#e8e4df]")} />}
+        {/* Solid = already happened, dashed = still ahead - the line
+            literally traces the delivery's own route through the steps,
+            not just a generic connector. */}
+        {!isLast && (
+          done ? (
+            <div className="my-1 w-0.5 flex-1 rounded-full bg-brand-green" />
+          ) : (
+            <div className="my-1 flex-1 border-l-2 border-dashed border-[#e8e4df]" />
+          )
+        )}
       </div>
       <div className={"min-w-0 flex-1 " + (isLast ? "" : "pb-5")}>
         <div className="flex flex-wrap items-center justify-between gap-x-2 gap-y-1">
-          <p className={"font-semibold " + (done || current ? "text-ink" : "text-[#8a8178]")}>{label}</p>
-          {done && <span className="shrink-0 text-xs text-[#8a8178]">{formatTimestamp(timestamp)}</span>}
+          <p className={"font-semibold " + (done || current ? "text-ink" : "text-faint")}>{label}</p>
+          {done && <span className="shrink-0 text-xs text-faint">{formatTimestamp(timestamp)}</span>}
           {current && (
             <span className="shrink-0 rounded-full bg-brand-orange/10 px-2 py-0.5 text-xs font-bold text-brand-orange">
               In progress
@@ -128,13 +137,13 @@ function DeliveryTracking({ order, onConfirmDelivery, busy }: any) {
               isLast={i === ROWS.length - 1}
             >
               {row.key === "packaging" && current && (
-                <div className="mt-2 rounded-xl border border-brand-orange/30 bg-brand-orange/5 p-3">
+                <div className="mt-2 rounded-2xl bg-brand-orange/[0.09] p-3">
                   <div className="flex items-center justify-between gap-3">
-                    <p className="text-sm text-[#6b635a]">Your agent is preparing your order.</p>
+                    <p className="text-sm text-muted">Your agent is preparing your order.</p>
                     <span
                       className={
                         "shrink-0 rounded-full px-2.5 py-1 text-xs font-bold " +
-                        (overrun ? "bg-red-100 text-red-700" : nearOverrun ? "bg-amber-100 text-amber-700" : "bg-white text-[#6b635a]")
+                        (overrun ? "bg-red-100 text-red-700" : nearOverrun ? "bg-brand-orange/15 text-brand-orange-dark" : "bg-surface text-muted")
                       }
                     >
                       {overrun ? formatRemaining(remaining) : `ready in ~${formatRemaining(remaining)}`}
@@ -161,7 +170,7 @@ function DeliveryTracking({ order, onConfirmDelivery, busy }: any) {
                 </div>
               )}
               {row.key === "rider_assigned" && current && (
-                <p className="mt-1 text-sm text-[#8a8178]">Waiting for a rider to pick up your order.</p>
+                <p className="mt-1 text-sm text-faint">Waiting for a rider to pick up your order.</p>
               )}
             </TimelineRow>
           );
@@ -188,8 +197,8 @@ function DeliveryTracking({ order, onConfirmDelivery, busy }: any) {
           verifiable handoff, no rider-side app needed to check it. No
           longer relevant once delivered. */}
       {order.handover_code && order.status !== "delivered" && order.status !== "closed" && (
-        <div className="mt-5 rounded-xl border-2 border-dashed border-brand-orange/40 bg-brand-orange/5 p-4 text-center">
-          <p className="text-sm font-semibold text-[#6b635a]">Share this code with the rider at handover</p>
+        <div className="mt-5 rounded-2xl border border-dashed border-brand-orange/40 bg-brand-orange/[0.08] p-4 text-center">
+          <p className="text-sm font-semibold text-muted">Share this code with the rider at handover</p>
           <p className="mt-1 text-3xl font-extrabold tracking-[0.3em] text-brand-orange">{order.handover_code}</p>
         </div>
       )}
@@ -203,12 +212,12 @@ function DeliveryTracking({ order, onConfirmDelivery, busy }: any) {
         </Button>
       )}
       {order.status === "out_for_delivery" && confirming && (
-        <div className="mt-5 rounded-xl border-2 border-brand-orange bg-white p-4">
+        <div className="mt-5 rounded-2xl bg-brand-orange/[0.12] p-4">
           <p className="mb-1 text-sm font-semibold text-ink/80">
             This releases payment to your agent. Confirm you&apos;ve received everything?
           </p>
           {order.handover_code && (
-            <p className="mb-3 text-xs text-[#8a8178]">Your handover code was {order.handover_code} — make sure it matched what the rider gave you.</p>
+            <p className="mb-3 text-xs text-faint">Your handover code was {order.handover_code} — make sure it matched what the rider gave you.</p>
           )}
           <div className="flex gap-2">
             <Button variant="neutral" onClick={() => setConfirming(false)} disabled={busy} fullWidth>
@@ -222,7 +231,7 @@ function DeliveryTracking({ order, onConfirmDelivery, busy }: any) {
       )}
       {(order.status === "delivered" || order.status === "closed") && (
         <p className="mt-5 rounded-lg bg-brand-green/10 px-3 py-2 text-center text-sm font-semibold text-brand-green">
-          Delivered — thanks for shopping with Quika!
+          Delivered — thanks for shopping with Qyka!
         </p>
       )}
     </Card>

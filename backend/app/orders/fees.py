@@ -1,4 +1,4 @@
-"""Fee calculation — the settled Quika money model, isolated in one file.
+"""Fee calculation — the settled Qyka money model, isolated in one file.
 
 FEE POLICY (see project docs):
   Items    : whatever the agent actually TRANSFERRED to vendors (JIT).
@@ -37,6 +37,17 @@ EMTL_THRESHOLD = Decimal("10000.00")     # applies to transfers >= this
 # --- Deposit policy ---
 DEPOSIT_THRESHOLD = Decimal("30000.00")  # estimates above this need a deposit
 DEPOSIT_RATE = Decimal("0.20")           # 20% of the goods estimate
+
+# --- Mid-order additions ---
+# Flat platform fee for adding a new item to an order that's already being
+# shopped (see orders.service.add_item). Deliberately flat regardless of the
+# item's own price or how far along shopping is - fair and predictable
+# rather than punitive, per the product spec this came from. Charged
+# separately from - and never folded into - the spending authorization cap:
+# it's a platform fee, not goods money, same reasoning that already keeps
+# delivery/combined_fee out of goods_estimate (see Order.goods_estimate's
+# own comment).
+ADD_ITEM_FEE = Decimal("500.00")
 
 
 def _money(value: Decimal) -> Decimal:

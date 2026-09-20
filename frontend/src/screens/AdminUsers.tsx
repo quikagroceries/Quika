@@ -54,7 +54,7 @@ function AdminUsers() {
   return (
     <div>
       <h1 className="mb-1 font-display text-3xl font-extrabold tracking-tight text-ink md:text-4xl">Users</h1>
-      <p className="mb-6 text-[#6b635a]">Customers flagged for non-payment history — why, and the option to pardon.</p>
+      <p className="mb-6 text-muted">Customers flagged for non-payment history — why, and the option to pardon.</p>
 
       {error && <p className="mb-4 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p>}
 
@@ -68,7 +68,7 @@ function AdminUsers() {
             <Card key={u.id} className="flex flex-wrap items-center justify-between gap-3">
               <div className="min-w-0">
                 <div className="font-semibold text-ink">{u.full_name || u.phone}</div>
-                <div className="text-sm text-[#6b635a]">{u.phone}</div>
+                <div className="text-sm text-muted">{u.phone}</div>
                 <ul className="mt-1 list-inside list-disc text-sm text-amber-700">
                   {flagReasons(u).map((r) => <li key={r}>{r}</li>)}
                 </ul>
@@ -76,7 +76,7 @@ function AdminUsers() {
               <div className="shrink-0">
                 {confirmingId === u.id ? (
                   <div className="flex items-center gap-2">
-                    <span className="text-sm text-[#6b635a]">Clear this flag?</span>
+                    <span className="text-sm text-muted">Clear this flag?</span>
                     <Button variant="neutral" onClick={() => setConfirmingId(null)} disabled={busyId === u.id} className="text-sm">
                       Cancel
                     </Button>

@@ -125,7 +125,7 @@ function AdminMarkets() {
       <div className="mb-6 flex items-center justify-between">
         <div>
           <h1 className="font-display text-3xl font-extrabold tracking-tight text-ink md:text-4xl">Markets</h1>
-          <p className="mt-1 text-[#6b635a]">Where agents shop — this is what sets up a pilot market.</p>
+          <p className="mt-1 text-muted">Where agents shop — this is what sets up a pilot market.</p>
         </div>
         {!creating && (
           <Button onClick={() => setCreating(true)} className="shrink-0">
@@ -169,7 +169,7 @@ function AdminMarkets() {
               <div
                 key={m.id}
                 className={
-                  "overflow-hidden rounded-2xl border border-[#ebe7e0] bg-white shadow-sm " +
+                  "overflow-hidden rounded-3xl border border-line bg-surface shadow-sm " +
                   (m.is_active ? "" : "opacity-60")
                 }
               >
@@ -181,7 +181,7 @@ function AdminMarkets() {
                     className="h-full w-full"
                   />
                   {!m.is_active && (
-                    <span className="absolute right-2 top-2 rounded-full bg-white/95 px-2 py-0.5 text-xs font-bold text-[#6b635a] shadow-sm">
+                    <span className="absolute right-2 top-2 rounded-full bg-white/95 px-2 py-0.5 text-xs font-bold text-muted shadow-sm">
                       Inactive
                     </span>
                   )}
@@ -189,10 +189,10 @@ function AdminMarkets() {
 
                 <div className="p-4">
                   <div className="truncate font-bold text-ink">{m.name}</div>
-                  <div className="text-sm text-[#6b635a]">{m.city}, {m.state}</div>
+                  <div className="text-sm text-muted">{m.city}, {m.state}</div>
 
                   <div className="mt-3 flex items-center justify-between">
-                    <span className="text-sm text-[#6b635a]">Float balance</span>
+                    <span className="text-sm text-muted">Float balance</span>
                     <span className={
                       "font-bold " +
                       (floatByMarket[m.id] != null && Number(floatByMarket[m.id]) < LOW_FLOAT_BALANCE

@@ -15,7 +15,8 @@ function activeKeyFromPath(pathname: string) {
   // Track rather than leaving the sidebar showing nothing active at all.
   if (pathname.startsWith("/orders/")) return "track";
   if (pathname.startsWith("/track")) return "track";
-  if (pathname.startsWith("/history")) return "history";
+  if (pathname.startsWith("/history")) return "track";
+  if (pathname.startsWith("/messages")) return "messages";
   if (pathname.startsWith("/wallet")) return "wallet";
   if (pathname.startsWith("/settings")) return "settings";
   if (pathname.startsWith("/shop")) return "shop";
@@ -35,56 +36,64 @@ function LoadingScreen() {
 }
 
 /**
- * One shell for the whole customer dashboard — Shop, History, Wallet,
- * Settings all sit under the same adaptive AppShell sidebar now. Shop is
- * the one exception to auth: it stays guest-capable (browse and build a
- * list before signing in), so it skips RequireAuth and passes its own
- * guest flag straight to the sidebar, and it renders `bare` so its own
- * ShopHeader/ShopBag remain the sticky top bar + mobile nav instead of
- * doubling up with AppShell's generic ones.
+ * ONE shell for the whole customer app. Shop, Orders, Messages, Wallet and
+ * Settings all render through the SAME <AppShell> element, so navigating
+ * between them keeps the sidebar, header, tab bar, bag and chat dock mounted -
+ * only the page inside swaps. (This used to be two different AppShell trees,
+ * one for Shop and one for everything else, so every Shop <-> other move tore
+ * the whole frame down and rebuilt it: the flicker and lag.) What differs by
+ * route is just props:
+ *  - Shop is guest-capable and `bare` (its own layout via ShopShell);
+ *    everything else needs a signed-in customer (RequireAuth, applied INSIDE
+ *    the shell around the page so the frame never unmounts for it).
+ *  - `ShopProvider` and `Notifications` sit above/beside the shell for the
+ *    same reason: the bag's state, the list draft and the toast poll all
+ *    survive navigation instead of restarting with each page.
  */
 export default function CustomerLayout({ children }: any) {
   const { user, token, hydrated, handleLogout, roleSwitch } = useAuth();
   const pathname = usePathname();
   const isShop = pathname === "/shop" || pathname.startsWith("/shop/");
+  const authed = !!token && !!user;
 
-  if (isShop) {
-    if (!hydrated) return <LoadingScreen />;
-    const guest = !token || !user;
+  // First load only: don't paint a shell before we know who the user is.
+  if (!hydrated) return <LoadingScreen />;
+
+  // Signed out on a page that needs an account: no shell, just the redirect.
+  if (!isShop && !authed) {
     return (
-      <ShopProvider>
-        <AppShell
-          navItems={CUSTOMER_NAV}
-          activeKey="shop"
-          user={user}
-          onLogout={handleLogout}
-          roleSwitch={roleSwitch}
-          guest={guest}
-          bare
-          bottomNav
-          floating
-        >
-          <ShopShell floating>{children}</ShopShell>
-        </AppShell>
-      </ShopProvider>
+      <RequireAuth roles={["CUSTOMER", "AGENT"]} agentMode="customer">
+        {null}
+      </RequireAuth>
     );
   }
 
   return (
-    <RequireAuth roles={["CUSTOMER", "AGENT"]} agentMode="customer">
+    <ShopProvider>
+      {authed && <Notifications />}
       <AppShell
         navItems={CUSTOMER_NAV}
         activeKey={activeKeyFromPath(pathname)}
         user={user}
         onLogout={handleLogout}
         roleSwitch={roleSwitch}
+        guest={isShop && !authed}
+        bare={isShop}
         bottomNav
-        fullWidth
-        contentClassName="bg-white"
+        fullWidth={!isShop}
+        contentClassName={isShop ? "" : "bg-canvas"}
+        ctaLabel={isShop ? undefined : "New list"}
+        ctaHref={isShop ? undefined : "/shop"}
+        shopBag
       >
-        <Notifications />
-        {children}
+        {isShop ? (
+          <ShopShell>{children}</ShopShell>
+        ) : (
+          <RequireAuth roles={["CUSTOMER", "AGENT"]} agentMode="customer">
+            {children}
+          </RequireAuth>
+        )}
       </AppShell>
-    </RequireAuth>
+    </ShopProvider>
   );
 }

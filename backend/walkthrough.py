@@ -1,4 +1,4 @@
-"""Run the whole Quika order flow in one command.
+"""Run the whole Qyka order flow in one command.
 
 Instead of clicking through Swagger and re-authorizing between every step, this
 walks a complete order end to end, using the correct role's token at each step
@@ -19,7 +19,7 @@ from decimal import Decimal
 
 import httpx
 
-BASE = os.environ.get("QUIKA_BASE_URL", "http://localhost:8000")
+BASE = os.environ.get("QYKA_BASE_URL", "http://localhost:8000")
 
 GREEN = "\033[92m"
 RED = "\033[91m"
@@ -52,7 +52,7 @@ def check(step: str, resp, expected=(200, 201)):
 
 
 async def main() -> None:
-    print(f"\n{BOLD}Quika order walkthrough{END}  {DIM}({BASE}){END}\n")
+    print(f"\n{BOLD}Qyka order walkthrough{END}  {DIM}({BASE}){END}\n")
 
     async with httpx.AsyncClient(base_url=BASE, timeout=30.0) as c:
         # ---------------------------------------------------------------

@@ -29,7 +29,7 @@ function Modal({ open, onClose, title, children, className = "" }: any) {
       <div
         onClick={(e) => e.stopPropagation()}
         className={
-          "w-full max-w-md animate-fade-up rounded-t-2xl bg-white p-5 shadow-card sm:rounded-2xl " +
+          "w-full max-w-md animate-fade-up rounded-t-3xl bg-surface p-5 shadow-card sm:rounded-3xl " +
           className
         }
       >
@@ -40,7 +40,7 @@ function Modal({ open, onClose, title, children, className = "" }: any) {
               <button
                 onClick={onClose}
                 aria-label="Close"
-                className="-m-2 flex h-9 w-9 items-center justify-center rounded-full text-[#8a8178] hover:bg-[#f0eeeb]"
+                className="-m-2 flex h-9 w-9 items-center justify-center rounded-full text-faint hover:bg-sunken"
               >
                 <Icon name="close" className="h-5 w-5" />
               </button>

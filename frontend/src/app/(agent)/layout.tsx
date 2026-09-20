@@ -12,6 +12,7 @@ function activeKeyFromPath(pathname) {
   // active (same reasoning as the customer side's /orders/:id -> Track).
   if (pathname.startsWith("/agent/orders/")) return "home";
   if (pathname.startsWith("/agent/history")) return "history";
+  if (pathname.startsWith("/agent/messages")) return "messages";
   if (pathname.startsWith("/agent/dashboard")) return "dashboard";
   if (pathname.startsWith("/agent/settings")) return "settings";
   return "home";
@@ -31,7 +32,7 @@ export default function AgentLayout({ children }: any) {
         roleSwitch={roleSwitch}
         bottomNav
         fullWidth
-        contentClassName="bg-white"
+        contentClassName="bg-canvas"
       >
         {children}
       </AppShell>

@@ -27,3 +27,20 @@ class Message(Base):
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()
     )
+
+
+class ChatRead(Base):
+    """Where a person has read up to in one order's chat: any message from the
+    OTHER participant created after `last_read_at` is unread for them. One row
+    per (user, order), so unread counts are per-person - the customer reading a
+    thread doesn't mark it read for the agent."""
+
+    __tablename__ = "chat_reads"
+
+    user_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True)
+    order_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("orders.id", ondelete="CASCADE"), primary_key=True
+    )
+    last_read_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )

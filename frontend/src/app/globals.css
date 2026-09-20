@@ -2,10 +2,53 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ── Semantic palette ──────────────────────────────────────────────────────
+   Space-separated RGB triplets so Tailwind's `rgb(var(--x) / <alpha-value>)`
+   opacity syntax works (see tailwind.config.js). Qyka is light-only by
+   design (no dark surfaces, anywhere) - these are the only values these
+   tokens ever take, app shell and auth alike, so the two always match
+   exactly. Brand hues (orange/green/gold) carry meaning and aren't themed
+   at all. `.force-light` stays defined (identical values) as a no-op so
+   existing usages don't need to be touched. */
+:root {
+  --canvas: 240 236 224;
+  --canvas-deep: 229 222 205;
+  --ink: 26 26 26;
+  --surface: 255 255 255;
+  --surface-2: 253 250 245;
+  --sunken: 240 238 235;
+  --sunken-2: 247 245 242;
+  --line: 238 238 232;
+  --line-strong: 224 221 211;
+  --muted: 74 74 74;
+  --faint: 155 155 155;
+  --chalk: 244 240 230;
+  --ground-wash: 240 236 224;
+  --ground-wash-alpha: 0.88;
+  --auth-wash: 10 10 10;
+  --auth-wash-alpha: 0.78;
+}
+
+.force-light {
+  --canvas: 240 236 224;
+  --canvas-deep: 229 222 205;
+  --ink: 26 26 26;
+  --surface: 255 255 255;
+  --surface-2: 253 250 245;
+  --sunken: 240 238 235;
+  --sunken-2: 247 245 242;
+  --line: 238 238 232;
+  --line-strong: 224 221 211;
+  --muted: 74 74 74;
+  --faint: 155 155 155;
+  --chalk: 244 240 230;
+}
+
 body {
   margin: 0;
-  font-family: var(--font-plus-jakarta), "Plus Jakarta Sans", system-ui, sans-serif;
-  color: #211a14;
+  font-family: var(--font-dm-sans), "DM Sans", system-ui, sans-serif;
+  color: rgb(var(--ink));
+  background-color: rgb(var(--canvas));
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
@@ -132,49 +175,100 @@ body {
   }
 }
 
-/* ── Shop system — clean product surface (marketplace, not marketing wash) ─ */
-.shop-shell {
-  min-height: 100vh;
-  background: #ffffff;
+/* Settings → Appearance → "Reduce motion" (device-local, on <html>). */
+.reduce-motion *,
+.reduce-motion *::before,
+.reduce-motion *::after {
+  animation-duration: 0.001ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.001ms !important;
+  scroll-behavior: auto !important;
 }
 
-/* Floating shop: the panel is a fixed-height card (viewport minus the
-   ground's padding) with its own internal scroll — the page itself doesn't
-   scroll, the list area inside does. */
-@media (min-width: 768px) {
-  .shop-shell.shop-shell--contained {
-    min-height: 0;
-    height: 100%;
-    display: flex;
-    flex-direction: column;
-    overflow: hidden;
-    /* Let the translucent panel (AppShell content column) show the market
-       ground through it — this layer and the content column stay clear. */
-    background: transparent;
-  }
+/* SplitReveal's per-line mask — each line needs its own clipped box so the
+   line inside can slide up into view without bleeding into its neighbours. */
+.split-line {
+  display: block;
+  overflow: hidden;
+}
 
-  .shop-shell--contained .shop-texture {
-    background-color: transparent;
-  }
+/* Fixed, page-wide grain — the "bespoke/tactile" texture pass on the
+   marketing site. Extremely low alpha; a still SVG turbulence filter is
+   cheaper than any animated/PNG noise texture. */
+.grain-overlay {
+  position: relative;
+}
+.grain-overlay::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  pointer-events: none;
+  opacity: 0.05;
+  mix-blend-mode: overlay;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+/* Same texture, for white/near-white surfaces (app-shell chrome like the
+   sidebar and top bar, not the marketing site's cream canvas) - `overlay`
+   blend mode is mathematically a no-op on a pure-white or pure-black base
+   (the formula collapses to the base color at both extremes), so it was
+   rendering completely invisibly on `bg-surface` (#FFFFFF). `multiply`
+   always darkens regardless of the base lightness, so it actually shows up
+   here; confirmed via pixel-variance sampling, not just "should work." */
+.grain-overlay-light {
+  position: relative;
+}
+.grain-overlay-light::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  pointer-events: none;
+  opacity: 0.4;
+  mix-blend-mode: multiply;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+/* Custom cursor (marketing pages, fine-pointer devices only — see
+   CustomCursor.tsx) — hide the OS cursor only once the component confirms
+   it's active, so touch/keyboard users never lose their pointer. */
+.custom-cursor-active {
+  cursor: none;
+}
+.custom-cursor-active a,
+.custom-cursor-active button {
+  cursor: none;
+}
+
+/* ── Shop system - was a deliberately separate white "product surface" vs.
+   the rest of the app's cream wash; unified onto the same cream canvas as
+   the sidebar/dashboard/auth screens now, per explicit direction. Product
+   cards/chips/inputs inside Shop stay on bg-surface (white) so they still
+   read as raised controls against this background, same pattern as the
+   sidebar's collapse-toggle button staying white against its cream rail. */
+.shop-shell {
+  min-height: 100vh;
+  background: rgb(var(--canvas));
 }
 
 .shop-input {
   width: 100%;
   border-radius: 9999px;
   border: none;
-  background: #f0eeeb;
+  background: rgb(var(--sunken));
   padding: 0.7rem 1rem 0.7rem 2.75rem;
   font-size: 0.9375rem;
-  color: #211a14;
+  color: rgb(var(--ink));
   outline: none;
 }
 
 .shop-input::placeholder {
-  color: rgba(33, 26, 20, 0.4);
+  color: rgb(var(--ink) / 0.4);
 }
 
 .shop-input:focus {
-  background: #fff;
+  background: rgb(var(--surface));
   box-shadow: 0 0 0 2px rgba(232, 84, 30, 0.35);
 }
 
@@ -189,18 +283,18 @@ body {
   align-items: center;
   gap: 0.375rem;
   border-radius: 9999px;
-  border: 1px solid #e5e2dc;
-  background: #fff;
+  border: 1px solid rgb(var(--line-strong));
+  background: rgb(var(--surface));
   padding: 0.5rem 1rem;
   font-size: 0.875rem;
   font-weight: 600;
-  color: #5c534a;
+  color: rgb(var(--muted));
   transition: background 0.15s, color 0.15s, border-color 0.15s, transform 0.15s;
 }
 
 .shop-chip:hover {
-  border-color: #cfc8be;
-  color: #211a14;
+  border-color: rgb(var(--faint));
+  color: rgb(var(--ink));
 }
 
 .shop-chip:active {
@@ -208,28 +302,28 @@ body {
 }
 
 .shop-chip-active {
-  border-color: #211a14;
-  background: #211a14;
-  color: #fff;
+  border-color: rgb(var(--ink));
+  background: rgb(var(--ink));
+  color: rgb(var(--surface));
 }
 
 .shop-chip-active:hover {
-  border-color: #211a14;
-  color: #fff;
+  border-color: rgb(var(--ink));
+  color: rgb(var(--surface));
 }
 
 .shop-card {
   overflow: hidden;
   border-radius: 1rem;
-  background: #fff;
+  background: rgb(var(--surface));
   text-align: left;
-  border: 1px solid #ebe7e0;
+  border: 1px solid rgb(var(--line));
   transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
 }
 
 .shop-card:hover {
   transform: translateY(-2px);
-  border-color: #ddd6cb;
+  border-color: rgb(var(--line-strong));
   box-shadow: 0 12px 28px rgba(33, 26, 20, 0.08);
 }
 
@@ -238,7 +332,7 @@ body {
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.08em;
-  color: #8a8178;
+  color: rgb(var(--faint));
 }
 
 .shop-title {
@@ -246,7 +340,7 @@ body {
   font-size: 1.75rem;
   font-weight: 800;
   letter-spacing: -0.03em;
-  color: #211a14;
+  color: rgb(var(--ink));
   line-height: 1.15;
 }
 
@@ -259,7 +353,7 @@ body {
 .shop-sub {
   font-size: 0.9375rem;
   line-height: 1.5;
-  color: #6b635a;
+  color: rgb(var(--muted));
 }
 
 /* Faint produce-line texture for the Shop content area — the same idea as
@@ -269,25 +363,8 @@ body {
    competing with the cards and photography sitting on top of it. Scattered
    at an irregular scale/rotation per tile (not a rigid repeating grid) so
    it doesn't read as wallpaper. */
-/* The shop content column is a clean white surface now — it sits inside the
-   floating panel (see .shop-ground / AppShell `floating`), and the market
-   photo lives on the ground behind that panel, not on this layer. */
 .shop-texture {
-  background-color: #fff;
-}
-
-/* Warm textured "ground" the shop panels float above — the market photo
-   knocked right back under a warm-sand overlay so the sidebar and content
-   cards read as hovering slabs, not full-bleed sections. */
-.shop-ground {
-  background-color: #efe6d9;
-  background-image:
-    linear-gradient(rgba(239, 230, 217, 0.88), rgba(239, 230, 217, 0.88)),
-    url("/bg.jpeg");
-  background-repeat: no-repeat;
-  background-position: center;
-  background-size: cover;
-  background-attachment: fixed;
+  background-color: transparent;
 }
 
 /* LiveKit's call UI ships with its own generic blue-on-black theme
@@ -308,8 +385,34 @@ body {
   --lk-success: #0e7a3c !important;
   --lk-danger: #dc2626 !important;
   --lk-border-color: rgba(255, 255, 255, 0.12) !important;
-  --lk-font-family: var(--font-plus-jakarta), "Plus Jakarta Sans", system-ui, sans-serif !important;
+  --lk-font-family: var(--font-dm-sans), "DM Sans", system-ui, sans-serif !important;
   --lk-border-radius: 0.875rem !important;
 }
 
 
+
+/* Inner scroll areas (tab rows, chip rows, panels, tables, chat, the bag...)
+   scroll exactly as before but don't draw the browser's scrollbar track - it
+   read as stray lines inside cards and rows. Keyed on Tailwind's overflow
+   utilities so every current and future scroll container is covered without
+   each one repeating the arbitrary-property incantation. The PAGE's own
+   scrollbar (html/body) is deliberately left alone. */
+.overflow-auto,
+.overflow-x-auto,
+.overflow-y-auto,
+.overflow-scroll,
+.overflow-x-scroll,
+.overflow-y-scroll {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.overflow-auto::-webkit-scrollbar,
+.overflow-x-auto::-webkit-scrollbar,
+.overflow-y-auto::-webkit-scrollbar,
+.overflow-scroll::-webkit-scrollbar,
+.overflow-x-scroll::-webkit-scrollbar,
+.overflow-y-scroll::-webkit-scrollbar {
+  display: none;
+  width: 0;
+  height: 0;
+}

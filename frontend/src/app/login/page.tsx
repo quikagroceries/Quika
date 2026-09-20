@@ -3,7 +3,7 @@
 import { Suspense, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Login from "@/screens/Login";
-import TopBar from "@/components/TopBar";
+import AuthShell from "@/components/AuthShell";
 import { useAuth } from "@/components/AuthProvider";
 import { loadGuestDraft } from "@/lib/guestDraft";
 
@@ -26,16 +26,9 @@ function LoginPageInner() {
   }, [loading, token, user, homePath, router, next]);
 
   return (
-    <div className="min-h-screen bg-slate-50">
-      <TopBar />
-      <main className="mx-auto max-w-lg px-4 py-6">
-        <Login
-          onLoggedIn={(t) => {
-            handleLoggedIn(t);
-          }}
-        />
-      </main>
-    </div>
+    <AuthShell>
+      <Login onLoggedIn={(t) => handleLoggedIn(t)} />
+    </AuthShell>
   );
 }
 
@@ -43,7 +36,7 @@ export default function LoginPage() {
   return (
     <Suspense
       fallback={
-        <div className="flex min-h-screen items-center justify-center bg-slate-50 text-slate-500">
+        <div className="flex min-h-screen items-center justify-center bg-canvas text-ink/50">
           Loading…
         </div>
       }

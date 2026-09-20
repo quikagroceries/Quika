@@ -12,9 +12,9 @@ PHONE_OUTSIDER = "+2348030000003"
 
 
 async def _login(client, phone):
-    r = await client.post("/auth/request-otp", json={"phone": phone})
+    r = await client.post("/auth/request-otp", json={"identifier": phone})
     code = r.json()["dev_otp"]
-    r = await client.post("/auth/verify-otp", json={"phone": phone, "code": code})
+    r = await client.post("/auth/verify-otp", json={"identifier": phone, "code": code})
     return r.json()["access_token"]
 
 

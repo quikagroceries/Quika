@@ -1,18 +1,22 @@
 'use client';
 
 import { useState, useEffect, useRef } from "react";
+import Image from "next/image";
 import { api } from "@/lib/api";
 import Button from "@/components/Button";
 import Icon from "@/components/Icon";
+import Avatar from "@/components/Avatar";
 import { formatDayDivider, formatClockTime } from "@/lib/dateFormat";
+import squiggleLeaf from "@/assets/illustrations/decorative-squiggle-leaf.png";
+import garlic from "@/assets/illustrations/garlic.png";
 
 const POLL_MS = 5000;
 const QUICK_REPLIES = ["Hello", "On it", "Almost done", "Thank you"];
 
-// Always rendered full-screen by ChatPanel now (never embedded as a side
-// card), so this owns its own header (close + voice/video call icons)
-// instead of sitting inside a <Card>.
-function Chat({ orderId, onMessages, onCollapse, onVoiceCall, onVideoCall }: any) {
+// Rendered by ChatDock now (mobile overlay or desktop docked panel, never
+// embedded as a side card), so this owns its own header (close + voice/
+// video call icons) instead of sitting inside a <Card>.
+function Chat({ orderId, person, label, onMessages, onCollapse, onVoiceCall, onVideoCall }: any) {
   const [messages, setMessages] = useState<any[]>([]);
   const [myUserId, setMyUserId] = useState<any>(null);
   const [text, setText] = useState("");
@@ -102,26 +106,47 @@ function Chat({ orderId, onMessages, onCollapse, onVoiceCall, onVideoCall }: any
   }
 
   return (
-    <div className="flex h-full flex-col bg-white">
-      <div className="flex items-center justify-between border-b border-[#ebe7e0] px-4 py-3 sm:px-6">
-        <div className="flex items-center gap-2">
+    // `bg-canvas` (warm cream), not a flat white panel - matching ShopBag's
+    // own content background rather than being the one docked panel in the
+    // app with no illustration presence at all.
+    <div className="flex h-full flex-col bg-canvas">
+      <div className="relative flex shrink-0 items-center justify-between overflow-hidden border-b border-line bg-canvas px-4 py-3 sm:px-6">
+        <Image
+          src={squiggleLeaf}
+          alt=""
+          aria-hidden
+          className="pointer-events-none absolute -right-3 -top-3 z-0 w-14 rotate-12 opacity-[0.16]"
+        />
+        <div className="relative z-10 flex items-center gap-2">
           {onCollapse && (
             <button
               onClick={onCollapse}
-              aria-label="Close chat"
-              className="flex h-10 w-10 items-center justify-center rounded-xl text-[#8a8178] hover:bg-[#f0eeeb]"
+              aria-label="Back"
+              className="flex h-10 w-10 items-center justify-center rounded-full text-ink transition hover:bg-sunken"
             >
-              <Icon name="close" className="h-5 w-5" />
+              <Icon name="chevronDown" className="h-5 w-5 rotate-90" />
             </button>
           )}
-          <p className="text-lg font-bold text-ink">Chat</p>
+          {person?.full_name ? (
+            // Who you're talking to: their photo and name, with what this chat
+            // is underneath - not a generic "Chat" over an anonymous thread.
+            <div className="flex min-w-0 items-center gap-2.5">
+              <Avatar src={person.avatar_url} name={person.full_name} className="h-9 w-9" />
+              <span className="min-w-0 leading-tight">
+                <span className="block truncate text-base font-bold text-ink">{person.full_name}</span>
+                <span className="block truncate text-xs text-muted">{label === "Chat with customer" ? "Customer" : "Your agent"}</span>
+              </span>
+            </div>
+          ) : (
+            <p className="text-lg font-bold text-ink">Chat</p>
+          )}
         </div>
-        <div className="flex items-center gap-1">
+        <div className="relative z-10 flex items-center gap-1">
           {onVoiceCall && (
             <button
               onClick={onVoiceCall}
               aria-label="Voice call"
-              className="flex h-10 w-10 items-center justify-center rounded-full text-[#6b635a] hover:bg-[#f0eeeb]"
+              className="flex h-10 w-10 items-center justify-center rounded-full text-muted hover:bg-sunken"
             >
               <Icon name="phone" className="h-5 w-5" />
             </button>
@@ -130,7 +155,7 @@ function Chat({ orderId, onMessages, onCollapse, onVoiceCall, onVideoCall }: any
             <button
               onClick={onVideoCall}
               aria-label="Video call"
-              className="flex h-10 w-10 items-center justify-center rounded-full text-[#6b635a] hover:bg-[#f0eeeb]"
+              className="flex h-10 w-10 items-center justify-center rounded-full text-muted hover:bg-sunken"
             >
               <Icon name="video" className="h-5 w-5" />
             </button>
@@ -138,14 +163,29 @@ function Chat({ orderId, onMessages, onCollapse, onVoiceCall, onVideoCall }: any
         </div>
       </div>
 
-      <div ref={scrollRef} className="flex-1 space-y-1 overflow-y-auto px-4 py-3 sm:px-6">
+      <div ref={scrollRef} className="relative flex-1 space-y-1 overflow-y-auto px-4 py-3 sm:px-6">
+        {/* Quiet background accents - same family/opacity ShopBag's own
+            content area uses, so this panel reads as part of the same
+            illustrated app instead of the one plain white message list. */}
+        <Image
+          src={squiggleLeaf}
+          alt=""
+          aria-hidden
+          className="pointer-events-none absolute -left-2 top-2 w-14 -rotate-6 opacity-[0.14]"
+        />
+        <Image
+          src={garlic}
+          alt=""
+          aria-hidden
+          className="pointer-events-none absolute -right-2 bottom-4 w-12 rotate-12 opacity-[0.14]"
+        />
         {messages.length === 0 && (
           <div className="flex h-full flex-col items-center justify-center gap-2 text-center">
-            <span className="flex h-12 w-12 items-center justify-center rounded-full bg-[#f0eeeb] text-[#8a8178]">
+            <span className="flex h-12 w-12 items-center justify-center rounded-full bg-sunken text-faint">
               <Icon name="chat" className="h-6 w-6" />
             </span>
             <p className="font-display text-base font-bold text-ink">No messages yet</p>
-            <p className="max-w-[220px] text-sm text-[#8a8178]">
+            <p className="max-w-[220px] text-sm text-faint">
               Say hello, or send a quick reply below to get things started.
             </p>
           </div>
@@ -163,7 +203,7 @@ function Chat({ orderId, onMessages, onCollapse, onVoiceCall, onVideoCall }: any
             <div key={m.id}>
               {showDivider && (
                 <div className="my-3 flex items-center justify-center">
-                  <span className="rounded-full bg-[#f0eeeb] px-3 py-1 text-[0.7rem] font-semibold text-[#8a8178]">
+                  <span className="rounded-full bg-sunken px-3 py-1 text-[0.7rem] font-semibold text-faint">
                     {formatDayDivider(m.created_at)}
                   </span>
                 </div>
@@ -174,8 +214,8 @@ function Chat({ orderId, onMessages, onCollapse, onVoiceCall, onVideoCall }: any
                     className={
                       "rounded-2xl px-3 py-2 text-sm " +
                       (mine
-                        ? "bg-brand-orange text-white " + (lastInRun ? "rounded-br-sm" : "")
-                        : "bg-[#f0eeeb] text-ink " + (lastInRun ? "rounded-bl-sm" : ""))
+                        ? "bg-brand-orange text-[#1A1A1A] " + (lastInRun ? "rounded-br-sm" : "")
+                        : "bg-sunken text-ink " + (lastInRun ? "rounded-bl-sm" : ""))
                     }
                   >
                     {m.text && <div className="whitespace-pre-wrap break-words">{m.text}</div>}
@@ -190,7 +230,7 @@ function Chat({ orderId, onMessages, onCollapse, onVoiceCall, onVideoCall }: any
                     )}
                   </div>
                   {lastInRun && m.created_at && (
-                    <div className={"mt-0.5 text-[0.7rem] text-[#8a8178] " + (mine ? "text-right" : "text-left")}>
+                    <div className={"mt-0.5 text-[0.7rem] text-faint " + (mine ? "text-right" : "text-left")}>
                       {formatClockTime(m.created_at)}
                     </div>
                   )}
@@ -217,7 +257,7 @@ function Chat({ orderId, onMessages, onCollapse, onVoiceCall, onVideoCall }: any
         </div>
       )}
 
-      <div className="border-t border-[#ebe7e0] px-4 py-3 sm:px-6">
+      <div className="border-t border-line px-4 py-3 sm:px-6">
         {error && (
           <div className="mb-2">
             <p className="mb-1 text-sm text-red-600">{error}</p>
@@ -235,7 +275,7 @@ function Chat({ orderId, onMessages, onCollapse, onVoiceCall, onVideoCall }: any
               key={reply}
               onClick={() => sendQuickReply(reply)}
               disabled={busy}
-              className="shrink-0 whitespace-nowrap rounded-full border border-[#ebe7e0] bg-white px-3 py-1.5 text-sm font-semibold text-[#6b635a] transition-colors hover:border-brand-orange hover:text-brand-orange disabled:opacity-50"
+              className="shrink-0 whitespace-nowrap rounded-full border border-line bg-surface px-3 py-1.5 text-sm font-semibold text-muted transition-colors hover:border-brand-orange hover:text-brand-orange disabled:opacity-50"
             >
               {reply}
             </button>
@@ -249,7 +289,7 @@ function Chat({ orderId, onMessages, onCollapse, onVoiceCall, onVideoCall }: any
             value={text}
             onChange={(e) => setText(e.target.value)}
             onKeyDown={(e) => { if (e.key === "Enter") handleSend(); }}
-            className="min-h-[44px] flex-1 rounded-full border border-[#ddd6cb] px-4 text-base focus:outline-none focus:ring-2 focus:ring-brand-orange focus:border-brand-orange"
+            className="min-h-[44px] flex-1 rounded-full border border-line-strong px-4 text-base focus:outline-none focus:ring-2 focus:ring-brand-orange focus:border-brand-orange"
           />
 
           {/* capture="environment" opens the rear camera directly on a phone. */}
@@ -265,7 +305,7 @@ function Chat({ orderId, onMessages, onCollapse, onVoiceCall, onVideoCall }: any
             onClick={() => fileInputRef.current && fileInputRef.current.click()}
             disabled={uploading}
             aria-label="Send a photo"
-            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[#f0eeeb] text-[#6b635a] hover:bg-[#e8e4df] disabled:opacity-50"
+            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-sunken text-muted hover:bg-[#e8e4df] disabled:opacity-50"
           >
             {uploading ? "…" : <Icon name="camera" className="h-5 w-5" />}
           </button>
@@ -274,7 +314,7 @@ function Chat({ orderId, onMessages, onCollapse, onVoiceCall, onVideoCall }: any
             onClick={handleSend}
             disabled={busy || !text.trim()}
             aria-label="Send message"
-            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-brand-orange text-white hover:bg-brand-orange-dark disabled:opacity-50"
+            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-brand-orange text-[#1A1A1A] hover:bg-brand-orange-dark disabled:opacity-50"
           >
             <Icon name="send" className="h-5 w-5" />
           </button>

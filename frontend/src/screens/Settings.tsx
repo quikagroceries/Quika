@@ -6,7 +6,14 @@ import Button from "@/components/Button";
 import Card from "@/components/Card";
 import Input from "@/components/Input";
 import Icon from "@/components/Icon";
+import HeroBanner from "@/components/HeroBanner";
+import AvatarUpload from "@/components/AvatarUpload";
 import { ActiveOrderBanner } from "@/components/ActiveOrderBanner";
+import SectionHeader from "@/components/SectionHeader";
+import SwitchRow from "@/components/Switch";
+import RoleSwitch from "@/components/RoleSwitch";
+import { usePageSearch } from "@/components/PageSearchContext";
+import settingsArt from "@/assets/illustrations/settings.png";
 
 // One Settings screen shared by both personas (customer/agent) - the fields
 // that differ (delivery address is customer-only) are gated on role, not
@@ -14,26 +21,92 @@ import { ActiveOrderBanner } from "@/components/ActiveOrderBanner";
 const STATUS_LABEL = { active: "Active", flagged: "Flagged", locked: "Locked" };
 const STATUS_TONE = {
   active: "bg-brand-green/10 text-brand-green",
-  flagged: "bg-amber-100 text-amber-700",
+  flagged: "bg-brand-orange/15 text-brand-orange-dark",
   locked: "bg-red-100 text-red-700",
 };
+
+// Device-local preferences — Qyka has no per-user prefs endpoint yet, so
+// these persist to localStorage (standard for notification / appearance
+// settings, which are per-device anyway).
+const PREFS_KEY = "qyka_prefs";
+const DEFAULT_PREFS = {
+  notif: { orders: true, messages: true, payments: true, promos: false },
+  reduceMotion: false,
+};
+type Prefs = typeof DEFAULT_PREFS;
+
+function loadPrefs(): Prefs {
+  if (typeof window === "undefined") return DEFAULT_PREFS;
+  try {
+    const raw = JSON.parse(localStorage.getItem(PREFS_KEY) || "{}");
+    return {
+      ...DEFAULT_PREFS,
+      ...raw,
+      notif: { ...DEFAULT_PREFS.notif, ...(raw.notif || {}) },
+    };
+  } catch {
+    return DEFAULT_PREFS;
+  }
+}
+
+function applyPrefs(p: Prefs) {
+  if (typeof document === "undefined") return;
+  document.documentElement.classList.toggle("reduce-motion", p.reduceMotion);
+}
+
+const Toggle = SwitchRow;
 
 // `extra` is an optional slot for a persona-specific card (e.g. Admin's own
 // system-status card) rendered after Account, in the same column - keeps
 // this one screen shared across all three personas instead of forking it,
 // while still letting one of them add something the others don't need.
-function Settings({ user, onUserUpdated, onLogout, extra }: any) {
+function Settings({ user, onUserUpdated, onLogout, extra, roleSwitch }: any) {
   const isCustomer = (user.role || "").toLowerCase() === "customer";
   const [fullName, setFullName] = useState(user.full_name || "");
   const [address, setAddress] = useState(user.default_delivery_address || "");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [saved, setSaved] = useState(false);
+  // Top-bar search filters the sections themselves: type "motion" or "phone"
+  // and only the cards that cover it stay.
+  const q = usePageSearch("Search settings…");
+  const KEYWORDS = {
+    profile: "profile full name delivery address default",
+    account: "account phone role",
+    notifications: "notifications order updates agent messages payment reminders offers promos",
+    appearance: "appearance reduce motion animation transitions",
+    agent: "become an agent apply market shop earn",
+    system: "system status api health",
+    mode: "view mode switch agent customer role",
+  };
+  const matches = (key: keyof typeof KEYWORDS) => !q || KEYWORDS[key].includes(q);
+  const hide = (key: keyof typeof KEYWORDS) => (matches(key) ? "" : "hidden");
 
   // Only customers can apply (an agent/admin already has - or is past -
   // this decision, and the backend itself refuses a non-customer's apply
   // call with 409 - see agent_applications.service.apply), so this whole
   // section only ever fetches/renders for them.
+  const [prefs, setPrefs] = useState<Prefs>(DEFAULT_PREFS);
+  useEffect(() => {
+    const p = loadPrefs();
+    setPrefs(p);
+    applyPrefs(p);
+  }, []);
+  function updatePrefs(
+    patch: Partial<Omit<Prefs, "notif">> & { notif?: Partial<Prefs["notif"]> }
+  ) {
+    setPrefs((cur) => {
+      const next: Prefs = {
+        ...cur,
+        ...patch,
+        notif: { ...cur.notif, ...(patch.notif || {}) },
+      };
+      localStorage.setItem(PREFS_KEY, JSON.stringify(next));
+      applyPrefs(next);
+      return next;
+    });
+  }
+
   const [applications, setApplications] = useState<any>(null); // null = loading
   const [showAgentForm, setShowAgentForm] = useState(false);
   const [agentMarkets, setAgentMarkets] = useState<any[]>([]);
@@ -95,49 +168,46 @@ function Settings({ user, onUserUpdated, onLogout, extra }: any) {
     }
   }
 
+  const roleLabel = user.role ? user.role[0].toUpperCase() + user.role.slice(1).toLowerCase() : "Account";
+
   return (
     <div>
-      <div className="mb-6 flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-        <div className="min-w-0">
-          <h1 className="font-display text-3xl font-extrabold tracking-tight text-ink md:text-4xl">Settings</h1>
-          <p className="mt-1 text-[#6b635a]">Your account details.</p>
-        </div>
-        <ActiveOrderBanner />
-      </div>
-
-      {/* Standard settings layout: an account summary card that stays put
-          (left, sticky on desktop) alongside the editable sections (right,
-          wide enough for fields to sit two-up) - the same wide-page shape
-          Wallet uses, instead of one narrow column stranded on a full-width
-          page. */}
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-[320px_1fr] lg:items-start">
-        <Card className="lg:sticky lg:top-6">
-          <div className="flex flex-col items-center text-center">
-            <span className="flex h-16 w-16 shrink-0 items-center justify-center rounded-full bg-brand-orange/10 text-brand-orange">
-              <Icon name="user" className="h-7 w-7" />
-            </span>
-            <div className="mt-3 truncate font-display text-lg font-extrabold tracking-tight text-ink">
-              {user.full_name || "Unnamed"}
-            </div>
-            <div className="truncate text-sm text-[#6b635a]">{user.phone}</div>
-            <span
-              className={
-                "mt-2 shrink-0 rounded-full px-3 py-1 text-xs font-bold " +
-                (STATUS_TONE[user.status] || "bg-[#f0eeeb] text-[#6b635a]")
-              }
-            >
+      {/* Same illustrated HeroBanner as the rest of the app. The account
+          summary that used to sit in its own side card (avatar, name, phone,
+          status, log out) is the hero now: who you are, at a glance, with
+          the way out one tap away. */}
+      <HeroBanner
+        leading={<AvatarUpload user={user} onUserUpdated={onUserUpdated} />}
+        eyebrow={roleLabel + " account"}
+        title={user.full_name || "Your account"}
+        body={
+          <span className="inline-flex flex-wrap items-center gap-2">
+            {user.phone}
+            <span className={"rounded-full px-2.5 py-0.5 text-xs font-bold " + (STATUS_TONE[user.status] || "bg-sunken text-muted")}>
               {STATUS_LABEL[user.status] || user.status}
             </span>
-          </div>
-          <Button variant="neutral" onClick={onLogout} fullWidth className="mt-5">
+          </span>
+        }
+        illustration={settingsArt}
+        banner={<ActiveOrderBanner />}
+        actions={
+          <Button variant="neutral" onClick={onLogout}>
             Log out
           </Button>
-        </Card>
+        }
+      />
 
+      {q && !(Object.keys(KEYWORDS) as (keyof typeof KEYWORDS)[]).some((k) => matches(k)) && (
+        <p className="mb-4 rounded-2xl bg-sunken-2/70 px-4 py-3 text-sm text-muted">
+          No settings match &ldquo;{q}&rdquo;.
+        </p>
+      )}
+
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2 lg:items-start">
         <div className="space-y-4">
-          <Card>
-            <p className="mb-3 text-sm font-bold uppercase tracking-wide text-[#8a8178]">Profile</p>
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <Card className={hide("profile")}>
+            <SectionHeader icon="user" title="Profile" className="mb-4" />
+            <div className="grid grid-cols-1 gap-3">
               <label className="block">
                 <span className="mb-1 block text-sm font-semibold text-ink/80">Full name</span>
                 <Input value={fullName} onChange={(e) => setFullName(e.target.value)} placeholder="e.g. Ada Obi" />
@@ -146,7 +216,7 @@ function Settings({ user, onUserUpdated, onLogout, extra }: any) {
               {isCustomer && (
                 <label className="block">
                   <span className="mb-1 block text-sm font-semibold text-ink/80">
-                    Default delivery address <span className="font-normal text-[#8a8178]">(optional)</span>
+                    Default delivery address <span className="font-normal text-faint">(optional)</span>
                   </span>
                   <Input
                     placeholder="e.g. 12 Allen Avenue, Ikeja"
@@ -169,22 +239,73 @@ function Settings({ user, onUserUpdated, onLogout, extra }: any) {
             {error && <p className="mt-2 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p>}
           </Card>
 
-          <Card>
-            <p className="mb-3 text-sm font-bold uppercase tracking-wide text-[#8a8178]">Account</p>
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <Card className={hide("account")}>
+            <SectionHeader icon="phone" title="Account" className="mb-4" />
+            <div className="grid grid-cols-1 gap-3">
               <label className="block">
                 <span className="mb-1 block text-sm font-semibold text-ink/80">Phone</span>
-                <Input value={user.phone} disabled className="bg-[#f7f5f2] text-[#6b635a]" />
+                <Input value={user.phone} disabled className="bg-sunken-2 text-muted" />
               </label>
               <label className="block">
                 <span className="mb-1 block text-sm font-semibold text-ink/80">Role</span>
                 <Input
                   value={user.role ? user.role[0].toUpperCase() + user.role.slice(1) : ""}
                   disabled
-                  className="bg-[#f7f5f2] text-[#6b635a]"
+                  className="bg-sunken-2 text-muted"
                 />
               </label>
             </div>
+          </Card>
+
+        </div>
+
+        <div className="space-y-4">
+          {roleSwitch && (
+            <Card className={hide("mode")}>
+              <SectionHeader icon="user" title="View mode" subtitle="Switch between agent and customer views of your account." className="mb-4" />
+              <RoleSwitch {...roleSwitch} />
+            </Card>
+          )}
+
+          <Card className={hide("notifications")}>
+            <SectionHeader icon="chat" title="Notifications" subtitle="How Qyka reaches you on this device." className="mb-2" />
+            <div className="divide-y divide-dashed divide-line-strong">
+              <Toggle
+                label="Order updates"
+                hint="Agent assigned, shopping started, out for delivery"
+                checked={prefs.notif.orders}
+                onChange={(v) => updatePrefs({ notif: { orders: v } })}
+              />
+              <Toggle
+                label="Agent messages"
+                hint="Replies in the order chat"
+                checked={prefs.notif.messages}
+                onChange={(v) => updatePrefs({ notif: { messages: v } })}
+              />
+              <Toggle
+                label="Payment reminders"
+                hint="Deposits owed and balances due"
+                checked={prefs.notif.payments}
+                onChange={(v) => updatePrefs({ notif: { payments: v } })}
+              />
+              <Toggle
+                label="Offers & updates"
+                hint="New markets, occasional product news"
+                checked={prefs.notif.promos}
+                onChange={(v) => updatePrefs({ notif: { promos: v } })}
+              />
+            </div>
+          </Card>
+
+          <Card className={hide("appearance")}>
+            <SectionHeader icon="settings" title="Appearance" subtitle="Motion on this device." className="mb-2" />
+
+            <Toggle
+              label="Reduce motion"
+              hint="Minimise animations and transitions"
+              checked={prefs.reduceMotion}
+              onChange={(v) => updatePrefs({ reduceMotion: v })}
+            />
           </Card>
 
           {/* Self-serve entry into the SAME admin-approved agent_applications
@@ -193,26 +314,24 @@ function Settings({ user, onUserUpdated, onLogout, extra }: any) {
               Never shown for an agent/admin themselves (isCustomer gates
               it), and never lets them re-submit while one's still pending. */}
           {isCustomer && applications !== null && (
-            <Card>
-              <p className="mb-3 text-sm font-bold uppercase tracking-wide text-[#8a8178]">
-                Become an agent
-              </p>
+            <Card className={hide("agent")}>
+              <SectionHeader icon="flag" title="Become an agent" className="mb-4" />
 
               {pendingApplication ? (
-                <div className="flex items-center gap-3 rounded-xl bg-amber-50 px-4 py-3">
-                  <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-amber-100 text-amber-700">
+                <div className="flex items-center gap-3 rounded-2xl bg-brand-orange/[0.12] px-4 py-3">
+                  <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-brand-orange text-[#1A1A1A]">
                     <Icon name="clock" className="h-4 w-4" />
                   </span>
                   <div className="min-w-0">
-                    <p className="text-sm font-bold text-amber-800">Application pending review</p>
-                    <p className="text-sm text-amber-700">
+                    <p className="text-sm font-bold text-ink">Application pending review</p>
+                    <p className="text-sm text-muted">
                       We&apos;ll let you know once an admin has reviewed it.
                     </p>
                   </div>
                 </div>
               ) : !showAgentForm ? (
                 <div className="flex flex-wrap items-center justify-between gap-3">
-                  <p className="max-w-md text-sm text-[#6b635a]">
+                  <p className="max-w-md text-sm text-muted">
                     Shop on behalf of customers at a market and earn a fee.
                   </p>
                   <Button variant="neutral" onClick={openAgentForm}>
@@ -232,7 +351,7 @@ function Settings({ user, onUserUpdated, onLogout, extra }: any) {
                   </label>
                   <label className="block">
                     <span className="mb-1 block text-sm font-semibold text-ink/80">
-                      Note <span className="font-normal text-[#8a8178]">(optional)</span>
+                      Note <span className="font-normal text-faint">(optional)</span>
                     </span>
                     <Input
                       placeholder="e.g. I already run a stall at this market"
@@ -266,7 +385,7 @@ function Settings({ user, onUserUpdated, onLogout, extra }: any) {
             </Card>
           )}
 
-          {extra}
+          {matches("system") && extra}
         </div>
       </div>
     </div>

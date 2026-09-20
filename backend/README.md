@@ -1,6 +1,6 @@
-# Quika Groceries — Backend
+# Qyka Groceries — Backend
 
-FastAPI + PostgreSQL backend for Quika Groceries. Recycled-float grocery
+FastAPI + PostgreSQL backend for Qyka Groceries. Recycled-float grocery
 shopping via human market agents: a customer places a list, an agent shops
 it at a real market, paid for out of a company float pool that's
 replenished the moment the customer pays.

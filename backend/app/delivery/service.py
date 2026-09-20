@@ -65,7 +65,7 @@ async def dispatch_to_courier(
 ) -> Order:
     """Hand a packed order to the third-party courier (Kwik / Sendbox).
 
-    Quika does not employ riders. The courier is only alerted AFTER payment,
+    Qyka does not employ riders. The courier is only alerted AFTER payment,
     so nobody travels for an order that might not be paid for — and the goods
     are already packed when they arrive, so there is no paid waiting time.
 

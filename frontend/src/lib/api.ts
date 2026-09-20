@@ -20,7 +20,7 @@ export function setUnauthorizedHandler(fn) {
 
 // Every request goes through here so the token is attached in ONE place.
 async function request(path: string, { method = "GET", body }: { method?: string; body?: unknown } = {}) {
-  const token = typeof window !== "undefined" ? localStorage.getItem("quika_token") : null;
+  const token = typeof window !== "undefined" ? localStorage.getItem("qyka_token") : null;
   const res = await fetch(BASE + path, {
     method,
     headers: {
@@ -39,19 +39,42 @@ async function request(path: string, { method = "GET", body }: { method?: string
 }
 
 export const api = {
-  requestOtp: (phone) =>
-    request("/auth/request-otp", { method: "POST", body: { phone } }),
+  // `identifier` is a phone number OR an email — the backend tells them apart.
+  // `channel` ("sms" | "whatsapp" | "email") only matters for a phone
+  // identifier; an email identifier always delivers by email regardless.
+  // Returns { detail, channel, dev_otp, expires_in_seconds }.
+  requestOtp: (identifier: string, channel?: "sms" | "whatsapp" | "voice" | "email") =>
+    request("/auth/request-otp", {
+      method: "POST",
+      body: { identifier, ...(channel ? { channel } : {}) },
+    }),
   // `role` is only honored by the backend outside production, and only for
-  // a phone number that doesn't already have an account - see auth/routes.py.
-  verifyOtp: (phone, code, role?: string) =>
-    request("/auth/verify-otp", { method: "POST", body: { phone, code, ...(role ? { role } : {}) } }),
+  // an identifier that doesn't already have an account - see auth/routes.py.
+  verifyOtp: (identifier: string, code: string, role?: string) =>
+    request("/auth/verify-otp", {
+      method: "POST",
+      body: { identifier, code, ...(role ? { role } : {}) },
+    }),
+  // credential is the ID token from Google Identity Services. Google already
+  // verifies the email, so this always logs in or creates the account in one
+  // step — returns { access_token }.
+  googleAuth: (credential: string) =>
+    request("/auth/google", { method: "POST", body: { credential } }),
   myOrders: () => request("/orders/mine"),
 
   me: () => request("/auth/me"),
   getHealth: () => request("/health"),
   updateProfile: (body) => request("/auth/me", { method: "PATCH", body }),
+  // Attaches a verified email to the signed-in account. Caller must have
+  // already sent the code via requestOtp(email) - this just confirms it,
+  // the same way sign-in/sign-up verification works.
+  linkEmail: (email: string, code: string) =>
+    request("/auth/link-email", { method: "POST", body: { email, code } }),
 
   getOrder: (id) => request(`/orders/${id}`),
+  getConversations: () => request("/chat/conversations"),
+  markChatRead: (id) => request(`/orders/${id}/messages/read`, { method: "POST" }),
+  getOrderAgent: (id) => request(`/orders/${id}/agent`),
   getProposedAgent: (id) => request(`/orders/${id}/proposed-agent`),
   acceptProposedAgent: (id) => request(`/orders/${id}/accept-agent`, { method: "POST" }),
   seeAnotherAgent: (id) => request(`/orders/${id}/see-another-agent`, { method: "POST" }),
@@ -121,6 +144,10 @@ export const api = {
       method: "POST",
       body: { decision },
     }),
+  updateDraftOrder: (id, body) =>
+    request(`/orders/${id}/draft`, { method: "PUT", body }),
+  addOrderItem: (id, body) =>
+    request(`/orders/${id}/items`, { method: "POST", body }),
   getAuthorization: (id) => request(`/jit/orders/${id}/authorization`),
   getPurchases: (id) => request(`/jit/orders/${id}/purchases`),
   attachPurchasePhoto: (id, transferId, photoRef) =>
@@ -203,8 +230,14 @@ export const api = {
     request(`/orders/${orderId}/messages`, { method: "POST", body }),
 
   uploadChatImage: (file) => uploadToCloudinary(file),
+  uploadProfilePhoto: (file) => uploadToCloudinary(file),
   uploadPackingPhoto: (file) => uploadToCloudinary(file),
   uploadPurchasePhoto: (file) => uploadToCloudinary(file),
+  // Guest-friendly (get_current_user_optional backend-side) - `request`
+  // already attaches a token when one exists, but works without one too.
+  trackLocation: (label: string, latitude?: number, longitude?: number) =>
+    request("/locations/track", { method: "POST", body: { label, latitude, longitude } }),
+  getPopularLocations: () => request("/locations/popular"),
 };
 
 async function uploadToCloudinary(file) {

@@ -77,7 +77,7 @@ function Notifications() {
   const note = unread[0];
 
   return (
-    <div className="fixed inset-x-4 top-5 z-[1000] mx-auto max-w-md overflow-hidden rounded-2xl bg-white shadow-lg ring-1 ring-black/5">
+    <div className="fixed inset-x-4 top-5 z-[1000] mx-auto max-w-md overflow-hidden rounded-2xl bg-surface shadow-lg ring-1 ring-black/5">
       <div className="h-1.5 bg-brand-orange" />
       <div className="p-4">
         <div className="mb-1 text-xs font-semibold uppercase tracking-wide text-brand-orange">

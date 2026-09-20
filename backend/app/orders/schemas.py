@@ -24,14 +24,47 @@ class OrderItemIn(BaseModel):
     preferred_stall_id: uuid.UUID | None = Field(default=None)
 
 
+class AddItemIn(BaseModel):
+    """A single item added mid-shopping (see orders.service.add_item).
+
+    Unlike OrderItemIn at order creation, listed_price is REQUIRED here, not
+    optional - a mid-order addition has no "budget/unstructured" bucket to
+    fall back into (that's only ever set once, at CreateOrderIn.listed_items_total),
+    so an item added without a price would give the agent no extra spending
+    room to actually buy it (see jit.raise_authorization, called with this
+    exact amount).
+    """
+
+    description: str = Field(..., examples=["A bag of onions"])
+    requested_note: str | None = Field(
+        default=None, examples=["Mama Chidinma's stall, ripe ones"]
+    )
+    listed_price: Decimal = Field(..., gt=0, examples=["500.00"])
+    quantity: int | None = Field(default=None, ge=1, examples=[2])
+    preferred_stall_id: uuid.UUID | None = Field(default=None)
+
+
 class CreateOrderIn(BaseModel):
     delivery_address: str | None = None
+    # Where the customer dropped the delivery pin (optional - an address
+    # alone still works). Used for courier quotes.
+    dropoff_latitude: float | None = Field(default=None, ge=-90, le=90)
+    dropoff_longitude: float | None = Field(default=None, ge=-180, le=180)
     # The customer's estimate for whichever items DON'T carry their own
     # listed_price (the budget/unstructured portion of the list) — added to
     # the sum of itemized prices, not overridden by them, so a list can freely
     # mix priced and un-priced items. Drives the deposit check.
     listed_items_total: Decimal = Decimal("0.00")
     market_id: uuid.UUID
+    items: list[OrderItemIn] = Field(..., min_length=1)
+
+
+class UpdateDraftIn(BaseModel):
+    """Full replacement of a draft order's list - same shape as CreateOrderIn
+    minus market (a draft's market is fixed)."""
+
+    delivery_address: str | None = None
+    listed_items_total: Decimal = Decimal("0.00")
     items: list[OrderItemIn] = Field(..., min_length=1)
 
 
@@ -106,6 +139,19 @@ class ProposedAgentOut(BaseModel):
     id: uuid.UUID
     full_name: str | None
     phone: str
+    avatar_url: str | None = None
+
+
+class AssignedAgentOut(BaseModel):
+    """The customer-facing card for the agent shopping their order: name and
+    photo only. Deliberately no phone number - contact goes through the
+    order chat/call, and the customer never needed the raw number."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    id: uuid.UUID
+    full_name: str | None
+    avatar_url: str | None = None
 
 
 class SeeAnotherOut(BaseModel):

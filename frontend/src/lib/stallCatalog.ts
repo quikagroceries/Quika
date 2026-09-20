@@ -22,10 +22,10 @@ export type StallCatalogItem = {
 export type StallCategoryNav = { id: string; label: string };
 
 const IMG = {
-  produce: "/quika-cat-produce.jpg",
-  protein: "/quika-cat-protein.jpg",
-  provisions: "/quika-cat-pantry.jpg",
-  spices: "/quika-trust-basket.jpg",
+  produce: "/qyka-cat-produce.jpg",
+  protein: "/qyka-cat-protein.jpg",
+  provisions: "/qyka-cat-pantry.jpg",
+  spices: "/qyka-trust-basket.jpg",
 } as const;
 
 function item(

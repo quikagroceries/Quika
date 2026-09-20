@@ -59,6 +59,12 @@ const ICONS = {
     </>
   ),
   check: <polyline points="5,12.5 9.5,17 19,7" />,
+  search: (
+    <>
+      <circle cx="11" cy="11" r="6.5" />
+      <line x1="16" y1="16" x2="20" y2="20" />
+    </>
+  ),
   chat: (
     <>
       <rect x="3.5" y="5" width="17" height="11" rx="3" />

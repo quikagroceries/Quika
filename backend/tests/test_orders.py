@@ -10,9 +10,9 @@ PHONE_CUST_B = "+2348010000009"
 
 
 async def _login(client, phone, role=None):
-    r = await client.post("/auth/request-otp", json={"phone": phone})
+    r = await client.post("/auth/request-otp", json={"identifier": phone})
     code = r.json()["dev_otp"]
-    r = await client.post("/auth/verify-otp", json={"phone": phone, "code": code})
+    r = await client.post("/auth/verify-otp", json={"identifier": phone, "code": code})
     token = r.json()["access_token"]
     return token
 
@@ -281,3 +281,152 @@ async def test_itemized_prices_drive_estimate_deposit_and_cap(client, db_session
     assert Decimal(r.json()["cap"]) == Decimal("40000.00"), (
         "cap should equal the goods-only itemized estimate, not the combined estimated_value"
     )
+
+
+@pytest.mark.asyncio
+async def test_draft_list_can_be_edited_and_is_repriced(client):
+    token = await _login(client, PHONE_CUST)
+    auth = {"Authorization": f"Bearer {token}"}
+    market_id = str(uuid.uuid4())
+    r = await client.post(
+        "/orders",
+        headers=auth,
+        json={"market_id": market_id, "items": [{"description": "Beans", "listed_price": "1000.00"}]},
+    )
+    assert r.status_code == 201
+    order = r.json()
+    # No agent exists in this fixture, so the order stays a draft.
+    assert order["status"] == "draft"
+
+    r = await client.put(
+        f"/orders/{order['id']}/draft",
+        headers=auth,
+        json={
+            "listed_items_total": "1500.00",
+            "items": [
+                {"description": "Rice", "listed_price": "6000.00", "quantity": 2},
+                {"description": "Ugu leaves"},
+            ],
+        },
+    )
+    assert r.status_code == 200
+    edited = r.json()
+    assert [i["description"] for i in edited["items"]] == ["Rice", "Ugu leaves"]
+    # 6000 priced + 1500 budget, same pricing rules as order creation.
+    assert Decimal(edited["goods_estimate"]) == Decimal("7500.00")
+    assert Decimal(edited["estimated_value"]) == Decimal("13100.00")
+
+
+@pytest.mark.asyncio
+async def test_only_owner_can_edit_a_draft_list(client):
+    owner = await _login(client, PHONE_CUST)
+    other = await _login(client, PHONE_CUST_B)
+    r = await client.post(
+        "/orders",
+        headers={"Authorization": f"Bearer {owner}"},
+        json={"market_id": str(uuid.uuid4()), "items": [{"description": "Beans", "listed_price": "1000.00"}]},
+    )
+    order_id = r.json()["id"]
+    r = await client.put(
+        f"/orders/{order_id}/draft",
+        headers={"Authorization": f"Bearer {other}"},
+        json={"items": [{"description": "Stolen", "listed_price": "1.00"}]},
+    )
+    assert r.status_code == 403
+
+
+@pytest.mark.asyncio
+async def test_order_keeps_the_delivery_pin(client):
+    token = await _login(client, PHONE_CUST)
+    r = await client.post(
+        "/orders",
+        headers={"Authorization": f"Bearer {token}"},
+        json={
+            "market_id": str(uuid.uuid4()),
+            "delivery_address": "12 Allen Avenue, Ikeja",
+            "dropoff_latitude": 6.6018,
+            "dropoff_longitude": 3.3515,
+            "items": [{"description": "Beans", "listed_price": "1000.00"}],
+        },
+    )
+    assert r.status_code == 201
+    assert r.json()["dropoff_latitude"] == 6.6018
+    assert r.json()["dropoff_longitude"] == 3.3515
+    # Out-of-range coordinates are rejected, not stored.
+    r = await client.post(
+        "/orders",
+        headers={"Authorization": f"Bearer {token}"},
+        json={"market_id": str(uuid.uuid4()), "dropoff_latitude": 123, "items": [{"description": "x"}]},
+    )
+    assert r.status_code == 422
+
+
+@pytest.mark.asyncio
+async def test_assigned_agent_card_is_customer_only_and_empty_until_assigned(client):
+    owner = await _login(client, PHONE_CUST)
+    other = await _login(client, PHONE_CUST_B)
+    r = await client.post(
+        "/orders",
+        headers={"Authorization": f"Bearer {owner}"},
+        json={"market_id": str(uuid.uuid4()), "items": [{"description": "Beans", "listed_price": "1000.00"}]},
+    )
+    order_id = r.json()["id"]
+    # No agent has accepted yet.
+    r = await client.get(f"/orders/{order_id}/agent", headers={"Authorization": f"Bearer {owner}"})
+    assert r.status_code == 200 and r.json() is None
+    # Nobody else can read it.
+    r = await client.get(f"/orders/{order_id}/agent", headers={"Authorization": f"Bearer {other}"})
+    assert r.status_code == 403
+
+
+@pytest.mark.asyncio
+async def test_messages_inbox_unread_counts_are_per_person(client, db_session_factory):
+    from app.auth.models import User
+    from app.orders.models import Order
+
+    cust = await _login(client, PHONE_CUST)
+    agent = await _login(client, PHONE_AGENT)
+    hc = {"Authorization": f"Bearer {cust}"}
+    ha = {"Authorization": f"Bearer {agent}"}
+
+    r = await client.post(
+        "/orders",
+        headers=hc,
+        json={"market_id": str(uuid.uuid4()), "items": [{"description": "Beans", "listed_price": "1000.00"}]},
+    )
+    order_id = r.json()["id"]
+
+    # An order with no messages isn't a conversation yet.
+    assert (await client.get("/chat/conversations", headers=hc)).json() == []
+
+    # Put the agent on the order (assignment is covered elsewhere).
+    async with db_session_factory() as s:
+        agent_user = (await s.execute(select(User).where(User.phone == PHONE_AGENT))).scalar_one()
+        order = (await s.execute(select(Order).where(Order.id == uuid.UUID(order_id)))).scalar_one()
+        order.agent_id = agent_user.id
+        await s.commit()
+
+    await client.post(f"/orders/{order_id}/messages", headers=hc, json={"text": "Hello agent"})
+    await client.post(f"/orders/{order_id}/messages", headers=ha, json={"text": "On it"})
+    await client.post(f"/orders/{order_id}/messages", headers=ha, json={"image_url": "https://res.cloudinary.com/x/y.jpg"})
+
+    # Customer: two unread from the agent. (Which message is "last" isn't
+    # asserted: the SQLite test DB stamps whole seconds, so three messages
+    # sent together tie - Postgres has microsecond precision.)
+    (c,) = (await client.get("/chat/conversations", headers=hc)).json()
+    assert c["unread"] == 2 and c["last_message"] is not None
+    # Agent: one unread (the customer's hello) - counts are per person.
+    (a,) = (await client.get("/chat/conversations", headers=ha)).json()
+    assert a["unread"] == 1
+
+    # Reading clears only the reader's count.
+    assert (await client.post(f"/orders/{order_id}/messages/read", headers=hc)).status_code == 204
+    (c,) = (await client.get("/chat/conversations", headers=hc)).json()
+    (a,) = (await client.get("/chat/conversations", headers=ha)).json()
+    assert c["unread"] == 0 and a["unread"] == 1
+
+    # A stranger can neither read nor mark it.
+    other = await _login(client, PHONE_CUST_B)
+    ho = {"Authorization": f"Bearer {other}"}
+    assert (await client.post(f"/orders/{order_id}/messages/read", headers=ho)).status_code == 403
+    assert (await client.get("/chat/conversations", headers=ho)).json() == []

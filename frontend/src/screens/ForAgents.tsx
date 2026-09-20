@@ -3,10 +3,12 @@
 import { FormEvent, useState, type MouseEvent } from "react";
 import { useRouter } from "next/navigation";
 import { motion, useReducedMotion } from "framer-motion";
+import ClipReveal from "@/components/marketing/ClipReveal";
+import HelpWidget from "@/components/marketing/HelpWidget";
 import MarketingFooter from "@/components/marketing/MarketingFooter";
 import MarketingHeader from "@/components/marketing/MarketingHeader";
 import { EASE, HeroIn, Reveal, Stagger, StaggerItem } from "@/components/marketing/motion";
-import Wave from "@/components/marketing/Wave";
+import SplitReveal from "@/components/marketing/SplitReveal";
 import { hashFromHref, scrollToSection } from "@/lib/scrollToSection";
 
 function AgentApplyForm() {
@@ -17,7 +19,7 @@ function AgentApplyForm() {
 
   function submit(e: FormEvent) {
     e.preventDefault();
-    const subject = encodeURIComponent("Quika agent application");
+    const subject = encodeURIComponent("Qyka agent application");
     const body = encodeURIComponent(
       `Name: ${name}\nPhone: ${phone}\nMarket: ${market || "(not specified)"}\n`
     );
@@ -53,7 +55,7 @@ function AgentApplyForm() {
       />
       <button
         type="submit"
-        className="min-h-[48px] w-full rounded-xl bg-brand-orange font-display text-sm font-bold text-white transition hover:bg-brand-orange-dark focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gold"
+        className="min-h-[48px] w-full rounded-xl bg-brand-orange font-display text-sm font-bold text-[#1A1A1A] transition hover:bg-brand-orange-dark focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gold"
       >
         Apply as an agent →
       </button>
@@ -78,13 +80,13 @@ const DAY = [
     n: "03",
     title: "Transfer & prove",
     body: "Pay vendors by transfer. Snap photo proof. No unauthorized cash in your pocket.",
-    accent: "text-gold",
+    accent: "text-brand-orange-dark",
   },
   {
     n: "04",
     title: "Pack & hand off",
     body: "Final bill lands in the app. Courier takes the haul. You earn on completed runs.",
-    accent: "text-white",
+    accent: "text-ink",
   },
 ];
 
@@ -107,12 +109,12 @@ export default function ForAgents() {
       window.history.pushState(null, "", `/#${hash}`);
       return;
     }
-    sessionStorage.setItem("quika-scroll-to", hash);
+    sessionStorage.setItem("qyka-scroll-to", hash);
     router.push(`/#${hash}`);
   }
 
   return (
-    <div className="bg-canvas text-ink">
+    <div className="force-light min-h-screen bg-canvas text-ink">
       <MarketingHeader />
 
       {/* HERO — homepage pattern: canvas, ink type, side visual */}
@@ -122,12 +124,14 @@ export default function ForAgents() {
             <HeroIn y={20} delay={0.05}>
               <p className="text-sm font-semibold uppercase tracking-wide text-brand-green">For Agents</p>
             </HeroIn>
-            <HeroIn y={24} delay={0.12}>
-              <h1 className="mt-3 font-display text-4xl font-extrabold leading-[1.08] tracking-tight sm:text-5xl lg:text-[3.25rem]">
-                Earn shopping a market{" "}
-                <span className="text-brand-orange">you already know</span>.
-              </h1>
-            </HeroIn>
+            <SplitReveal
+              as="h1"
+              mode="load"
+              delay={0.12}
+              className="mt-3 font-serif text-5xl italic leading-[1.05] tracking-tight sm:text-6xl lg:text-[3.75rem]"
+            >
+              Earn shopping a market <span className="text-brand-orange">you already know</span>.
+            </SplitReveal>
             <HeroIn y={20} delay={0.2}>
               <p className="mt-5 max-w-xl text-base leading-relaxed text-ink/60 sm:text-lg">
                 Customers send free-text lists. You bargain the stalls, pay by transfer, pack with
@@ -138,14 +142,14 @@ export default function ForAgents() {
               <StaggerItem y={14} scale={0.96}>
                 <a
                   href="#apply"
-                  className="inline-flex min-h-[48px] items-center rounded-full bg-brand-green px-6 text-sm font-bold text-white transition hover:bg-brand-green/90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gold"
+                  className="inline-flex min-h-[48px] items-center rounded-full bg-brand-orange px-6 text-sm font-bold text-[#1A1A1A] transition hover:bg-brand-orange-dark focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gold"
                 >
                   Apply now
                 </a>
               </StaggerItem>
               <StaggerItem y={14} scale={0.96}>
                 <a
-                  href="/#how"
+                  href="/#help"
                   onClick={goHomeHash}
                   className="inline-flex min-h-[48px] items-center rounded-full border-2 border-ink px-6 text-sm font-bold text-ink transition hover:bg-ink hover:text-white"
                 >
@@ -159,14 +163,14 @@ export default function ForAgents() {
           </div>
 
           <HeroIn y={36} delay={0.15} className="relative mx-auto w-full max-w-md lg:max-w-none">
-            <div className="overflow-hidden rounded-[2rem] shadow-[0_24px_50px_rgba(33,26,20,0.14)]">
+            <ClipReveal delay={0.3} className="overflow-hidden rounded-[2rem] shadow-[0_24px_50px_rgba(33,26,20,0.14)]">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
-                src="/quika-hero-person.jpg"
+                src="/qyka-hero-person.jpg"
                 alt="Market agent with shopping"
                 className="aspect-[4/5] w-full object-cover sm:aspect-square"
               />
-            </div>
+            </ClipReveal>
           </HeroIn>
         </div>
       </section>
@@ -175,10 +179,10 @@ export default function ForAgents() {
       <section className="px-4 py-16 sm:px-6 sm:py-20">
         <div className="mx-auto max-w-6xl">
           <Reveal y={24} className="max-w-2xl">
-            <p className="text-sm font-semibold uppercase tracking-wide text-brand-orange">Why Quika</p>
-            <h2 className="mt-2 font-display text-3xl font-extrabold tracking-tight sm:text-4xl">
+            <p className="text-sm font-semibold uppercase tracking-wide text-brand-orange">Why Qyka</p>
+            <SplitReveal as="h2" className="mt-2 font-serif text-4xl italic tracking-tight sm:text-5xl">
               Your market knowledge is the product.
-            </h2>
+            </SplitReveal>
             <p className="mt-3 text-ink/60">
               We&apos;re not hiring warehouse pickers. We need people who already walk those aisles.
             </p>
@@ -212,16 +216,16 @@ export default function ForAgents() {
         </div>
       </section>
 
-      {/* DAY — ink band with waves (home trust pattern) */}
-      <div className="relative bg-ink">
-        <Wave from="bg-canvas" to="bg-ink" />
-        <section className="px-4 py-16 text-white sm:px-6 sm:py-20">
+
+      {/* DAY — white band. No dark surfaces anywhere in this palette. */}
+      <div className="relative bg-surface">
+        <section className="px-4 py-16 text-ink sm:px-6 sm:py-20">
           <div className="mx-auto max-w-6xl">
             <Reveal y={24} className="max-w-xl">
-              <p className="text-sm font-semibold uppercase tracking-wide text-gold">The workday</p>
-              <h2 className="mt-2 font-display text-3xl font-extrabold tracking-tight sm:text-4xl">
+              <p className="text-sm font-semibold uppercase tracking-wide text-brand-orange-dark">The workday</p>
+              <SplitReveal as="h2" className="mt-2 font-serif text-4xl italic tracking-tight sm:text-5xl">
                 A day on the run.
-              </h2>
+              </SplitReveal>
             </Reveal>
 
             <Stagger className="mt-12 grid gap-0 sm:grid-cols-2 lg:grid-cols-4" stagger={0.1}>
@@ -229,7 +233,7 @@ export default function ForAgents() {
                 <StaggerItem key={step.n} y={40} scale={0.96}>
                   <div
                     className={
-                      "relative h-full border-white/10 px-1 py-6 sm:px-5 " +
+                      "relative h-full border-ink/10 px-1 py-6 sm:px-5 " +
                       (i < DAY.length - 1 ? "sm:border-r" : "")
                     }
                   >
@@ -243,38 +247,39 @@ export default function ForAgents() {
                       {step.n}
                     </motion.span>
                     <h3 className="mt-4 font-display text-lg font-bold">{step.title}</h3>
-                    <p className="mt-2 text-sm leading-relaxed text-white/60">{step.body}</p>
+                    <p className="mt-2 text-sm leading-relaxed text-ink/60">{step.body}</p>
                   </div>
                 </StaggerItem>
               ))}
             </Stagger>
           </div>
         </section>
-        <Wave from="bg-ink" to="bg-canvas" />
       </div>
 
       {/* WHO FITS */}
       <section className="px-4 py-16 sm:px-6 sm:py-20">
         <div className="mx-auto grid max-w-6xl items-center gap-12 lg:grid-cols-[0.95fr_1.05fr]">
           <Reveal y={36} scale={0.96} className="relative overflow-hidden rounded-[1.75rem]">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src="/quika-cat-produce.jpg"
-              alt="Open-air market produce"
-              className="aspect-[4/5] w-full object-cover sm:aspect-[5/4] lg:aspect-[4/5]"
-            />
-            <div className="absolute inset-0 bg-gradient-to-t from-ink/50 to-transparent" />
-            <p className="absolute bottom-6 left-6 right-6 font-display text-xl font-bold text-white sm:text-2xl">
-              Your shortcuts are the edge.
-            </p>
+            <ClipReveal className="relative" direction="left">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src="/qyka-cat-produce.jpg"
+                alt="Open-air market produce"
+                className="aspect-[4/5] w-full object-cover sm:aspect-[5/4] lg:aspect-[4/5]"
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-ink/50 to-transparent" />
+              <p className="absolute bottom-6 left-6 right-6 font-serif text-2xl italic text-white sm:text-3xl">
+                Your shortcuts are the edge.
+              </p>
+            </ClipReveal>
           </Reveal>
 
           <div>
             <Reveal y={24}>
               <p className="text-sm font-semibold uppercase tracking-wide text-brand-orange">Who thrives</p>
-              <h2 className="mt-2 font-display text-3xl font-extrabold tracking-tight sm:text-4xl">
+              <SplitReveal as="h2" className="mt-2 font-serif text-4xl italic tracking-tight sm:text-5xl">
                 Built for people who already belong in the market.
-              </h2>
+              </SplitReveal>
             </Reveal>
             <Stagger className="mt-10 space-y-8" stagger={0.12}>
               {FIT.map((item, i) => (
@@ -295,31 +300,97 @@ export default function ForAgents() {
         </div>
       </section>
 
-      {/* APPLY — green band like home closer */}
-      <div className="relative bg-brand-green">
-        <Wave from="bg-canvas" to="bg-brand-green" />
-        <section id="apply" className="scroll-mt-28 px-4 py-16 text-white sm:px-6 sm:py-20">
+      {/* REQUIREMENTS + FAQ */}
+      <section className="bg-canvas-deep/60 px-4 py-16 sm:px-6 sm:py-20">
+        <div className="mx-auto grid max-w-6xl gap-14 lg:grid-cols-2 lg:gap-16">
+          <div>
+            <Reveal y={24}>
+              <p className="text-sm font-semibold uppercase tracking-wide text-brand-green">Before you apply</p>
+              <SplitReveal as="h2" className="mt-2 font-serif text-4xl italic tracking-tight sm:text-5xl">
+                What you need.
+              </SplitReveal>
+            </Reveal>
+            <Stagger className="mt-8 space-y-3" stagger={0.08}>
+              {[
+                "A smartphone with data — you'll use chat, photos, and transfers on the run",
+                "A bank account or wallet the run's transfer float can move through",
+                "A specific market you already shop and know the stalls at",
+                "Valid ID for verification before your first run",
+              ].map((req) => (
+                <StaggerItem key={req} y={16} scale={0.99}>
+                  <div className="flex items-start gap-3 rounded-xl bg-white p-4 shadow-[0_1px_2px_rgba(33,26,20,0.06)] ring-1 ring-ink/5">
+                    <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-brand-green text-white">
+                      <svg viewBox="0 0 24 24" className="h-3 w-3" fill="none" stroke="currentColor" strokeWidth="3">
+                        <path d="M5 13l4 4L19 7" strokeLinecap="round" strokeLinejoin="round" />
+                      </svg>
+                    </span>
+                    <p className="text-sm leading-relaxed text-ink/70">{req}</p>
+                  </div>
+                </StaggerItem>
+              ))}
+            </Stagger>
+          </div>
+
+          <div>
+            <Reveal y={24}>
+              <p className="text-sm font-semibold uppercase tracking-wide text-brand-orange">Common questions</p>
+              <SplitReveal as="h2" className="mt-2 font-serif text-4xl italic tracking-tight sm:text-5xl">
+                Before you ask.
+              </SplitReveal>
+            </Reveal>
+            <Stagger className="mt-8 divide-y divide-ink/8 border-y border-ink/8" stagger={0.08}>
+              {[
+                {
+                  q: "Do I shop with my own money?",
+                  a: "No — you shop using transfer float authorized for that run, never your own cash upfront.",
+                },
+                {
+                  q: "How am I paid?",
+                  a: "Earnings are tracked per completed run in the app and paid out to your linked account.",
+                },
+                {
+                  q: "Can I pick which runs I take?",
+                  a: "Yes — you only see and accept orders for the market(s) you've registered for.",
+                },
+              ].map((item) => (
+                <StaggerItem key={item.q} y={16} scale={0.99}>
+                  <div className="py-5">
+                    <p className="font-display font-bold text-ink">{item.q}</p>
+                    <p className="mt-1.5 text-sm leading-relaxed text-ink/60">{item.a}</p>
+                  </div>
+                </StaggerItem>
+              ))}
+            </Stagger>
+          </div>
+        </div>
+      </section>
+
+
+      {/* APPLY — white band like home closer. No dark surfaces anywhere in
+          this palette; separation from the cream page comes from bg-surface. */}
+      <div className="relative bg-surface">
+        <section id="apply" className="scroll-mt-28 px-4 py-16 text-ink sm:px-6 sm:py-20">
           <Reveal
             y={32}
             className="mx-auto grid max-w-6xl gap-10 lg:grid-cols-[1fr_0.95fr] lg:items-center"
           >
             <div>
-              <p className="text-sm font-semibold uppercase tracking-wide text-gold">Apply</p>
-              <h2 className="mt-2 font-display text-3xl font-extrabold tracking-tight sm:text-4xl">
-                Ready to shop for Quika?
-              </h2>
-              <p className="mt-3 max-w-md text-white/75">
+              <p className="text-sm font-semibold uppercase tracking-wide text-brand-orange-dark">Apply</p>
+              <SplitReveal as="h2" className="mt-2 font-serif text-4xl italic tracking-tight sm:text-5xl">
+                Ready to shop for Qyka?
+              </SplitReveal>
+              <p className="mt-3 max-w-md text-ink/70">
                 Tell us who you are and which market you know. We&apos;ll reach out as pilot slots open.
               </p>
-              <ul className="mt-6 space-y-2.5 text-sm text-white/80">
+              <ul className="mt-6 space-y-2.5 text-sm text-ink/70">
                 <li className="flex gap-2">
-                  <span className="text-gold">→</span> Transfers + photo proof only
+                  <span className="text-brand-orange-dark">→</span> Transfers + photo proof only
                 </li>
                 <li className="flex gap-2">
-                  <span className="text-gold">→</span> You accept proposed orders from your market
+                  <span className="text-brand-orange-dark">→</span> You accept proposed orders from your market
                 </li>
                 <li className="flex gap-2">
-                  <span className="text-gold">→</span> Earnings tracked on completed runs
+                  <span className="text-brand-orange-dark">→</span> Earnings tracked on completed runs
                 </li>
               </ul>
             </div>
@@ -332,10 +403,10 @@ export default function ForAgents() {
             </div>
           </Reveal>
         </section>
-        <Wave from="bg-brand-green" to="bg-ink" />
       </div>
 
       <MarketingFooter />
+      <HelpWidget />
     </div>
   );
 }

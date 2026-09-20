@@ -80,7 +80,7 @@ function Call({ orderId, onClose, mode = "video" }: any) {
           <div className="mt-2 flex gap-2">
             <button
               onClick={loadToken}
-              className="rounded-full bg-brand-orange px-5 py-2.5 text-sm font-bold text-white transition hover:bg-brand-orange-dark"
+              className="rounded-full bg-brand-orange px-5 py-2.5 text-sm font-bold text-[#1A1A1A] transition hover:bg-brand-orange-dark"
             >
               Try again
             </button>

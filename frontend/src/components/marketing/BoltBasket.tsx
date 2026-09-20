@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * Bolt-in-Basket illustration system — derived from the Quika logo:
+ * Bolt-in-Basket illustration system — derived from the Qyka logo:
  * orange basket, white lightning bolt, green produce silhouettes.
  * Variants react to context (hero fill, hover bounce, CTA stamp).
  */
@@ -21,7 +21,7 @@ export function BoltMark({ className = "h-5 w-5", bouncing = false, iconClassNam
   return (
     <span
       className={
-        "inline-flex items-center justify-center rounded-full bg-brand-orange text-white " +
+        "inline-flex items-center justify-center rounded-full bg-brand-orange text-[#1A1A1A] " +
         (bouncing ? "transition-transform duration-200 group-hover:-translate-y-1 group-hover:rotate-6" : "") +
         " " +
         className
@@ -75,7 +75,7 @@ export function BoltBasket({ size = "hero", filling = true, className = "" }: an
   return (
     <div className={"relative " + dims.className + " " + className} aria-hidden>
       <svg viewBox="0 0 200 220" className="h-auto w-full drop-shadow-lg" role="img">
-        <title>Quika basket with bolt</title>
+        <title>Qyka basket with bolt</title>
         {/* Produce rising into basket */}
         <g transform="translate(10 8)">
           <ProduceIcons filling={filling} />

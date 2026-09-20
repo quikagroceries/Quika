@@ -56,7 +56,7 @@ function AdminAgents() {
   return (
     <div>
       <h1 className="mb-1 font-display text-3xl font-extrabold tracking-tight text-ink md:text-4xl">Agents</h1>
-      <p className="mb-6 text-[#6b635a]">Approve applicants and see who's covering each market.</p>
+      <p className="mb-6 text-muted">Approve applicants and see who's covering each market.</p>
 
       {error && <p className="mb-4 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p>}
 
@@ -71,8 +71,8 @@ function AdminAgents() {
             <Card key={a.id} className="flex flex-wrap items-center justify-between gap-3">
               <div className="min-w-0">
                 <div className="font-semibold text-ink">Applicant {a.user_id.slice(0, 8)}…</div>
-                <div className="text-sm text-[#6b635a]">{marketName(a.market_id)}</div>
-                {a.note && <div className="mt-1 text-sm text-[#6b635a]">"{a.note}"</div>}
+                <div className="text-sm text-muted">{marketName(a.market_id)}</div>
+                {a.note && <div className="mt-1 text-sm text-muted">"{a.note}"</div>}
               </div>
               <div className="flex shrink-0 gap-2">
                 <Button
@@ -102,10 +102,10 @@ function AdminAgents() {
       ) : agents.length === 0 ? (
         <EmptyState icon="user" title="No agents yet" subtitle="Approved applicants will show up here." />
       ) : (
-        <div className="overflow-x-auto rounded-2xl border border-[#ebe7e0] bg-white shadow-sm">
+        <div className="overflow-x-auto rounded-3xl border border-line bg-surface shadow-sm">
           <table className="w-full min-w-[640px] text-left text-sm">
             <thead>
-              <tr className="border-b border-[#ebe7e0] text-xs uppercase tracking-wide text-[#8a8178]">
+              <tr className="border-b border-line text-xs uppercase tracking-wide text-faint">
                 <th className="px-4 py-3 font-semibold">Agent</th>
                 <th className="px-4 py-3 font-semibold">Market</th>
                 <th className="px-4 py-3 font-semibold">Status</th>
@@ -115,7 +115,7 @@ function AdminAgents() {
             </thead>
             <tbody>
               {agents.map((a) => (
-                <tr key={a.id} className="border-b border-[#ebe7e0] last:border-0">
+                <tr key={a.id} className="border-b border-line last:border-0">
                   <td className="px-4 py-3 font-semibold text-ink">{a.full_name || a.phone}</td>
                   <td className="px-4 py-3 text-ink/80">{marketName(a.assigned_market_id)}</td>
                   <td className="px-4 py-3">
@@ -125,7 +125,7 @@ function AdminAgents() {
                         ? "bg-brand-green/10 text-brand-green"
                         : a.on_duty
                           ? "bg-amber-50 text-amber-700"
-                          : "bg-[#f0eeeb] text-[#6b635a]")
+                          : "bg-sunken text-muted")
                     }>
                       {!a.on_duty ? "Off duty" : a.is_available ? "Available" : "Busy"}
                     </span>

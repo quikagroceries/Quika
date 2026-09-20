@@ -1,62 +1,24 @@
 "use client";
 
-import { useEffect, useRef, useState, type FormEvent, type MouseEvent, type ReactNode } from "react";
+import { useEffect, useState, type FormEvent, type MouseEvent } from "react";
 import Link from "next/link";
-import {
-  motion,
-  useReducedMotion,
-  useScroll,
-  useSpring,
-  useTransform,
-  type MotionStyle,
-  type MotionValue,
-} from "framer-motion";
-import { BoltMark } from "@/components/marketing/BoltBasket";
+import ClipReveal from "@/components/marketing/ClipReveal";
+import CountUpNumber from "@/components/marketing/CountUpNumber";
+import DeviceMockup from "@/components/marketing/DeviceMockup";
+import HelpWidget from "@/components/marketing/HelpWidget";
+import ImagePlaceholder from "@/components/marketing/ImagePlaceholder";
 import MarketShopPicker from "@/components/marketing/MarketShopPicker";
 import MarketingFooter from "@/components/marketing/MarketingFooter";
 import MarketingHeader from "@/components/marketing/MarketingHeader";
-import { FoodScatter, SoftCircles } from "@/components/marketing/MarketDecor";
-import Wave from "@/components/marketing/Wave";
+import { HeroIn, Reveal, Stagger, StaggerItem } from "@/components/marketing/motion";
+import SplitReveal from "@/components/marketing/SplitReveal";
+import TiltCard from "@/components/marketing/TiltCard";
 import { DIRECTORY_MARKETS } from "@/lib/marketDirectory";
 import { hashFromHref, scrollToSection } from "@/lib/scrollToSection";
-
-const PILOT = "our first pilot market";
-const EASE = [0.22, 1, 0.36, 1] as const;
-
-const FAQS = [
-  {
-    q: "What is Quika?",
-    a: "Quika is a remote personal shopper for Nigerian open-air markets. You send a free-text list, a local agent shops the stalls, pays by transfer, and a courier brings the haul to your door.",
-  },
-  {
-    q: "How do free-text lists work?",
-    a: "Write your list the way you’d tell a neighbour — “₦500 of pepper,” “2 wraps of beans.” There’s no supermarket catalogue. Your agent bargains and shops what you asked for.",
-  },
-  {
-    q: "How do I pay?",
-    a: "You deposit wallet balance or bank transfer before shopping starts. That locks the run. The final bill lands in the app with photos; float recycles through the system.",
-  },
-  {
-    q: "Does the agent carry cash?",
-    a: "No. Agents pay vendors by bank transfer with photo proof. There’s no unauthorized cash on the run — that’s a core Quika rule.",
-  },
-  {
-    q: "When can I start ordering?",
-    a: `We’re opening carefully with ${PILOT}. Join the waitlist and we’ll tell you when shopping opens in your area.`,
-  },
-  {
-    q: "Can I become a Quika agent?",
-    a: "Yes — if you already know a market’s stalls and prices. Apply on the For Agents page. You’ll accept proposed runs, shop, transfer-pay, and earn on completed deliveries.",
-  },
-  {
-    q: "What if something’s wrong with my order?",
-    a: "Every run leaves a trail: your list, transfers, and photos. Confirm delivery when it arrives, or raise an issue against that trail. Read Trust & Safety for the full picture.",
-  },
-] as const;
+import { FAQS, HELP_TOPICS, PILOT } from "@/lib/helpContent";
 
 function FaqAccordion() {
   const [open, setOpen] = useState<number | null>(0);
-  const reduceMotion = useReducedMotion();
 
   return (
     <div className="divide-y divide-ink/10 border-y border-ink/10">
@@ -85,257 +47,14 @@ function FaqAccordion() {
                 </svg>
               </span>
             </button>
-            <motion.div
-              initial={false}
-              animate={
-                reduceMotion
-                  ? { height: isOpen ? "auto" : 0, opacity: isOpen ? 1 : 0 }
-                  : { height: isOpen ? "auto" : 0, opacity: isOpen ? 1 : 0 }
-              }
-              transition={{ duration: 0.35, ease: EASE }}
-              className="overflow-hidden"
-            >
+            {isOpen && (
               <p className="max-w-2xl pb-6 text-base leading-relaxed text-ink/60 sm:pb-7">
                 {item.a}
               </p>
-            </motion.div>
+            )}
           </div>
         );
       })}
-    </div>
-  );
-}
-
-/** Scroll-triggered reveal — fade + direction + optional scale */
-function Reveal({
-  children,
-  className = "",
-  delay = 0,
-  x = 0,
-  y = 36,
-  scale,
-  duration = 0.75,
-}: {
-  children: ReactNode;
-  className?: string;
-  delay?: number;
-  x?: number;
-  y?: number;
-  scale?: number;
-  duration?: number;
-}) {
-  const reduceMotion = useReducedMotion();
-  if (reduceMotion) return <div className={className}>{children}</div>;
-  return (
-    <motion.div
-      className={className}
-      initial={{ opacity: 0, x, y, scale: scale ?? 1 }}
-      whileInView={{ opacity: 1, x: 0, y: 0, scale: 1 }}
-      viewport={{ once: true, margin: "-12% 0px -6% 0px", amount: 0.25 }}
-      transition={{ duration, delay, ease: EASE }}
-    >
-      {children}
-    </motion.div>
-  );
-}
-
-function Stagger({
-  children,
-  className = "",
-  stagger = 0.1,
-  delay = 0,
-}: {
-  children: ReactNode;
-  className?: string;
-  stagger?: number;
-  delay?: number;
-}) {
-  const reduceMotion = useReducedMotion();
-  if (reduceMotion) return <div className={className}>{children}</div>;
-  return (
-    <motion.div
-      className={className}
-      initial="hidden"
-      whileInView="show"
-      viewport={{ once: true, margin: "-10% 0px", amount: 0.2 }}
-      variants={{
-        hidden: {},
-        show: { transition: { staggerChildren: stagger, delayChildren: delay } },
-      }}
-    >
-      {children}
-    </motion.div>
-  );
-}
-
-function StaggerItem({
-  children,
-  className = "",
-  y = 40,
-  x = 0,
-  scale = 0.94,
-}: {
-  children: ReactNode;
-  className?: string;
-  y?: number;
-  x?: number;
-  scale?: number;
-}) {
-  const reduceMotion = useReducedMotion();
-  if (reduceMotion) return <div className={className}>{children}</div>;
-  return (
-    <motion.div
-      className={className}
-      variants={{
-        hidden: { opacity: 0, y, x, scale },
-        show: {
-          opacity: 1,
-          y: 0,
-          x: 0,
-          scale: 1,
-          transition: { duration: 0.7, ease: EASE },
-        },
-      }}
-    >
-      {children}
-    </motion.div>
-  );
-}
-
-/** Gentle scroll-linked vertical parallax */
-function Parallax({
-  children,
-  className = "",
-  offset = 48,
-}: {
-  children: ReactNode;
-  className?: string;
-  offset?: number;
-}) {
-  const ref = useRef<HTMLDivElement>(null);
-  const reduceMotion = useReducedMotion();
-  const { scrollYProgress } = useScroll({
-    target: ref,
-    offset: ["start end", "end start"],
-  });
-  const rawY = useTransform(scrollYProgress, [0, 1], [offset, -offset]);
-  const y = useSpring(rawY, { stiffness: 90, damping: 28, mass: 0.4 });
-  const style: MotionStyle | undefined = reduceMotion ? undefined : { y };
-
-  return (
-    <motion.div ref={ref} style={style} className={className}>
-      {children}
-    </motion.div>
-  );
-}
-
-function FeatureRow({ icon, title, body }: { icon: ReactNode; title: string; body: string }) {
-  const reduceMotion = useReducedMotion();
-  const className = "flex items-start gap-3";
-  const content = (
-    <>
-      <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white text-ink shadow-[0_10px_28px_rgba(33,26,20,0.12)]">
-        {icon}
-      </span>
-      <div className="pt-0.5">
-        <p className="font-display text-sm font-bold tracking-tight text-ink">{title}</p>
-        <p className="mt-0.5 text-xs leading-snug text-ink/55">{body}</p>
-      </div>
-    </>
-  );
-  if (reduceMotion) return <div className={className}>{content}</div>;
-  return (
-    <motion.div
-      className={className}
-      variants={{
-        hidden: { opacity: 0, x: 24 },
-        show: { opacity: 1, x: 0, transition: { duration: 0.55, ease: EASE } },
-      }}
-    >
-      {content}
-    </motion.div>
-  );
-}
-
-function HeroPortrait() {
-  const reduceMotion = useReducedMotion();
-  return (
-    <div className="relative aspect-square w-full max-w-[540px] lg:mx-0">
-      <div
-        aria-hidden
-        className="pointer-events-none absolute inset-[11%] rounded-full bg-ink/10 blur-2xl"
-      />
-
-      <motion.div
-        className="absolute inset-[9%] rounded-full bg-gold"
-        initial={reduceMotion ? false : { scale: 0.88, opacity: 0 }}
-        animate={{ scale: 1, opacity: 1 }}
-        transition={{ duration: 0.8, ease: EASE }}
-      />
-
-      <motion.div
-        aria-hidden
-        className="absolute inset-[11.5%] rounded-full border-[1.5px] border-dashed border-ink/25"
-        animate={reduceMotion ? undefined : { rotate: 360 }}
-        transition={reduceMotion ? undefined : { duration: 48, ease: "linear", repeat: Infinity }}
-      />
-
-      <motion.div
-        className="absolute inset-[13%] overflow-hidden rounded-full bg-gold"
-        initial={reduceMotion ? false : { scale: 1.08, opacity: 0 }}
-        animate={{ scale: 1, opacity: 1 }}
-        transition={{ duration: 0.9, delay: 0.1, ease: EASE }}
-      >
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
-          src="/quika-hero-person.jpg"
-          alt="Shopper with a market basket"
-          className="h-full w-full object-cover"
-        />
-      </motion.div>
-
-      <motion.svg
-        viewBox="0 0 200 200"
-        className="pointer-events-none absolute inset-0 h-full w-full"
-        aria-hidden
-        initial={reduceMotion ? false : { opacity: 0, rotate: -8 }}
-        animate={{ opacity: 1, rotate: 0 }}
-        transition={{ duration: 1, delay: 0.35, ease: EASE }}
-      >
-        <circle
-          cx="100"
-          cy="100"
-          r="94"
-          fill="none"
-          stroke="#0E7A3C"
-          strokeWidth="4.5"
-          strokeLinecap="round"
-          strokeDasharray="48 542"
-          transform="rotate(-40 100 100)"
-        />
-        <circle
-          cx="100"
-          cy="100"
-          r="94"
-          fill="none"
-          stroke="#C9C2B6"
-          strokeWidth="4.5"
-          strokeLinecap="round"
-          strokeDasharray="42 548"
-          transform="rotate(28 100 100)"
-        />
-        <circle
-          cx="100"
-          cy="100"
-          r="94"
-          fill="none"
-          stroke="#E8541E"
-          strokeWidth="4.5"
-          strokeLinecap="round"
-          strokeDasharray="54 536"
-          transform="rotate(205 100 100)"
-        />
-      </motion.svg>
     </div>
   );
 }
@@ -353,10 +72,10 @@ function WaitlistInline({ inputId = "waitlist-email" }: { inputId?: string }) {
       if (match) setMarketLabel(match.name);
     }
     syncMarket();
-    window.addEventListener("quika-market-change", syncMarket);
+    window.addEventListener("qyka-market-change", syncMarket);
     window.addEventListener("popstate", syncMarket);
     return () => {
-      window.removeEventListener("quika-market-change", syncMarket);
+      window.removeEventListener("qyka-market-change", syncMarket);
       window.removeEventListener("popstate", syncMarket);
     };
   }, []);
@@ -364,7 +83,7 @@ function WaitlistInline({ inputId = "waitlist-email" }: { inputId?: string }) {
   function submit(e: FormEvent) {
     e.preventDefault();
     if (!email.trim()) return;
-    const subject = encodeURIComponent(`Quika waitlist — ${marketLabel}`);
+    const subject = encodeURIComponent(`Qyka waitlist — ${marketLabel}`);
     const body = encodeURIComponent(
       `Join waitlist for ${marketLabel}.\n\nEmail: ${email.trim()}\n`
     );
@@ -390,7 +109,7 @@ function WaitlistInline({ inputId = "waitlist-email" }: { inputId?: string }) {
       />
       <button
         type="submit"
-        className="m-1.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-brand-green text-white transition hover:bg-brand-green-dark focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gold"
+        className="m-1.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-brand-orange text-[#1A1A1A] transition hover:bg-brand-orange-dark focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gold"
         aria-label="Join waitlist"
       >
         <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2.5">
@@ -410,322 +129,137 @@ function handleInPageAnchor(e: MouseEvent<HTMLAnchorElement>) {
   window.history.pushState(null, "", `/#${hash}`);
 }
 
-/** Market-first entry — same control as the orange shop band. */
-function HeroCtas() {
-  return (
-    <div className="max-w-xl">
-      <MarketShopPicker inputId="hero-market-picker" />
-    </div>
-  );
-}
+const STATS = [
+  { value: 0, suffix: "", label: "unauthorized cash on any run — transfer only" },
+  { value: 100, suffix: "%", label: "of vendor payments photographed as proof" },
+  { value: 3, suffix: "", label: "ways to work with Qyka — shop, agent, or rider" },
+] as const;
 
-/** Uses `/quika-app-phone.png` when present; otherwise a phone-shaped placeholder. */
-function AppPhoneSlot({ className = "" }: { className?: string }) {
-  const [hasPhoneArt, setHasPhoneArt] = useState(true);
-  const reduceMotion = useReducedMotion();
+type StartCard = {
+  id: string;
+  eyebrow: string;
+  title: string;
+  body: string;
+  cta: string;
+  href: string;
+  img?: string;
+  imgAlt?: string;
+  placeholder?: { label: string; file: string };
+  tone: "orange" | "ink" | "green";
+};
 
+const START_CARDS: StartCard[] = [
+  {
+    id: "customers",
+    eyebrow: "Customers",
+    title: "Get your groceries, without the trip.",
+    body: "Send a free-text list — market or supermarket — pick where to shop it, and deposit to lock the run.",
+    cta: "Open Qyka",
+    href: "/shop",
+    img: "/qyka-hero-person.jpg",
+    imgAlt: "Customer with a market shopping list",
+    tone: "orange",
+  },
+  {
+    id: "agents",
+    eyebrow: "Agents",
+    title: "Earn shopping a market you already know.",
+    body: "Accept proposed runs, bargain the stalls, pay vendors by transfer, and get paid on completed deliveries.",
+    cta: "Become an Agent",
+    href: "/for-agents",
+    img: "/qyka-cat-produce.jpg",
+    imgAlt: "Agent shopping fresh produce at a market stall",
+    tone: "ink",
+  },
+  {
+    id: "riders",
+    eyebrow: "Riders",
+    title: "Deliver market hauls, earn on your own schedule.",
+    body: "Pick up a packed order at the market gate and ride it home. Flexible hours, paid per completed delivery.",
+    cta: "Become a Rider",
+    href: "/for-riders",
+    placeholder: { label: "Rider on a delivery bike with packed market bags", file: "/qyka-rider-hero.jpg" },
+    tone: "green",
+  },
+];
+
+const TONE_BG: Record<StartCard["tone"], string> = {
+  orange: "bg-brand-orange",
+  ink: "bg-ink",
+  green: "bg-brand-green",
+};
+
+function StartTile({ card }: { card: StartCard }) {
   return (
-    <motion.div
-      className={"relative " + className}
-      animate={reduceMotion ? undefined : { y: [0, -10, 0] }}
-      transition={
-        reduceMotion
-          ? undefined
-          : { duration: 5.5, ease: "easeInOut", repeat: Infinity }
-      }
+    <TiltCard max={6}>
+    <Link
+      href={card.href}
+      data-cursor={card.cta}
+      className="group relative flex min-h-[420px] flex-col overflow-hidden rounded-2xl text-white shadow-[0_1px_2px_rgba(33,26,20,0.06)] transition hover:shadow-[0_24px_48px_-12px_rgba(33,26,20,0.35)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-gold"
     >
-      {hasPhoneArt ? (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img
-          src="/quika-app-phone.png"
-          alt="Quika on mobile"
-          className="relative w-full drop-shadow-[0_28px_48px_rgba(33,26,20,0.35)]"
-          onError={() => setHasPhoneArt(false)}
-        />
-      ) : (
-        <div
-          className="relative aspect-[9/19] w-full rounded-[2rem] border-[6px] border-ink bg-white shadow-[0_28px_48px_rgba(33,26,20,0.35)]"
-          aria-hidden
-        >
-          <div className="mx-auto mt-2 h-1.5 w-16 rounded-full bg-ink/15" />
-          <div className="flex h-[calc(100%-0.75rem)] flex-col items-center justify-center gap-2 px-4 text-center">
-            <BoltMark className="h-12 w-12" />
-            <p className="font-display text-sm font-bold text-ink">Phone mockup</p>
-            <p className="text-[11px] text-ink/45">Add /quika-app-phone.png</p>
-          </div>
-        </div>
-      )}
-    </motion.div>
+      <div className={"absolute inset-0 " + TONE_BG[card.tone]} />
+      <div className="absolute inset-0">
+        {card.img ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={card.img}
+            alt={card.imgAlt || ""}
+            className="h-full w-full object-cover opacity-90 transition duration-500 group-hover:scale-105 group-hover:opacity-100"
+          />
+        ) : (
+          <ImagePlaceholder
+            label={card.placeholder!.label}
+            file={card.placeholder!.file}
+            tone="dark"
+            align="top"
+            className="h-full w-full"
+          />
+        )}
+        <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/25 to-transparent" />
+      </div>
+
+      <div className="relative z-[1] mt-auto flex flex-col gap-2 p-7 sm:p-8">
+        <p className="text-xs font-bold uppercase tracking-[0.16em] text-white/70">{card.eyebrow}</p>
+        <h3 className="font-display text-2xl font-extrabold leading-tight tracking-tight sm:text-[1.65rem]">
+          {card.title}
+        </h3>
+        <p className="max-w-sm text-sm leading-relaxed text-white/75">{card.body}</p>
+        <span className="mt-3 inline-flex items-center gap-2 font-display text-sm font-bold">
+          {card.cta}
+          <svg viewBox="0 0 24 24" className="h-4 w-4 transition group-hover:translate-x-1" fill="none" stroke="currentColor" strokeWidth="2.4" aria-hidden>
+            <path d="M5 12h14M13 6l6 6-6 6" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+        </span>
+      </div>
+    </Link>
+    </TiltCard>
   );
 }
 
-const HOW_STEPS = [
+const CATEGORIES = [
+  { img: "/qyka-cat-produce.jpg", title: "Fresh produce", body: "Tomatoes, peppers, leafy greens — bargained by weight at the market." },
+  { img: "/qyka-cat-protein.jpg", title: "Proteins & fish", body: "Meat, fish, and poultry, priced the way the stall sells it." },
+  { img: "/qyka-cat-pantry.jpg", title: "Pantry & provisions", body: "Rice, garri, oil, and the rest of the weekly list." },
   {
-    n: "01",
-    tab: "Order",
-    title: "You write the list",
-    meta: "Free text · No catalogue",
-    body: "Send ₦500 of pepper the way you’d tell a neighbour at the stall — not a supermarket SKU.",
-    img: "/quika-hero-person.jpg",
-    imgAlt: "Shopper ready with a market list",
-    bg: "bg-brand-orange",
-    fg: "text-white",
-    soft: "text-white/75",
-    mediaTint: "from-brand-orange/40",
-    tagBg: "bg-ink text-white",
-  },
-  {
-    n: "02",
-    tab: "Assign",
-    title: "We match an agent",
-    meta: "Local · Market-fluent",
-    body: "Accept a proposed agent who already knows that market’s stalls, prices, and shortcuts.",
-    img: "/quika-hero-person.jpg",
-    imgAlt: "Customer ready to assign a market agent",
-    bg: "bg-ink",
-    fg: "text-white",
-    soft: "text-white/70",
-    mediaTint: "from-ink/50",
-    tagBg: "bg-brand-orange text-white",
-  },
-  {
-    n: "03",
-    tab: "Pay",
-    title: "Deposit first",
-    meta: "Wallet · Bank transfer",
-    body: "Balance or transfer locks the run — shopping only starts when payment is clear.",
-    img: "/quika-cat-produce.jpg",
-    imgAlt: "Market produce ready for a paid run",
-    bg: "bg-gold",
-    fg: "text-ink",
-    soft: "text-ink/70",
-    mediaTint: "from-gold/50",
-    tagBg: "bg-ink text-white",
-  },
-  {
-    n: "04",
-    tab: "Shop",
-    title: "Bargain & transfer",
-    meta: "In person · No cash float",
-    body: "Your agent bargains at the stall and pays vendors by transfer — no unauthorized cash on the run.",
-    img: "/quika-cat-produce.jpg",
-    imgAlt: "Fresh produce from an open-air market",
-    bg: "bg-brand-green",
-    fg: "text-white",
-    soft: "text-white/75",
-    mediaTint: "from-brand-green/40",
-    tagBg: "bg-ink text-white",
-  },
-  {
-    n: "05",
-    tab: "Pack",
-    title: "Proof & final bill",
-    meta: "Photos · Float recycle",
-    body: "Photos, packing, and the final bill land in the app — float recycles through the system.",
-    img: "/quika-trust-basket.jpg",
-    imgAlt: "Market basket being packed",
-    bg: "bg-chalk",
-    fg: "text-ink",
-    soft: "text-ink/65",
-    mediaTint: "from-chalk/40",
-    tagBg: "bg-brand-green text-white",
-  },
-  {
-    n: "06",
-    tab: "Deliver",
-    title: "To your door",
-    meta: "Courier · Confirm receipt",
-    body: "A courier brings the haul home. The run ends when you confirm delivery.",
-    img: "/quika-trust-basket.jpg",
-    imgAlt: "Packed market basket ready for delivery",
-    bg: "bg-brand-orange-dark",
-    fg: "text-white",
-    soft: "text-white/75",
-    mediaTint: "from-brand-orange-dark/40",
-    tagBg: "bg-ink text-white",
+    placeholder: { label: "Supermarket shelf goods — toiletries, cleaning, packaged food", file: "/qyka-cat-supermarket.jpg" },
+    title: "Household & supermarket",
+    body: "Toiletries, cleaning supplies, and packaged groceries at fixed shelf prices.",
   },
 ] as const;
 
-type HowStep = (typeof HOW_STEPS)[number];
-
-const TAB_H = 40;
-const STACK_TOP = 96;
-
-/** Dropped-card settle poses — alternate L/R tilt + messy offsets (not a neat pile) */
-const CARD_DROP = [
-  { rotate: -5.5, x: -22, y: 0 },
-  { rotate: 4.8, x: 26, y: 6 },
-  { rotate: -6.2, x: -14, y: 4 },
-  { rotate: 5.6, x: 20, y: 8 },
-  { rotate: -4.4, x: -28, y: 5 },
-  { rotate: 3.9, x: 16, y: 7 },
+const TRUST_POINTS = [
+  { t: "Agents hold no cash", d: "Every vendor is paid by bank transfer — nothing changes hands off the books." },
+  { t: "Photo proof on every spend", d: "Each transfer is logged with a photo of what it bought." },
+  { t: "Capped spending", d: "Hard ceilings on every run — overages need your explicit OK first." },
+  { t: "Deposit before assignment", d: "Runs only start once payment clears, so there's no ambiguity on either side." },
 ] as const;
-
-/** Sticky stack — each card “drops” into a tilted, offset settle like a messy deck */
-function HowFolder({
-  step,
-  index,
-  progress,
-  reduceMotion,
-}: {
-  step: HowStep;
-  index: number;
-  progress: MotionValue<number>;
-  reduceMotion: boolean;
-}) {
-  const drop = CARD_DROP[index] ?? CARD_DROP[0];
-  const stickyTop = STACK_TOP + index * TAB_H;
-  const total = HOW_STEPS.length;
-  // Upright while this card is the focus; settles into the messy drop as the next ones pile on
-  const start = index / total;
-  const end = Math.min(1, start + 0.42);
-  const range: [number, number] = [start, end];
-
-  const rawRotate = useTransform(progress, range, [0, drop.rotate]);
-  const rawX = useTransform(progress, range, [0, drop.x]);
-  const rawY = useTransform(progress, range, [0, drop.y]);
-  const rawScale = useTransform(progress, range, [1, 0.97]);
-
-  const rotate = useSpring(rawRotate, { stiffness: 70, damping: 22, mass: 0.4 });
-  const x = useSpring(rawX, { stiffness: 70, damping: 22, mass: 0.4 });
-  const y = useSpring(rawY, { stiffness: 70, damping: 22, mass: 0.4 });
-  const scale = useSpring(rawScale, { stiffness: 70, damping: 22, mass: 0.4 });
-
-  const settledStyle = reduceMotion
-    ? {
-        transform: `translate(${drop.x}px, ${drop.y}px) rotate(${drop.rotate}deg)`,
-      }
-    : undefined;
-
-  return (
-    <div
-      className={reduceMotion ? "relative mb-8" : "sticky mb-8"}
-      style={{ top: reduceMotion ? undefined : stickyTop, zIndex: index + 1 }}
-    >
-      <motion.article
-        style={
-          reduceMotion
-            ? settledStyle
-            : { rotate, x, y, scale, transformOrigin: "50% 20%" }
-        }
-        className={
-          "will-change-transform overflow-hidden rounded-[1.75rem] shadow-[0_22px_50px_rgba(33,26,20,0.22)] sm:rounded-[2rem] " +
-          step.bg +
-          " " +
-          step.fg
-        }
-      >
-        <header
-          className={
-            "flex items-center gap-3 px-5 py-3.5 sm:gap-4 sm:px-8 " +
-            (step.fg === "text-white" ? "border-b border-white/15" : "border-b border-ink/10")
-          }
-        >
-          <span className="font-display text-xs font-bold tracking-[0.14em] opacity-70">
-            {step.n}
-          </span>
-          <h3 className="font-display text-lg font-extrabold uppercase tracking-wide sm:text-xl">
-            {step.tab}
-          </h3>
-          <span className="ml-auto hidden text-xs font-semibold uppercase tracking-[0.16em] opacity-60 sm:block">
-            {step.meta}
-          </span>
-        </header>
-
-        <div className="grid min-h-[min(62vh,540px)] lg:grid-cols-[1.05fr_0.95fr]">
-          <div className="flex flex-col justify-center px-6 py-10 sm:px-10 sm:py-12 lg:px-14">
-            <p className={"text-xs font-semibold uppercase tracking-[0.2em] " + step.soft}>
-              {step.meta}
-            </p>
-            <h3 className="mt-3 max-w-md font-display text-3xl font-extrabold tracking-tight sm:text-4xl lg:text-[2.6rem] lg:leading-[1.1]">
-              {step.title}
-            </h3>
-            <p className={"mt-5 max-w-md text-base leading-relaxed sm:text-lg " + step.soft}>
-              {step.body}
-            </p>
-            <div className="mt-8 flex flex-wrap gap-2">
-              <span
-                className={
-                  "inline-flex h-9 items-center rounded-full px-3.5 text-xs font-bold uppercase tracking-wide " +
-                  step.tagBg
-                }
-              >
-                {step.tab}
-              </span>
-              <span
-                className={
-                  "inline-flex h-9 items-center rounded-full px-3.5 text-xs font-bold uppercase tracking-wide " +
-                  step.tagBg
-                }
-              >
-                Step {step.n}
-              </span>
-            </div>
-          </div>
-
-          <div className="relative min-h-[220px] sm:min-h-[300px] lg:min-h-full">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={step.img}
-              alt={step.imgAlt}
-              className="absolute inset-0 h-full w-full object-cover"
-            />
-            <div
-              className={
-                "absolute inset-0 bg-gradient-to-t via-transparent to-transparent lg:bg-gradient-to-r lg:from-transparent " +
-                step.mediaTint
-              }
-            />
-            <span
-              className={
-                "pointer-events-none absolute bottom-4 right-5 font-display text-[5.5rem] font-extrabold leading-none tracking-tight opacity-[0.18] sm:text-[7rem] " +
-                step.fg
-              }
-              aria-hidden
-            >
-              {step.n}
-            </span>
-          </div>
-        </div>
-      </motion.article>
-    </div>
-  );
-}
-
-function HowStackCards() {
-  const reduceMotion = Boolean(useReducedMotion());
-  const containerRef = useRef<HTMLDivElement>(null);
-  const { scrollYProgress } = useScroll({
-    target: containerRef,
-    offset: ["start start", "end end"],
-  });
-
-  return (
-    <div ref={containerRef} className="relative mt-12 overflow-visible px-2 sm:mt-16 sm:px-4 md:px-6">
-      {HOW_STEPS.map((step, i) => (
-        <HowFolder
-          key={step.n}
-          step={step}
-          index={i}
-          progress={scrollYProgress}
-          reduceMotion={reduceMotion}
-        />
-      ))}
-      {/* Hold so the pile can settle and peeks stay visible */}
-      {!reduceMotion ? <div className="h-[40vh] sm:h-[48vh]" aria-hidden /> : null}
-    </div>
-  );
-}
 
 export default function MarketingPage() {
-  const reduceMotion = useReducedMotion();
-
   useEffect(() => {
     const scrollFromHash = (behavior: ScrollBehavior = "smooth") => {
-      const fromStorage = sessionStorage.getItem("quika-scroll-to");
+      const fromStorage = sessionStorage.getItem("qyka-scroll-to");
       if (fromStorage) {
-        sessionStorage.removeItem("quika-scroll-to");
-        // Wait a tick for layout after route transition
+        sessionStorage.removeItem("qyka-scroll-to");
         requestAnimationFrame(() => scrollToSection(fromStorage, behavior));
         return;
       }
@@ -741,190 +275,171 @@ export default function MarketingPage() {
   }, []);
 
   return (
-    <div className="bg-canvas text-ink">
+    <div className="force-light min-h-screen bg-canvas text-ink">
       <MarketingHeader />
 
-      {/* HERO */}
+      {/* HERO — split: headline + market picker on the left, real product UI on the right */}
       <section className="relative overflow-hidden bg-canvas">
-        <SoftCircles tone="canvas" />
-        <div className="relative z-[1] mx-auto grid max-w-6xl items-center gap-5 px-4 pb-10 pt-24 sm:px-6 lg:grid-cols-[0.85fr_1.35fr] lg:gap-0 lg:pb-14 lg:pt-28">
-          <motion.div
-            initial={{ opacity: 0, y: 18 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.55, ease: [0.22, 1, 0.36, 1] }}
-          >
-            <div className="relative">
-              <h1 className="font-display text-4xl font-extrabold leading-[1.08] tracking-tight text-ink sm:text-5xl lg:text-[3.5rem]">
-                Real{" "}
-                <span className="text-brand-orange">Market</span>{" "}
-                <span className="text-brand-green">Shopping</span>,
-                <br />
-                <span className="text-brand-orange">Made</span>{" "}
-                <span className="text-brand-green">Easy</span>.
-              </h1>
-            </div>
-            <motion.div
-              className="mt-4 flex max-w-md items-center gap-3 sm:gap-4"
-              initial={{ opacity: 0, y: 12 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5, delay: 0.12, ease: [0.22, 1, 0.36, 1] }}
-            >
-              <div className="h-12 w-12 shrink-0 overflow-hidden rounded-full bg-white shadow-[0_0_0_1px_rgba(33,26,20,0.06),0_8px_20px_rgba(33,26,20,0.1)] sm:h-14 sm:w-14">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src="/quika-hero-person.jpg"
-                  alt=""
-                  className="h-full w-full object-cover"
-                />
-              </div>
-              <p className="text-[0.95rem] font-medium leading-snug text-ink sm:text-lg">
-                When you can&apos;t make it to the market,
-                <br />
-                we&apos;re just a click away.
+        <div className="relative z-[1] mx-auto grid max-w-6xl items-center gap-12 px-4 pb-16 pt-16 sm:px-6 lg:grid-cols-[1.05fr_0.95fr] lg:gap-10 lg:pb-20 lg:pt-20">
+          <div>
+            <HeroIn y={20}>
+              <p className="text-sm font-semibold uppercase tracking-wide text-brand-green">
+                Pre-pilot · Groceries, from open-air markets to supermarkets
               </p>
-            </motion.div>
-            <motion.div
-              className="mt-5"
-              initial={{ opacity: 0, y: 12 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5, delay: 0.22, ease: [0.22, 1, 0.36, 1] }}
+            </HeroIn>
+            <SplitReveal
+              as="h1"
+              mode="load"
+              delay={0.08}
+              className="mt-3 font-serif text-5xl italic leading-[1.05] tracking-tight text-ink sm:text-6xl lg:text-[4rem]"
             >
+              Your groceries, <span className="text-brand-orange">shopped right</span>.
+            </SplitReveal>
+            <HeroIn y={20} delay={0.16}>
+              <p className="mt-5 max-w-lg text-base leading-relaxed text-ink/60 sm:text-lg">
+                Send a free-text list for anything on it — market produce or supermarket
+                staples. A local agent shops it and pays by transfer. A rider brings it to
+                your door. No cash on the street.
+              </p>
+            </HeroIn>
+            <HeroIn y={16} delay={0.24} className="mt-8 max-w-xl">
               <HeroCtas />
-            </motion.div>
-            <p className="mt-2 text-xs font-medium text-ink/40">
-              Pre-pilot · Pilot markets open Quika; others join the waitlist
-            </p>
-          </motion.div>
+            </HeroIn>
+            <HeroIn y={12} delay={0.32}>
+              <p className="mt-3 text-xs font-medium text-ink/40">
+                Pilot markets open Qyka today; everyone else joins the waitlist.
+              </p>
+            </HeroIn>
+          </div>
 
-          <motion.div
-            className="mx-auto flex w-full max-w-lg flex-col items-center gap-6 sm:max-w-none sm:flex-row sm:items-center sm:gap-5 lg:mx-0 lg:max-w-none lg:justify-start lg:gap-4"
-            initial={{ opacity: 0, scale: 0.96 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ duration: 0.65, delay: 0.1, ease: [0.22, 1, 0.36, 1] }}
-          >
-            {/* Negative margin cancels the transparent padding around the circular disc */}
-            <div className="w-full max-w-[360px] shrink-0 sm:max-w-[460px] lg:-ml-12 lg:max-w-[540px]">
-              <HeroPortrait />
+          <HeroIn y={32} delay={0.2} className="relative mx-auto w-full max-w-sm lg:mx-0 lg:max-w-none">
+            <div className="relative mx-auto w-full max-w-[300px]">
+              <DeviceMockup />
+              <div className="absolute -left-10 -top-4 hidden -rotate-3 rounded-xl bg-white px-4 py-3 shadow-[0_16px_36px_rgba(33,26,20,0.16)] sm:block">
+                <p className="text-xs font-bold text-ink">₦500 pepper</p>
+                <p className="text-[0.7rem] text-ink/50">added to list</p>
+              </div>
+              <div className="absolute -right-12 -bottom-4 hidden rotate-2 rounded-xl bg-ink px-4 py-3 text-white shadow-[0_16px_36px_rgba(33,26,20,0.24)] sm:block">
+                <p className="text-xs font-bold">Transfer sent</p>
+                <p className="text-[0.7rem] text-white/60">photo attached</p>
+              </div>
             </div>
+          </HeroIn>
+        </div>
 
-            <Stagger className="flex min-w-0 flex-1 flex-col gap-5" stagger={0.14} delay={0.35}>
-              <FeatureRow
-                title="Free-text lists"
-                body="Write ₦500 of pepper — no catalogue needed."
-                icon={
-                  <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2">
-                    <path d="M8 6h12M8 12h12M8 18h8" strokeLinecap="round" />
-                    <path d="M4 6h.01M4 12h.01M4 18h.01" strokeLinecap="round" />
-                  </svg>
-                }
-              />
-              <FeatureRow
-                title="Transfer pay"
-                body="Agent bargains, then pays stalls by transfer."
-                icon={
-                  <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2">
-                    <path d="M7 17 17 7M8 7h9v9" strokeLinecap="round" strokeLinejoin="round" />
-                  </svg>
-                }
-              />
-              <FeatureRow
-                title="Courier delivery"
-                body="Packed at the market and brought to your door."
-                icon={
-                  <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2">
-                    <path d="M3 7h11v10H3zM14 10h4l3 3v4h-7V10z" strokeLinejoin="round" />
-                    <circle cx="7" cy="18" r="1.5" fill="currentColor" stroke="none" />
-                    <circle cx="17" cy="18" r="1.5" fill="currentColor" stroke="none" />
-                  </svg>
-                }
-              />
-            </Stagger>
-          </motion.div>
+        {/* Stat strip */}
+        <div className="border-t border-ink/8 bg-canvas-deep/60">
+          <Stagger className="mx-auto grid max-w-6xl grid-cols-1 divide-y divide-ink/8 px-4 sm:grid-cols-3 sm:divide-x sm:divide-y-0 sm:px-6" stagger={0.1}>
+            {STATS.map((s) => (
+              <StaggerItem key={s.label} y={16} scale={0.98}>
+                <div className="flex items-center gap-3 px-1 py-5 sm:flex-col sm:items-start sm:px-6">
+                  <CountUpNumber
+                    value={s.value}
+                    suffix={s.suffix}
+                    className="font-serif text-3xl italic text-ink sm:text-4xl"
+                  />
+                  <span className="text-sm text-ink/55 sm:mt-1">{s.label}</span>
+                </div>
+              </StaggerItem>
+            ))}
+          </Stagger>
         </div>
       </section>
 
-      {/* ORANGE — pick your market (product model is market-first, not address-first) */}
-      <section id="action" className="relative z-[2] scroll-mt-28 overflow-visible px-4 pb-16 pt-24 sm:px-6 sm:pb-20 sm:pt-28">
-        <Reveal className="relative z-[1] mx-auto max-w-6xl" y={36}>
-          <div className="relative text-white">
-            <div className="app-cta-slab relative z-0 bg-brand-orange px-7 py-12 sm:px-10 sm:py-14 lg:flex lg:min-h-[360px] lg:items-center lg:px-14 lg:py-16 lg:pr-[42%]">
-              <div className="max-w-xl">
-                <p className="text-sm font-semibold uppercase tracking-wide text-white/70">
-                  Shop a market
-                </p>
-                <h2 className="mt-2 font-display text-3xl font-extrabold leading-tight tracking-tight sm:text-4xl">
-                  Enter the market you{" "}
-                  <span className="underline decoration-gold decoration-4 underline-offset-4">
-                    buy from
-                  </span>
-                </h2>
-                <p className="mt-4 max-w-md text-base text-white/80 sm:text-lg">
-                  Quika is built around specific open-air markets — not delivery zones. Pick yours to open the app or join the waitlist.
-                </p>
-                <div className="mt-8">
-                  <MarketShopPicker inputId="action-market-picker" tone="inverse" />
-                </div>
-              </div>
-            </div>
 
-            {/* Phone — right side, raised so it sits in the CTA band */}
-            <Reveal
-              y={48}
-              scale={0.92}
-              delay={0.12}
-              className="relative z-10 mx-auto -mt-40 w-[220px] sm:-mt-48 sm:w-[250px] lg:absolute lg:right-2 lg:top-1/2 lg:mt-0 lg:w-[280px] lg:-translate-y-[74%] lg:translate-x-2"
-            >
-              <div className="origin-center rotate-[-6deg] sm:rotate-[-7deg]">
-                <AppPhoneSlot className="w-full" />
-              </div>
-            </Reveal>
+      {/* GET STARTED — three audiences, Uber/Bolt-style split */}
+      <section id="get-started" className="relative scroll-mt-28 bg-canvas px-4 py-20 sm:px-6 sm:py-24">
+        <div className="mx-auto max-w-6xl">
+          <Reveal y={24} className="max-w-2xl">
+            <p className="text-sm font-semibold uppercase tracking-wide text-brand-orange">Get started</p>
+            <SplitReveal as="h2" className="mt-2 font-serif text-4xl italic tracking-tight text-ink sm:text-5xl">
+              Three ways to work with Qyka.
+            </SplitReveal>
+            <p className="mt-3 text-base text-ink/60 sm:text-lg">
+              Shop a market, run one, or deliver one — pick where you fit in.
+            </p>
+          </Reveal>
+
+          <Stagger className="mt-10 grid gap-5 lg:grid-cols-3" stagger={0.1}>
+            {START_CARDS.map((card) => (
+              <StaggerItem key={card.id} y={32} scale={0.97}>
+                <StartTile card={card} />
+              </StaggerItem>
+            ))}
+          </Stagger>
+        </div>
+      </section>
+
+      {/* ACTION — market-first entry, repeated for scrollers who skipped the hero */}
+      {/* brand-orange is a light peach fill now, not the old dark indigo —
+          content here needs dark ink text, and the picker's "inverse"
+          (white-text-on-dark) tone no longer applies. */}
+      <section id="action" className="relative scroll-mt-28 bg-brand-orange px-4 py-16 sm:px-6 sm:py-20">
+        <Reveal className="mx-auto max-w-6xl" y={28}>
+          <div className="grid gap-10 text-ink lg:grid-cols-[1fr_1fr] lg:items-center lg:gap-16">
+            <div>
+              <p className="text-sm font-semibold uppercase tracking-wide text-ink/70">Shop your groceries</p>
+              <SplitReveal as="h2" className="mt-2 font-serif text-4xl italic leading-tight tracking-tight sm:text-5xl">
+                Enter the market or supermarket you buy from.
+              </SplitReveal>
+              <p className="mt-4 max-w-md text-base text-ink/70 sm:text-lg">
+                Qyka is built around specific markets and supermarkets, not delivery zones. Pick
+                yours to open the app, or join the waitlist if it isn&apos;t live yet.
+              </p>
+            </div>
+            <div className="lg:justify-self-end lg:pr-2">
+              <MarketShopPicker inputId="action-market-picker" />
+            </div>
           </div>
         </Reveal>
       </section>
 
-      {/* CATEGORIES — solid canvas so the trust wave join stays seamless */}
-      <section id="categories" className="relative z-[1] scroll-mt-28 overflow-hidden bg-canvas px-4 py-20 sm:px-6">
-        <div className="relative z-[1] mx-auto max-w-6xl text-center">
-          <Reveal y={28}>
-            <p className="text-sm font-semibold uppercase tracking-wide text-brand-green">Baskets</p>
-            <h2 className="mt-2 font-display text-3xl font-extrabold tracking-tight sm:text-4xl">
-              Our <span className="text-brand-orange">best shopped</span> categories.
-            </h2>
-            <p className="mx-auto mt-3 max-w-lg text-ink/55">
-              Real market baskets — not supermarket aisles. Pick your market above to start a list.
+
+      {/* CATEGORIES */}
+      <section className="relative bg-canvas px-4 py-20 sm:px-6 sm:py-24">
+        <div className="mx-auto max-w-6xl">
+          <Reveal y={24} className="max-w-xl">
+            <p className="text-sm font-semibold uppercase tracking-wide text-brand-green">Groceries</p>
+            <SplitReveal as="h2" className="mt-2 font-serif text-4xl italic tracking-tight text-ink sm:text-5xl">
+              Everything on your list, one run.
+            </SplitReveal>
+            <p className="mt-3 text-base text-ink/60 sm:text-lg">
+              Fresh market produce, bargained at the stalls, or fixed-price supermarket
+              staples — Qyka shops both.
             </p>
           </Reveal>
 
-          <Stagger className="mt-14 grid gap-10 sm:grid-cols-3" stagger={0.16}>
-            {[
-              { img: "/quika-cat-produce.jpg", title: "Fresh produce", ring: "text-brand-green", bg: "bg-brand-green/15" },
-              { img: "/quika-cat-protein.jpg", title: "Proteins & fish", ring: "text-brand-orange", bg: "bg-brand-orange/15" },
-              { img: "/quika-cat-pantry.jpg", title: "Pantry & provisions", ring: "text-gold", bg: "bg-gold/20" },
-            ].map((c) => (
-              <StaggerItem key={c.title} y={56} scale={0.88}>
+          <Stagger className="mt-10 grid gap-5 sm:grid-cols-2 lg:grid-cols-4" stagger={0.12}>
+            {CATEGORIES.map((c) => (
+              <StaggerItem key={c.title} y={28} scale={0.97}>
                 <a
                   href="#action"
                   onClick={handleInPageAnchor}
-                  className="group flex flex-col items-center focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-gold"
+                  data-cursor="Shop"
+                  className="group block overflow-hidden rounded-2xl bg-white shadow-[0_1px_2px_rgba(33,26,20,0.06)] ring-1 ring-ink/5 transition hover:shadow-[0_16px_36px_-8px_rgba(33,26,20,0.2)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-gold"
                 >
-                  <div className={"relative flex h-52 w-52 items-center justify-center rounded-full sm:h-56 sm:w-56 " + c.bg}>
-                    <motion.div
-                      className={"absolute inset-3 rounded-full dashed-ring " + c.ring}
-                      animate={reduceMotion ? undefined : { rotate: 360 }}
-                      transition={
-                        reduceMotion
-                          ? undefined
-                          : { duration: 32, ease: "linear", repeat: Infinity }
-                      }
-                      aria-hidden
-                    />
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={c.img} alt="" className="relative z-[1] h-40 w-40 rounded-full object-cover shadow-lg transition duration-300 group-hover:scale-105 sm:h-44 sm:w-44" />
+                  <ClipReveal className="aspect-[4/3] overflow-hidden">
+                    {"img" in c ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={c.img}
+                        alt=""
+                        className="h-full w-full object-cover transition duration-500 group-hover:scale-105"
+                      />
+                    ) : (
+                      <ImagePlaceholder label={c.placeholder.label} file={c.placeholder.file} className="h-full w-full" />
+                    )}
+                  </ClipReveal>
+                  <div className="p-5">
+                    <h3 className="font-display text-lg font-bold text-ink">{c.title}</h3>
+                    <p className="mt-1 text-sm text-ink/55">{c.body}</p>
+                    <span className="mt-3 inline-flex items-center gap-1.5 text-sm font-bold text-brand-orange">
+                      Choose where to shop
+                      <svg viewBox="0 0 24 24" className="h-3.5 w-3.5 transition group-hover:translate-x-1" fill="none" stroke="currentColor" strokeWidth="2.6" aria-hidden>
+                        <path d="M5 12h14M13 6l6 6-6 6" strokeLinecap="round" strokeLinejoin="round" />
+                      </svg>
+                    </span>
                   </div>
-                  <h3 className="mt-6 font-display text-xl font-bold text-ink">{c.title}</h3>
-                  <span className="mt-2 text-sm font-bold text-brand-orange group-hover:underline">
-                    Choose your market &gt;
-                  </span>
                 </a>
               </StaggerItem>
             ))}
@@ -932,249 +447,225 @@ export default function MarketingPage() {
         </div>
       </section>
 
-      {/* DARK TRUST SECTION — wave from solid canvas (matches categories) */}
-      <div className="relative overflow-hidden bg-ink">
-        <Wave from="bg-canvas" to="bg-ink" />
-        <FoodScatter tone="ink" />
-        <SoftCircles tone="ink" />
-        <section id="trust" className="relative z-[1] scroll-mt-28 text-white">
-          <div className="mx-auto grid max-w-6xl items-center gap-10 px-4 py-16 sm:px-6 lg:grid-cols-[1fr_1.1fr_0.9fr] lg:py-20">
-            <Reveal x={-40} y={24}>
-              <h2 className="font-display text-3xl font-extrabold leading-tight tracking-tight sm:text-4xl">
-                Trust that fits{" "}
-                <span className="text-brand-orange">real markets</span>
-              </h2>
-              <p className="mt-4 text-white/65">
-                Quika&apos;s differentiator isn&apos;t speed slogans — it&apos;s how money moves when there&apos;s no catalogue.
-              </p>
-              <Link
-                href="/trust-and-safety"
-                className="mt-5 inline-flex text-sm font-bold text-gold hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-gold"
-              >
-                Read Trust &amp; Safety →
-              </Link>
-            </Reveal>
+      {/* TRUST — flat white band, proof-photo mosaic instead of a single hero shot.
+          No dark surfaces anywhere in this palette. */}
+      <section id="trust" className="relative scroll-mt-28 bg-surface text-ink">
+        <div className="mx-auto grid max-w-6xl gap-12 px-4 py-20 sm:px-6 sm:py-24 lg:grid-cols-[0.9fr_1.1fr] lg:gap-16">
+          <Reveal y={24}>
+            <p className="text-sm font-semibold uppercase tracking-wide text-brand-orange-dark">Trust & safety</p>
+            <SplitReveal as="h2" className="mt-2 font-serif text-4xl italic leading-tight tracking-tight sm:text-5xl">
+              Built for markets with no catalogue and no receipts by default.
+            </SplitReveal>
+            <p className="mt-4 max-w-md text-ink/65">
+              Qyka&apos;s differentiator isn&apos;t speed — it&apos;s how money moves when there&apos;s no
+              storefront to fall back on.
+            </p>
+            <Link
+              href="/trust-and-safety"
+              className="mt-5 inline-flex text-sm font-bold text-brand-orange-dark hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-gold"
+            >
+              Read Trust &amp; Safety →
+            </Link>
 
-            <Reveal className="relative mx-auto w-full max-w-sm" y={48} scale={0.92} delay={0.08}>
-              <Parallax offset={36}>
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src="/quika-trust-basket.jpg"
-                  alt="Market basket of groceries"
-                  className="w-full rounded-[2rem] object-cover shadow-2xl"
-                />
-              </Parallax>
-            </Reveal>
-
-            <Stagger className="space-y-6" stagger={0.12} delay={0.15}>
-              {[
-                { t: "Agent holds no cash", d: "Vendors paid by transfer only." },
-                { t: "Transfer as receipt", d: "Every pay is photographed and logged." },
-                { t: "Capped spending", d: "Hard ceilings — overages need your OK." },
-                { t: "Deposit protection", d: "Commit before an agent is assigned." },
-              ].map((f) => (
-                <StaggerItem key={f.t} x={36} y={16} scale={0.96}>
+            <Stagger className="mt-10 space-y-6" stagger={0.1}>
+              {TRUST_POINTS.map((f) => (
+                <StaggerItem key={f.t} x={0} y={16} scale={0.98}>
                   <div className="flex gap-3">
-                    <span className="mt-1 flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-brand-orange">
-                      <BoltMark className="h-5 w-5 !bg-transparent" />
+                    <span className="mt-1 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-brand-green">
+                      <svg viewBox="0 0 24 24" className="h-3.5 w-3.5" fill="none" stroke="white" strokeWidth="3">
+                        <path d="M5 13l4 4L19 7" strokeLinecap="round" strokeLinejoin="round" />
+                      </svg>
                     </span>
                     <div>
                       <p className="font-display font-bold">{f.t}</p>
-                      <p className="text-sm text-white/55">{f.d}</p>
+                      <p className="text-sm text-ink/55">{f.d}</p>
                     </div>
                   </div>
                 </StaggerItem>
               ))}
             </Stagger>
-          </div>
-        </section>
-        <Wave from="bg-ink" to="bg-canvas" />
-      </div>
-
-      {/* HOW WE SERVE — sticky card stack */}
-      <section id="how" className="relative z-[1] scroll-mt-28 overflow-x-clip bg-canvas px-4 py-20 sm:px-6 sm:py-28">
-        <div className="relative z-[1] mx-auto max-w-6xl overflow-visible">
-          <Reveal y={28} className="max-w-2xl">
-            <p className="text-sm font-semibold uppercase tracking-wide text-brand-orange">The run</p>
-            <h2 className="mt-2 font-display text-3xl font-extrabold tracking-tight sm:text-5xl">
-              How we <span className="text-brand-orange">serve</span> you.
-            </h2>
-            <p className="mt-4 text-base text-ink/60 sm:text-lg">
-              Scroll the run — each step drops into the pile, tilted and offset like cards left as they land.
-            </p>
           </Reveal>
 
-          <HowStackCards />
-
-          <Reveal y={24} delay={0.1} className="mt-6 flex flex-col items-start gap-4 border-t border-ink/10 pt-10 sm:flex-row sm:items-center sm:justify-between">
-            <p className="max-w-md text-sm text-ink/55 sm:text-base">
-              Ready for the first pilot market? Join the waitlist and we&apos;ll tell you when shopping opens.
-            </p>
-            <a
-              href="#customers"
-              onClick={handleInPageAnchor}
-              className="inline-flex min-h-[48px] shrink-0 items-center rounded-full bg-brand-green px-6 font-display text-sm font-bold text-white transition hover:bg-brand-green/90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gold"
-            >
-              Join the waitlist →
-            </a>
+          <Reveal y={32} delay={0.1} className="grid grid-cols-2 gap-3 sm:gap-4">
+            {[
+              { src: "/qyka-trust-basket.jpg", alt: "Packed market basket ready for delivery" },
+              { src: "/qyka-cat-produce.jpg", alt: "Fresh produce bought for a run" },
+              { src: "/qyka-cat-protein.jpg", alt: "Protein purchased at a market stall" },
+              { src: "/qyka-cat-pantry.jpg", alt: "Pantry items ready to pack" },
+            ].map((img, i) => (
+              <ClipReveal
+                key={img.src}
+                delay={i * 0.08}
+                direction={i % 2 === 0 ? "left" : "right"}
+                className={"aspect-square w-full overflow-hidden rounded-xl " + (i % 2 === 1 ? "mt-6" : "")}
+              >
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={img.src} alt={img.alt} className="h-full w-full object-cover" />
+              </ClipReveal>
+            ))}
           </Reveal>
         </div>
       </section>
 
-      {/* PROMO / THREE DOORS */}
-      <section id="doors" className="relative scroll-mt-28 overflow-hidden px-4 pb-4 sm:px-6">
-        <Stagger className="relative z-[1] mx-auto grid max-w-6xl gap-5 lg:grid-cols-[1.2fr_0.8fr]" stagger={0.14}>
-          <StaggerItem y={48} x={-24} scale={0.96}>
-            <div id="customers" className="relative scroll-mt-28 overflow-hidden rounded-[1.75rem] bg-gold/90 p-8 sm:p-10">
-              <div className="absolute -right-8 -top-8 h-40 w-40 rounded-full bg-white/20" />
-              <motion.span
-                className="absolute right-6 top-6 rotate-12 rounded-full bg-brand-orange px-4 py-2 font-display text-sm font-bold text-white shadow-lg"
-                initial={{ scale: 0.6, opacity: 0, rotate: 0 }}
-                whileInView={{ scale: 1, opacity: 1, rotate: 12 }}
-                viewport={{ once: true }}
-                transition={{ type: "spring", stiffness: 260, damping: 16, delay: 0.25 }}
-              >
-                Waitlist
-              </motion.span>
-              <h3 className="max-w-sm font-display text-3xl font-extrabold leading-tight text-ink sm:text-4xl">
-                Get the market haul without the market day.
-              </h3>
-              <p className="mt-3 max-w-md text-ink/70">
-                Skip queues, haggling, and heavy bags. Join the waitlist for {PILOT}.
-              </p>
-              <div className="mt-6 max-w-md">
-                <WaitlistInline inputId="waitlist-email-doors" />
-              </div>
-              <div className="mt-8 flex justify-end">
-                <Parallax offset={20}>
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src="/quika-cat-produce.jpg" alt="" className="h-36 w-36 rounded-full object-cover shadow-xl sm:h-44 sm:w-44" />
-                </Parallax>
-              </div>
-            </div>
-          </StaggerItem>
 
-          <Stagger className="flex flex-col gap-5" stagger={0.16} delay={0.08}>
-            <StaggerItem y={36} x={28} scale={0.96}>
-              <div id="agents" className="relative overflow-hidden rounded-[1.75rem] bg-ink p-6 text-white sm:p-7">
-                <span className="absolute right-4 top-4 rounded-md bg-gold px-3 py-1 font-display text-xs font-bold text-ink">
-                  Agents
-                </span>
-                <h3 className="max-w-[14rem] font-display text-2xl font-extrabold">
-                  Earn shopping a market you already know.
-                </h3>
-                <p className="mt-2 text-sm text-white/60">No unauthorized cash — transfers + photos only.</p>
-                <Link
-                  href="/for-agents"
-                  className="mt-5 inline-flex min-h-[44px] items-center rounded-lg bg-gold px-4 font-display text-sm font-bold text-ink transition hover:brightness-95 focus-visible:outline focus-visible:outline-2 focus-visible:outline-white"
-                >
-                  Apply as an agent →
-                </Link>
-              </div>
-            </StaggerItem>
+      {/* HELP — replaces the old step-by-step walkthrough */}
+      <section id="help" className="relative scroll-mt-28 bg-canvas px-4 py-20 sm:px-6 sm:py-24">
+        <div className="mx-auto max-w-6xl">
+          <Reveal y={24} className="max-w-2xl">
+            <p className="text-sm font-semibold uppercase tracking-wide text-brand-green">Help</p>
+            <SplitReveal as="h2" className="mt-2 font-serif text-4xl italic tracking-tight text-ink sm:text-5xl">
+              Answers, sorted by what you&apos;re trying to do.
+            </SplitReveal>
+            <p className="mt-3 text-base text-ink/60 sm:text-lg">
+              Pick a topic, or skip straight to a real person.
+            </p>
+          </Reveal>
 
-            <StaggerItem y={36} x={28} scale={0.96}>
-              <div id="partners" className="relative overflow-hidden rounded-[1.75rem] bg-brand-orange p-6 text-white sm:p-7">
-                <span className="absolute right-4 top-4 flex h-14 w-14 items-center justify-center rounded-full bg-white font-display text-xs font-bold text-brand-orange shadow">
-                  Deck
-                </span>
-                <h3 className="font-display text-2xl font-extrabold">Partners & investors</h3>
-                <p className="mt-2 max-w-xs text-sm text-white/85">
-                  Request the deck — float pools, deposits, Paystack transfers.
-                </p>
-                <a
-                  href="mailto:partners@quika.ng?subject=Quika%20deck%20request"
-                  className="mt-4 inline-flex min-h-[40px] items-center rounded-lg bg-ink px-4 font-display text-sm font-bold text-white hover:bg-ink/90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-gold"
-                >
-                  Contact / request the deck →
-                </a>
-              </div>
-            </StaggerItem>
+          <Stagger className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3" stagger={0.08}>
+            {HELP_TOPICS.map((topic) => {
+              const hash = hashFromHref(topic.href);
+              const content = (
+                <>
+                  <h3 className="font-display text-lg font-bold text-ink">{topic.title}</h3>
+                  <p className="mt-1.5 text-sm leading-relaxed text-ink/55">{topic.body}</p>
+                  <span className="mt-4 inline-flex items-center gap-1.5 text-sm font-bold text-brand-orange">
+                    Go
+                    <svg viewBox="0 0 24 24" className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth="2.6" aria-hidden>
+                      <path d="M5 12h14M13 6l6 6-6 6" strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
+                  </span>
+                </>
+              );
+              const className =
+                "block h-full rounded-2xl border border-ink/8 bg-white p-6 transition hover:border-brand-orange/30 hover:shadow-[0_12px_28px_-8px_rgba(33,26,20,0.16)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-gold";
+              return (
+                <StaggerItem key={topic.title} y={24} scale={0.98}>
+                  {hash ? (
+                    <a href={topic.href} onClick={handleInPageAnchor} className={className}>
+                      {content}
+                    </a>
+                  ) : topic.href.startsWith("mailto:") ? (
+                    <a href={topic.href} className={className}>
+                      {content}
+                    </a>
+                  ) : (
+                    <Link href={topic.href} className={className}>
+                      {content}
+                    </Link>
+                  )}
+                </StaggerItem>
+              );
+            })}
           </Stagger>
-        </Stagger>
+        </div>
       </section>
 
       {/* FAQ */}
-      <section id="faq" className="relative z-[1] scroll-mt-28 bg-canvas px-4 py-20 sm:px-6 sm:py-28">
+      <section id="faq" className="relative scroll-mt-28 bg-canvas px-4 py-20 sm:px-6 sm:py-24">
         <div className="mx-auto grid max-w-6xl gap-12 lg:grid-cols-[0.85fr_1.15fr] lg:gap-16">
-          <Reveal y={28} className="lg:pt-2">
+          <Reveal y={24} className="lg:pt-2">
             <p className="text-sm font-semibold uppercase tracking-wide text-brand-green">FAQ</p>
-            <h2 className="mt-2 font-display text-3xl font-extrabold tracking-tight sm:text-5xl">
-              Questions,{" "}
-              <span className="text-brand-orange">answered</span>.
-            </h2>
+            <SplitReveal as="h2" className="mt-2 font-serif text-4xl italic tracking-tight text-ink sm:text-6xl">
+              Questions, <span className="text-brand-orange">answered</span>.
+            </SplitReveal>
             <p className="mt-4 max-w-md text-base text-ink/60 sm:text-lg">
-              How lists, money, and agents work on Quika — before you join the waitlist.
+              How lists, money, agents, and riders work on Qyka — before you join the waitlist.
             </p>
             <a
-              href="mailto:hello@quika.ng?subject=Quika%20question"
+              href="mailto:hello@quika.ng?subject=Qyka%20question"
               className="mt-6 inline-flex text-sm font-bold text-brand-orange hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gold"
             >
               Still curious? Email us →
             </a>
           </Reveal>
 
-          <Reveal y={36} delay={0.08}>
+          <Reveal y={28} delay={0.08}>
             <FaqAccordion />
           </Reveal>
         </div>
       </section>
 
-      {/* GREEN CLOSE — one solid green band; wave uses fill-brand-green */}
-      <div className="relative mt-4 overflow-hidden bg-brand-green">
-        <Wave from="bg-canvas" to="bg-brand-green" />
-        <FoodScatter tone="green" />
-        <SoftCircles tone="green" />
-        <section id="start" className="relative z-[1] scroll-mt-28 px-4 py-16 text-white sm:px-6 sm:py-20">
-          <div className="mx-auto grid max-w-6xl items-center gap-10 lg:grid-cols-[1.1fr_0.9fr] lg:gap-14">
-            <Reveal x={-36} y={28}>
-              <p className="text-sm font-semibold uppercase tracking-wide text-white/65">Start here</p>
-              <h2 className="mt-2 font-display text-3xl font-extrabold leading-tight tracking-tight sm:text-4xl">
-                Your list. Our agents.{" "}
-                <span className="underline decoration-gold decoration-4 underline-offset-4">Your door.</span>
-              </h2>
-              <p className="mt-4 max-w-md text-base text-white/80 sm:text-lg">
-                Free-text orders for open-air markets — bargain at the stalls, pay by transfer, courier home.
-              </p>
-              <Stagger className="mt-8 flex flex-wrap gap-3" stagger={0.1} delay={0.1}>
-                <StaggerItem y={16} scale={0.94}>
-                  <Link
-                    href="/shop"
-                    className="inline-flex min-h-[48px] items-center rounded-full bg-white px-6 font-display text-sm font-bold text-brand-green transition hover:bg-white/90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-gold"
-                  >
-                    Open Quika
-                  </Link>
-                </StaggerItem>
-                <StaggerItem y={16} scale={0.94}>
-                  <a
-                    href="#action"
-                    onClick={handleInPageAnchor}
-                    className="inline-flex min-h-[48px] items-center rounded-full border-2 border-white/50 px-6 font-display text-sm font-bold text-white transition hover:bg-white/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-gold"
-                  >
-                    Choose a market
-                  </a>
-                </StaggerItem>
-              </Stagger>
-            </Reveal>
 
-            <Reveal y={48} scale={0.92} delay={0.12} className="relative mx-auto w-full max-w-md lg:max-w-none">
-              <Parallax offset={40}>
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src="/quika-cat-produce.jpg"
-                  alt="Fresh market produce"
-                  className="aspect-[4/3] w-full rounded-[2rem] object-cover shadow-[0_20px_50px_rgba(0,0,0,0.25)]"
-                />
-              </Parallax>
-            </Reveal>
-          </div>
-        </section>
-        <Wave from="bg-brand-green" to="bg-ink" />
-      </div>
+      {/* CLOSE — flat white band, primary CTA plus quieter secondary asks.
+          No dark surfaces anywhere in this palette — differentiation from
+          the cream page comes from bg-surface (white), not a dark fill. */}
+      <section id="start" className="relative scroll-mt-28 bg-surface px-4 py-20 text-ink sm:px-6 sm:py-24">
+        <div className="mx-auto max-w-6xl">
+          <Reveal y={24} className="max-w-2xl">
+            <p className="text-sm font-semibold uppercase tracking-wide text-ink/60">Start here</p>
+            <SplitReveal as="h2" className="mt-2 font-serif text-4xl italic leading-tight tracking-tight sm:text-5xl">
+              Your list. Our agents. Your door.
+            </SplitReveal>
+            <p className="mt-4 max-w-md text-base text-ink/70 sm:text-lg">
+              Free-text grocery orders — market or supermarket. Shopped and paid by transfer,
+              rider home.
+            </p>
+            <Stagger className="mt-8 flex flex-wrap gap-3" stagger={0.1}>
+              <StaggerItem y={12} scale={0.96}>
+                <Link
+                  href="/shop"
+                  className="inline-flex min-h-[48px] items-center rounded-full bg-brand-orange px-6 font-display text-sm font-bold text-[#1A1A1A] transition hover:bg-brand-orange-dark focus-visible:outline focus-visible:outline-2 focus-visible:outline-gold"
+                >
+                  Open Qyka
+                </Link>
+              </StaggerItem>
+              <StaggerItem y={12} scale={0.96}>
+                <a
+                  href="#action"
+                  onClick={handleInPageAnchor}
+                  className="inline-flex min-h-[48px] items-center rounded-full border-2 border-ink/15 px-6 font-display text-sm font-bold text-ink transition hover:bg-ink/5 focus-visible:outline focus-visible:outline-2 focus-visible:outline-gold"
+                >
+                  Choose a market
+                </a>
+              </StaggerItem>
+            </Stagger>
+          </Reveal>
 
-      <div className="-mt-px">
-        <MarketingFooter />
-      </div>
+          <Reveal y={20} delay={0.1} className="mt-14 grid gap-6 border-t border-ink/10 pt-10 sm:grid-cols-3">
+            <div>
+              <p className="font-display font-bold">Join the waitlist</p>
+              <p className="mt-1 text-sm text-ink/60">Not in {PILOT} yet? We&apos;ll email you the moment it opens.</p>
+              <div className="mt-4">
+                <WaitlistInline inputId="waitlist-email-close" />
+              </div>
+            </div>
+            <div>
+              <p className="font-display font-bold">Work with Qyka</p>
+              <p className="mt-1 text-sm text-ink/60">Shop for us or deliver for us.</p>
+              <div className="mt-4 flex flex-wrap gap-2">
+                <Link href="/for-agents" className="inline-flex min-h-[40px] items-center rounded-full bg-brand-orange/10 px-4 text-sm font-bold text-brand-orange-dark transition hover:bg-brand-orange/20">
+                  Become an Agent
+                </Link>
+                <Link href="/for-riders" className="inline-flex min-h-[40px] items-center rounded-full bg-brand-orange/10 px-4 text-sm font-bold text-brand-orange-dark transition hover:bg-brand-orange/20">
+                  Become a Rider
+                </Link>
+              </div>
+            </div>
+            <div>
+              <p className="font-display font-bold">Partners & investors</p>
+              <p className="mt-1 text-sm text-ink/60">Request the deck — float pools, deposits, transfer rails.</p>
+              <a
+                href="mailto:partners@quika.ng?subject=Qyka%20deck%20request"
+                className="mt-4 inline-flex min-h-[40px] items-center rounded-full bg-brand-orange/10 px-4 text-sm font-bold text-brand-orange-dark transition hover:bg-brand-orange/20"
+              >
+                Contact / request the deck →
+              </a>
+            </div>
+          </Reveal>
+        </div>
+      </section>
+
+      <MarketingFooter />
+      <HelpWidget />
+    </div>
+  );
+}
+
+/** Market-first entry — same control as the orange shop band. */
+function HeroCtas() {
+  return (
+    <div className="max-w-xl">
+      <MarketShopPicker inputId="hero-market-picker" />
     </div>
   );
 }

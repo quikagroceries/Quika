@@ -1,6 +1,6 @@
 /** Guest shopping draft — survives refresh until Place order succeeds. */
 
-export const GUEST_DRAFT_KEY = "quika_guest_draft";
+export const GUEST_DRAFT_KEY = "qyka_guest_draft";
 
 // List-first flow: compose the list, then choose the market, then delivery,
 // then quote. "vendors" is a retired step kept only so old drafts coerce.
@@ -20,6 +20,7 @@ export type GuestDraft = {
   step: ShopStep;
   stagedList: unknown | null;
   address: string;
+  deliveryCoords?: { lat: number; lng: number } | null;
   marketSlug?: string | null;
 };
 

@@ -1,9 +1,9 @@
 import TrustAndSafety from "@/screens/TrustAndSafety";
 
 export const metadata = {
-  title: "Trust & Safety — Quika Groceries",
+  title: "Trust & Safety — Qyka Groceries",
   description:
-    "How Quika keeps market runs accountable — transfer pay, photo proof, deposits, and delivery confirmation.",
+    "How Qyka keeps market runs accountable — transfer pay, photo proof, deposits, and delivery confirmation.",
 };
 
 export default function TrustAndSafetyPage() {

@@ -194,7 +194,7 @@ class OrderItem(Base):
     )
 
     # DELIBERATELY free text. There is no product catalogue — the moment this
-    # becomes a FK to a products table, Quika is a supermarket app.
+    # becomes a FK to a products table, Qyka is a supermarket app.
     description: Mapped[str] = mapped_column(Text)
     requested_note: Mapped[str | None] = mapped_column(
         String(255), nullable=True

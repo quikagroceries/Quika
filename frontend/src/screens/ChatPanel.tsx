@@ -1,143 +1,97 @@
 'use client';
 
-import { useState, useRef, useEffect } from "react";
-import { createPortal } from "react-dom";
-import dynamic from "next/dynamic";
-import { api } from "@/lib/api";
-import Chat from "@/screens/Chat";
+import { useEffect } from "react";
 import Icon from "@/components/Icon";
+import { useChat } from "@/components/chat/ChatContext";
 
-const Call = dynamic(() => import("@/screens/Call"), { ssr: false });
-
-// The chat trigger that sits on the order screen. Collapsed by default -
-// the order detail/task list is the primary view - opens as a slide-over
-// panel (same convention as ShopBag), not a full-screen takeover: the order
-// screen stays visible and dimmed behind it, so opening chat never feels
-// like leaving the order. Full width only below sm, where there's no room
-// for a partial panel anyway. Voice and video call actions live inside the
-// chat's own header (Call still renders full-screen while active - a call
-// is the one moment that warrants taking over the whole screen).
-//
-// Chat stays mounted the whole time regardless of collapse state (only its
-// container's visibility toggles, never unmounted - same convention as
-// MobileDrawer), so its poll keeps running and the unread badge on this
-// icon stays accurate even while collapsed.
-function ChatPanel({ orderId, variant = "icon", label = "Chat with agent" }: any) {
-  const [open, setOpen] = useState(false);
-  const [callMode, setCallMode] = useState<any>(null); // null | "voice" | "video"
-  const [messages, setMessages] = useState<any[]>([]);
-  const [myUserId, setMyUserId] = useState<any>(null);
-  const [seenCount, setSeenCount] = useState(0);
-  const firstLoadRef = useRef(true);
-  // Portal everything full-screen straight to <body> - this trigger can sit
-  // inside a `sticky` sidebar column (OrderDetail's), and `position: sticky`
-  // unconditionally creates a new CSS stacking context. Left un-portaled,
-  // the chat panel/call's `fixed` overlay would be trapped inside that
-  // context - its own z-index would only win LOCALLY, so it could still
-  // render BELOW an unrelated sibling elsewhere on the page (the hero
-  // banner's back button, in practice) despite a much higher z-index.
-  const [mounted, setMounted] = useState(false);
+// The chat trigger that sits on the order screen. Just a button now - the
+// actual panel is ChatDock, mounted once at the shell level (see AppShell),
+// so its desktop variant can be a real layout sibling that pushes the page
+// narrower when it opens, the same way ShopBag's own docked panel works,
+// instead of a `fixed` overlay floating on top of everything. This button's
+// only job is to register "this page's order is X" with ChatContext on
+// mount and ask it to open/close - see ChatContext for where the actual
+// message polling, unread tracking, and open state live.
+function ChatPanel({ orderId, variant = "icon", label = "Chat with agent", person = null }: any) {
+  const { registration, unread, openChat, register, unregister } = useChat();
 
   useEffect(() => {
-    setMounted(true);
-  }, []);
+    register(orderId, label, person);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- re-register when the order, label or the person's name/photo changes
+  }, [orderId, label, person?.full_name, person?.avatar_url]);
 
-  useEffect(() => {
-    api.me().then((u) => setMyUserId(u.id)).catch(() => {});
-  }, []);
+  // Unregister only when the order itself goes away - NOT on every person/label
+  // update, which would close the panel mid-conversation.
+  useEffect(() => () => unregister(orderId), [orderId]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  function handleMessages(msgs) {
-    setMessages(msgs);
-    // Whatever's already there the first time this panel ever polls counts
-    // as "seen" (nothing to alert about on a fresh page load) - only
-    // messages that arrive on LATER polls, while still collapsed, count
-    // toward the unread badge.
-    if (firstLoadRef.current) {
-      firstLoadRef.current = false;
-      setSeenCount(msgs.length);
-    }
+  // Only show unread state once this trigger is actually the one registered
+  // (defends against a stale badge during the brief window another order's
+  // ChatPanel is unmounting while this one mounts).
+  const myUnread = registration?.orderId === orderId ? unread : 0;
+  const ariaLabel = myUnread > 0 ? `Open chat, ${myUnread} unread message${myUnread === 1 ? "" : "s"}` : "Open chat";
+
+  if (variant === "pill") {
+    // Labelled, compact, peach: the primary "talk to them" action on the
+    // order page. An icon alone left people guessing what it was.
+    return (
+      <button
+        onClick={openChat}
+        aria-label={ariaLabel}
+        className="relative inline-flex h-11 items-center gap-2 rounded-full bg-brand-orange px-4 text-sm font-bold text-[#1A1A1A] shadow-xs transition hover:bg-brand-orange-dark active:scale-[0.98]"
+      >
+        <Icon name="chat" className="h-4 w-4" />
+        {label}
+        {myUnread > 0 && (
+          <span className="flex h-5 min-w-[1.25rem] items-center justify-center rounded-full bg-red-600 px-1 text-[11px] font-bold text-white">
+            {myUnread > 9 ? "9+" : myUnread}
+          </span>
+        )}
+      </button>
+    );
   }
 
-  function handleOpen() {
-    setOpen(true);
-    setSeenCount(messages.length);
+  if (variant === "button") {
+    // Labeled, full-width entry point - makes it obvious a chat exists at
+    // all, instead of relying on a small icon the other side has to
+    // already know to look for. `label` names who's on the other end
+    // (customer vs agent), since the same component serves both sides.
+    // White card + peach icon well, matching the "Spending approval" /
+    // "Order estimate" cards it sits beside - not an olive outline. Olive
+    // is a rare success-only accent in this app (order-confirmed states,
+    // "Buy elsewhere" secondary actions), not a color for a persistent
+    // nav-style action button, which is why it read as out of place here.
+    return (
+      <button
+        onClick={openChat}
+        aria-label={ariaLabel}
+        className="relative flex w-full items-center gap-3 rounded-3xl border border-line bg-surface px-4 py-3 text-left shadow-sm transition hover:bg-sunken-2"
+      >
+        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-brand-orange/15 text-brand-orange-dark">
+          <Icon name="chat" className="h-4 w-4" />
+        </span>
+        <span className="flex-1 text-sm font-bold text-ink">{label}</span>
+        {myUnread > 0 && (
+          <span className="flex h-5 min-w-[1.25rem] shrink-0 items-center justify-center rounded-full bg-red-600 px-1 text-[11px] font-bold text-white">
+            {myUnread > 9 ? "9+" : myUnread}
+          </span>
+        )}
+      </button>
+    );
   }
-
-  const unread = open ? 0 : messages.slice(seenCount).filter((m) => m.sender_id !== myUserId).length;
-
-  if (callMode) {
-    return mounted
-      ? createPortal(
-          <Call orderId={orderId} onClose={() => setCallMode(null)} mode={callMode} />,
-          document.body
-        )
-      : null;
-  }
-
-  const ariaLabel = unread > 0 ? `Open chat, ${unread} unread message${unread === 1 ? "" : "s"}` : "Open chat";
 
   return (
-    <>
-      {variant === "button" ? (
-        // Labeled, full-width entry point - makes it obvious a chat exists
-        // at all, instead of relying on a small icon the other side has to
-        // already know to look for. `label` names who's on the other end
-        // (customer vs agent), since the same component serves both sides.
-        <button
-          onClick={handleOpen}
-          aria-label={ariaLabel}
-          className="relative flex w-full items-center justify-center gap-2 rounded-xl border-2 border-brand-green px-4 py-3 text-sm font-bold text-brand-green transition-colors hover:bg-brand-green/5"
-        >
-          <Icon name="chat" className="h-5 w-5" />
-          {label}
-          {unread > 0 && (
-            <span className="flex h-5 min-w-[1.25rem] items-center justify-center rounded-full bg-red-600 px-1 text-[11px] font-bold text-white">
-              {unread > 9 ? "9+" : unread}
-            </span>
-          )}
-        </button>
-      ) : (
-        <button
-          onClick={handleOpen}
-          aria-label={ariaLabel}
-          className="relative flex h-11 w-11 shrink-0 items-center justify-center rounded-full border-2 border-brand-green text-brand-green transition-colors hover:bg-brand-green/5"
-        >
-          <Icon name="chat" className="h-5 w-5" />
-          {unread > 0 && (
-            <span className="absolute -top-1.5 -right-1.5 flex h-5 min-w-[1.25rem] items-center justify-center rounded-full bg-red-600 px-1 text-[11px] font-bold text-white">
-              {unread > 9 ? "9+" : unread}
-            </span>
-          )}
-        </button>
+    <button
+      onClick={openChat}
+      aria-label={ariaLabel}
+      className="relative flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-line-strong bg-surface text-brand-orange-dark shadow-xs transition hover:bg-sunken-2"
+    >
+      <Icon name="chat" className="h-5 w-5" />
+      {myUnread > 0 && (
+        <span className="absolute -top-1.5 -right-1.5 flex h-5 min-w-[1.25rem] items-center justify-center rounded-full bg-red-600 px-1 text-[11px] font-bold text-white">
+          {myUnread > 9 ? "9+" : myUnread}
+        </span>
       )}
-
-      {mounted &&
-        createPortal(
-          <div
-            className={open ? "fixed inset-0 z-[1500] flex justify-end" : "hidden"}
-            role="dialog"
-            aria-modal="true"
-            aria-label="Chat with agent"
-          >
-            <button
-              type="button"
-              className="absolute inset-0 bg-black/35"
-              aria-label="Close chat"
-              onClick={() => setOpen(false)}
-            />
-            <aside className="relative z-[1] flex h-full w-full max-w-md flex-col bg-white shadow-[-8px_0_32px_rgba(0,0,0,0.12)]">
-              <Chat
-                orderId={orderId}
-                onMessages={handleMessages}
-                onCollapse={() => setOpen(false)}
-                onVoiceCall={() => setCallMode("voice")}
-                onVideoCall={() => setCallMode("video")}
-              />
-            </aside>
-          </div>,
-          document.body
-        )}
-    </>
+    </button>
   );
 }
 

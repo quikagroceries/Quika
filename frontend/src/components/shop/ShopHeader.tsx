@@ -4,17 +4,29 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import logo from "@/assets/logo.png";
+import squiggleArrow from "@/assets/illustrations/decorative-squiggle-arrow.png";
+import squiggle2 from "@/assets/illustrations/decorative-squiggle-2.png";
+import dotArrow from "@/assets/illustrations/decorative-dot-arrow.png";
+import dottedSquares from "@/assets/illustrations/decorative-dotted-squares.png";
 import { useAuth } from "@/components/AuthProvider";
 import Icon from "@/components/Icon";
 import { ACCOUNT_NAV } from "@/lib/nav";
 import { useShop } from "./ShopContext";
+import { useChatOptional } from "@/components/chat/ChatContext";
 import VenuePopover from "./VenuePopover";
+import BagPeek from "./BagPeek";
+import HeaderLiveOrderPill from "@/components/header/HeaderLiveOrderPill";
+import SearchField from "@/components/SearchField";
+import Avatar from "@/components/Avatar";
+import { usePathname } from "next/navigation";
+import { usePageSearchContext } from "@/components/PageSearchContext";
+import HeaderWalletChip from "@/components/header/HeaderWalletChip";
 
 /** Shared header chrome tokens — keep icon wells + borders on one pattern. */
-const BORDER = "border-[#ddd6cb]";
+const BORDER = "border-line-strong";
 const ICON_WELL =
-  "relative flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#faf9f7] ring-1 ring-[#ebe7e0]";
-const CHEVRON = "h-3.5 w-3.5 shrink-0 text-[#8a8178]";
+  "relative flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-sunken-2 ring-1 ring-line";
+const CHEVRON = "h-3.5 w-3.5 shrink-0 text-faint";
 const CONTROL_SHADOW = "shadow-[0_1px_2px_rgba(33,26,20,0.06)]";
 
 function PinGlyph({ className = "h-4 w-4" }: { className?: string }) {
@@ -43,7 +55,13 @@ function Chevron({ open = false }: { open?: boolean }) {
 }
 
 /** Sticky marketplace header — max-width centered, venue + search as primary discovery. */
-function ShopHeader({ floating = false }: { floating?: boolean }) {
+// One header for the whole customer app on a phone. On /shop it drives market
+// browsing (its search finds markets); on every other customer page
+// (`mobileOnly`, so the desktop keeps its own top bar) it's the SAME header -
+// location, bag, account - with its search bound to whatever that page
+// registers (History's orders, Wallet's transactions...), or absent if the
+// page has nothing to search.
+function ShopHeader({ mobileOnly = false }: { mobileOnly?: boolean }) {
   const { user, token, handleLogout, roleSwitch } = useAuth();
   const {
     market,
@@ -61,23 +79,36 @@ function ShopHeader({ floating = false }: { floating?: boolean }) {
   } = useShop();
 
   const [accountOpen, setAccountOpen] = useState(false);
-  const [isNarrow, setIsNarrow] = useState(false);
+  // Same reasoning as DesktopTopBar's own bag button: while chat's docked
+  // panel already holds the page's "sticky sidebar" slot, opening the bag
+  // there too would fight it for the same layout role, so it peeks as a
+  // small dropdown here instead.
+  const chat = useChatOptional();
+  const [bagPeekOpen, setBagPeekOpen] = useState(false);
+
+  function handleBagClick() {
+    if (chat?.open) {
+      setBagPeekOpen((v) => !v);
+    } else {
+      openBag();
+    }
+  }
   const accountRef = useRef<HTMLDivElement>(null);
   const desktopGroupRef = useRef<HTMLButtonElement>(null);
-  const mobileGroupRef = useRef<HTMLButtonElement>(null);
   const guest = !token || !user;
   const itemCount = listDraft?.itemCount || 0;
-  const searchEnabled = step === "market";
+  const pathname = usePathname();
+  const onShop = pathname === "/shop" || pathname?.startsWith("/shop/");
+  const pageSearch = usePageSearchContext();
+  const searchPlaceholder = onShop ? "Search markets…" : pageSearch?.placeholder || null;
+  const searchValue = onShop ? searchQuery : pageSearch?.query || "";
+  const setSearchValue = onShop ? setSearchQuery : pageSearch?.setQuery || (() => {});
+  // On /shop the box is always drawn (disabled outside the market step, so the
+  // layout doesn't jump); elsewhere it exists only if the page has a search.
+  const showSearch = onShop || Boolean(searchPlaceholder);
+  const searchEnabled = onShop ? step === "market" : Boolean(searchPlaceholder);
   const venueSelected = Boolean(market?.name);
-  const venueAnchorRef = isNarrow ? mobileGroupRef : desktopGroupRef;
-
-  useEffect(() => {
-    const mq = window.matchMedia("(max-width: 639px)");
-    const sync = () => setIsNarrow(mq.matches);
-    sync();
-    mq.addEventListener("change", sync);
-    return () => mq.removeEventListener("change", sync);
-  }, []);
+  const venueAnchorRef = desktopGroupRef;
 
   useEffect(() => {
     if (!accountOpen) return;
@@ -98,18 +129,45 @@ function ShopHeader({ floating = false }: { floating?: boolean }) {
   const deliverLabel = address.trim() || "Add address";
 
   return (
-    <header
-      className={
-        "sticky z-40 border-b border-[#ebe7e0] bg-white " +
-        (floating ? "top-0 md:top-4 md:rounded-t-[1.25rem] md:bg-[#fdfaf5]" : "top-0")
-      }
-    >
-      <div className="flex h-[64px] w-full items-center gap-3 px-4 md:gap-4 md:px-6 lg:px-8">
+    <header className={"sticky top-0 z-40 overflow-hidden border-b border-line-strong bg-canvas " + (mobileOnly ? "md:hidden" : "")}>
+      {/* Far-left + far-right are meant to be genuinely visible (raised
+          opacity, and gated on md: - not lg:/xl:, which may not even
+          trigger on a normal desktop window and was why these read as
+          "not really there"). The two center pieces are the deliberate
+          exception: pinned to peek from just above/below the search pill,
+          mostly hidden behind it on purpose - a glimpse, not the full
+          image, is the point ("thirst for more"), so they stay lower
+          opacity and small. */}
+      <Image
+        src={squiggleArrow}
+        alt=""
+        aria-hidden
+        className="pointer-events-none absolute -left-2 top-1/2 hidden w-20 -translate-y-1/2 opacity-[0.4] md:block"
+      />
+      <Image
+        src={squiggle2}
+        alt=""
+        aria-hidden
+        className="pointer-events-none absolute -right-3 top-1/2 hidden w-20 -translate-y-1/2 rotate-6 opacity-[0.4] md:block"
+      />
+      <Image
+        src={dotArrow}
+        alt=""
+        aria-hidden
+        className="pointer-events-none absolute left-1/2 -top-2 hidden w-14 -translate-x-1/2 -rotate-6 opacity-[0.22] lg:block"
+      />
+      <Image
+        src={dottedSquares}
+        alt=""
+        aria-hidden
+        className="pointer-events-none absolute left-1/2 -bottom-2 hidden w-14 translate-x-6 rotate-6 opacity-[0.22] lg:block"
+      />
+      <div className="relative flex h-[64px] w-full items-center gap-3 px-4 md:gap-4 md:px-6 lg:px-8">
         {/* The sidebar (from AppShell) carries the logo from md: up — this
             stays mobile-only so the brand mark exists exactly once at any
             given width, not twice. */}
-        <Link href="/" className="shrink-0 md:hidden" aria-label="Quika home">
-          <Image src={logo} alt="Quika" className="h-10 w-auto object-contain" priority />
+        <Link href="/" className="shrink-0 md:hidden" aria-label="Qyka home">
+          <Image src={logo} alt="Qyka" className="h-10 w-auto object-contain" priority />
         </Link>
 
         {/* One control, not two — it opens a single popover that manages
@@ -122,16 +180,16 @@ function ShopHeader({ floating = false }: { floating?: boolean }) {
           aria-expanded={venueOpen}
           aria-haspopup="listbox"
           className={
-            "hidden h-11 min-w-0 max-w-[20rem] shrink-0 items-center gap-2.5 rounded-full border bg-white p-1.5 pr-3 text-left transition hover:bg-[#faf9f7] sm:flex md:max-w-[22rem] " +
+            "flex h-11 min-w-0 flex-1 items-center gap-2.5 rounded-full border bg-surface p-1.5 pr-3 text-left transition hover:bg-sunken-2 sm:max-w-[20rem] sm:flex-none md:max-w-[22rem] " +
             BORDER +
             " " +
             CONTROL_SHADOW
           }
         >
-          <span className={ICON_WELL + " text-brand-green"}>
+          <span className={ICON_WELL + " text-ink"}>
             <Icon name="pin" className="h-4 w-4" />
             {venueSelected && (
-              <span className="absolute -bottom-0.5 -right-0.5 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-brand-green text-white ring-2 ring-white">
+              <span className="absolute -bottom-0.5 -right-0.5 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-ink text-surface ring-2 ring-surface">
                 <svg viewBox="0 0 20 20" className="h-2 w-2" fill="currentColor" aria-hidden>
                   <path
                     fillRule="evenodd"
@@ -146,7 +204,7 @@ function ShopHeader({ floating = false }: { floating?: boolean }) {
             <span className="block truncate text-sm font-bold text-ink">
               {venueSelected ? market.name : "Choose your location"}
             </span>
-            <span className="flex items-center gap-1 truncate text-[0.7rem] font-medium text-[#8a8178]">
+            <span className="flex items-center gap-1 truncate text-[0.7rem] font-medium text-faint">
               <PinGlyph className="h-2.5 w-2.5 shrink-0" />
               <span className="truncate">{deliverLabel}</span>
             </span>
@@ -154,48 +212,51 @@ function ShopHeader({ floating = false }: { floating?: boolean }) {
           <Chevron open={venueOpen} />
         </button>
 
-        {/* Search — same border language as the split control */}
-        <div className="relative hidden min-w-0 flex-1 sm:block">
-          <span className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-[#8a8178]">
-            <svg viewBox="0 0 24 24" className="h-[18px] w-[18px]" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
-              <circle cx="11" cy="11" r="7" />
-              <path strokeLinecap="round" d="M20 20l-3-3" />
-            </svg>
-          </span>
-          <input
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
+        {/* Search - the shared field, same as every other page's top bar */}
+        {showSearch ? (
+          <SearchField
+            className="hidden min-w-0 flex-1 sm:block"
+            value={searchValue}
+            onChange={setSearchValue}
             disabled={!searchEnabled}
-            placeholder="Search markets by name or area…"
-            className={
-              "h-11 w-full rounded-full border bg-[#f0eeeb] py-2.5 pl-11 pr-4 text-sm text-ink outline-none transition placeholder:text-[#8a8178] focus:border-brand-orange/40 focus:bg-white focus:ring-2 focus:ring-brand-orange/15 disabled:cursor-not-allowed disabled:opacity-45 " +
-              BORDER
-            }
-            aria-label="Search"
+            placeholder={onShop ? "Search markets by name or area…" : searchPlaceholder}
           />
-        </div>
-
-        <div className="min-w-0 flex-1 sm:hidden" />
+        ) : (
+          <div className="hidden min-w-0 flex-1 sm:block" />
+        )}
 
         <div className="flex shrink-0 items-center gap-2 md:gap-3">
-          <button
-            type="button"
-            onClick={openBag}
-            className={
-              "relative flex h-11 w-11 shrink-0 items-center justify-center rounded-full border bg-white text-ink transition hover:border-brand-orange/40 hover:bg-[#fff8f5] " +
-              BORDER +
-              " " +
-              CONTROL_SHADOW
-            }
-            aria-label={`Shopping list${itemCount ? `, ${itemCount} items` : ""}`}
-          >
-            <Icon name="basket" className="h-5 w-5" />
-            {itemCount > 0 && (
-              <span className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-brand-orange px-1 text-[0.65rem] font-bold text-white shadow-sm">
-                {itemCount > 99 ? "99+" : itemCount}
-              </span>
-            )}
-          </button>
+          {/* Desktop only - on a phone the bottom bar's Track tab (with its
+              live dot) already says "you have an order in progress". */}
+          <div className="hidden md:block">
+            <HeaderLiveOrderPill compact />
+          </div>
+          <div className="hidden sm:block">
+            <HeaderWalletChip />
+          </div>
+
+          <div className="relative">
+            <button
+              type="button"
+              onClick={handleBagClick}
+              className={
+                "relative flex h-11 w-11 shrink-0 items-center justify-center rounded-full border bg-surface text-ink transition hover:border-brand-orange/40 hover:bg-brand-orange/10 " +
+                BORDER +
+                " " +
+                CONTROL_SHADOW
+              }
+              aria-label={`Shopping list${itemCount ? `, ${itemCount} items` : ""}`}
+              aria-expanded={bagPeekOpen}
+            >
+              <Icon name="basket" className="h-5 w-5" />
+              {itemCount > 0 && (
+                <span className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-brand-orange px-1 text-[0.65rem] font-bold text-[#1A1A1A] shadow-sm">
+                  {itemCount > 99 ? "99+" : itemCount}
+                </span>
+              )}
+            </button>
+            {bagPeekOpen && <BagPeek onClose={() => setBagPeekOpen(false)} />}
+          </div>
 
           {/* The sidebar (from AppShell) now covers sign-in/account/logout on
               md+ — this stays mobile-only so there's exactly one place to
@@ -204,7 +265,7 @@ function ShopHeader({ floating = false }: { floating?: boolean }) {
             {guest ? (
               <Link
                 href="/login?next=/shop"
-                className="inline-flex h-11 items-center rounded-full bg-ink px-4 text-sm font-bold text-white transition hover:bg-ink/90"
+                className="inline-flex h-11 items-center rounded-full bg-brand-orange px-4 text-sm font-bold text-[#1A1A1A] shadow-xs transition hover:bg-brand-orange-dark"
               >
                 Sign in
               </Link>
@@ -214,7 +275,7 @@ function ShopHeader({ floating = false }: { floating?: boolean }) {
                   type="button"
                   onClick={() => setAccountOpen((o) => !o)}
                   className={
-                    "flex h-11 w-11 items-center justify-center rounded-full border bg-white text-ink transition hover:bg-[#f7f5f2] md:w-auto md:gap-2 md:pl-1.5 md:pr-3 " +
+                    "flex h-11 w-11 items-center justify-center rounded-full border bg-surface text-ink transition hover:bg-sunken-2 md:w-auto md:gap-2 md:pl-[3px] md:pr-3 " +
                     BORDER +
                     " " +
                     CONTROL_SHADOW
@@ -222,27 +283,25 @@ function ShopHeader({ floating = false }: { floating?: boolean }) {
                   aria-expanded={accountOpen}
                   aria-haspopup="menu"
                 >
-                  <span className={ICON_WELL + " text-[#6b635a]"}>
-                    <Icon name="user" className="h-4 w-4" />
-                  </span>
+                  <Avatar src={user?.avatar_url} name={user?.full_name} className="h-[2.375rem] w-[2.375rem]" />
                   <span className="hidden max-w-[7rem] truncate text-sm font-semibold md:inline">
-                    {user?.phone}
+                    {user?.full_name || user?.phone}
                   </span>
                 </button>
                 {accountOpen && (
                   <div
                     role="menu"
-                    className="absolute right-0 mt-2 w-56 overflow-hidden rounded-2xl border border-[#ebe7e0] bg-white py-1 shadow-[0_16px_40px_rgba(33,26,20,0.12)]"
+                    className="absolute right-0 mt-2 w-56 overflow-hidden rounded-2xl border border-line bg-surface py-1 shadow-[0_16px_40px_rgba(33,26,20,0.12)]"
                   >
                     {vendor && (
-                      <p className="border-b border-[#ebe7e0] px-4 py-2 text-xs text-[#8a8178]">
+                      <p className="border-b border-line px-4 py-2 text-xs text-faint">
                         Soft prefer: {vendor.name}
                       </p>
                     )}
                     {roleSwitch && (
                       <button
                         type="button"
-                        className="w-full px-4 py-2.5 text-left text-sm font-semibold text-ink hover:bg-[#f7f5f2]"
+                        className="w-full px-4 py-2.5 text-left text-sm font-semibold text-ink hover:bg-sunken-2"
                         onClick={() => {
                           setAccountOpen(false);
                           roleSwitch.onToggle(
@@ -259,9 +318,9 @@ function ShopHeader({ floating = false }: { floating?: boolean }) {
                         href={item.href}
                         role="menuitem"
                         onClick={() => setAccountOpen(false)}
-                        className="flex items-center gap-3 px-4 py-2.5 text-sm font-semibold text-ink hover:bg-[#f7f5f2]"
+                        className="flex items-center gap-3 px-4 py-2.5 text-sm font-semibold text-ink hover:bg-sunken-2"
                       >
-                        <Icon name={item.icon} className="h-4 w-4 text-[#8a8178]" />
+                        <Icon name={item.icon} className="h-4 w-4 text-faint" />
                         {item.label}
                       </Link>
                     ))}
@@ -272,7 +331,7 @@ function ShopHeader({ floating = false }: { floating?: boolean }) {
                         setAccountOpen(false);
                         handleLogout();
                       }}
-                      className="flex w-full items-center gap-3 border-t border-[#ebe7e0] px-4 py-2.5 text-sm font-semibold text-[#6b635a] hover:bg-[#f7f5f2]"
+                      className="flex w-full items-center gap-3 border-t border-line px-4 py-2.5 text-sm font-semibold text-muted hover:bg-sunken-2"
                     >
                       <Icon name="logout" className="h-4 w-4" />
                       Log out
@@ -286,66 +345,19 @@ function ShopHeader({ floating = false }: { floating?: boolean }) {
       </div>
 
       {/* Mobile: split group + search */}
-      <div className="border-t border-[#ebe7e0] px-4 py-2 sm:hidden md:px-6 lg:px-8">
-        <div className="flex flex-col gap-2">
-          <button
-            ref={mobileGroupRef}
-            type="button"
-            onClick={() => setVenueOpen((o) => !o)}
-            aria-expanded={venueOpen}
-            className={
-              "flex items-center gap-2.5 rounded-xl border bg-white p-2 pr-3 text-left " +
-              BORDER +
-              " " +
-              CONTROL_SHADOW
-            }
-          >
-            <span className={ICON_WELL + " text-brand-green"}>
-              <Icon name="pin" className="h-4 w-4" />
-              {venueSelected && (
-                <span className="absolute -bottom-0.5 -right-0.5 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-brand-green text-white ring-2 ring-white">
-                  <svg viewBox="0 0 20 20" className="h-2 w-2" fill="currentColor" aria-hidden>
-                    <path
-                      fillRule="evenodd"
-                      d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z"
-                      clipRule="evenodd"
-                    />
-                  </svg>
-                </span>
-              )}
-            </span>
-            <span className="min-w-0 flex-1">
-              <span className="block truncate text-sm font-bold text-ink">
-                {venueSelected ? market.name : "Choose your location"}
-              </span>
-              <span className="flex items-center gap-1 truncate text-[0.7rem] text-[#8a8178]">
-                <PinGlyph className="h-2.5 w-2.5 shrink-0" />
-                <span className="truncate">{deliverLabel}</span>
-              </span>
-            </span>
-            <Chevron open={venueOpen} />
-          </button>
-          <div className="relative">
-            <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[#8a8178]">
-              <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
-                <circle cx="11" cy="11" r="7" />
-                <path strokeLinecap="round" d="M20 20l-3-3" />
-              </svg>
-            </span>
-            <input
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              disabled={!searchEnabled}
-              placeholder="Search markets…"
-              className={
-                "h-10 w-full rounded-full border bg-[#f0eeeb] py-2 pl-10 pr-3 text-sm text-ink outline-none placeholder:text-[#8a8178] disabled:opacity-45 " +
-                BORDER
-              }
-              aria-label="Search"
-            />
-          </div>
+      {/* Phones: the location control lives in the top row now, so this row
+          is ONLY the search - and only while search is usable (the market
+          step). A disabled search box on every other step was a full row of
+          sticky header spent on nothing. */}
+      {searchEnabled && (
+        <div className="border-t border-line px-4 py-2 sm:hidden">
+          <SearchField
+            value={searchValue}
+            onChange={setSearchValue}
+            placeholder={searchPlaceholder}
+          />
         </div>
-      </div>
+      )}
 
       <VenuePopover
         open={venueOpen}

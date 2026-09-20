@@ -3,6 +3,13 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import EmptyState from "./EmptyState";
+import Chip from "./Chip";
+import FilterPills from "./FilterPills";
+import HeroBanner from "./HeroBanner";
+import { ActiveOrderBanner } from "./ActiveOrderBanner";
+import StatTile from "./StatTile";
+import marketStallArt from "@/assets/illustrations/market-stall-produce.png";
+import shoppingCartArt from "@/assets/illustrations/shopping-cart.png";
 import Icon from "./Icon";
 import MarketArt from "@/components/shop/MarketArt";
 import {
@@ -10,26 +17,10 @@ import {
   type FoodCategory,
   type VenueType,
 } from "@/lib/marketDirectory";
-import { marketTone, stallTone } from "@/lib/vendorVisuals";
+import { marketTone, stallTone, TONE_COVER } from "@/lib/vendorVisuals";
 import { catalogForStall, categoriesForCatalog } from "@/lib/stallCatalog";
 import { useShopOptional } from "@/components/shop/ShopContext";
 import { api } from "@/lib/api";
-import ShopSideRail from "@/components/shop/ShopSideRail";
-import { useActiveOrders } from "@/lib/useActiveOrders";
-import { summarizeOrderStatus } from "@/lib/orderStatus";
-
-function activeOrderHeadline(orders: any[] | null): { title: string; href: string } | null {
-  if (!orders || orders.length === 0) return null;
-  const multiple = orders.length > 1;
-  const primary =
-    orders.find((o) => o.status === "shopping") ||
-    orders.find((o) => o.status === "awaiting_payment") ||
-    orders[0];
-  return {
-    title: multiple ? `${orders.length} orders in progress` : summarizeOrderStatus(primary),
-    href: multiple ? "/track" : `/orders/${primary.id}`,
-  };
-}
 
 const VENUE_TYPES: {
   id: VenueType;
@@ -96,7 +87,7 @@ function enrichMarket(m: any) {
     venue_type: venueType,
     blurb: dir?.blurb || (
       venueType === "supermarket"
-        ? "Fixed shelf prices — Quika picks and delivers."
+        ? "Fixed shelf prices — Qyka picks and delivers."
         : "Open-air stalls, live bargaining, real market prices."
     ),
     categories: dir?.categories || ["provisions"],
@@ -107,7 +98,7 @@ function enrichMarket(m: any) {
     featured: venueType === "local_market",
     image:
       dir?.image ||
-      (venueType === "supermarket" ? "/quika-cat-pantry.jpg" : "/quika-cat-produce.jpg"),
+      (venueType === "supermarket" ? "/qyka-cat-pantry.jpg" : "/qyka-cat-produce.jpg"),
   };
 }
 
@@ -121,13 +112,18 @@ function MarketCard({
   size?: "md" | "lg";
 }) {
   const wide = size === "lg";
+  // The app's one card shape (white, rounded-3xl, border, soft shadow, lift
+  // on hover - see Card.tsx), with the market art inset inside it and the
+  // details below a dashed divider. This used to be a bare image with loose
+  // text underneath it, the only card-like thing in the app that wasn't a
+  // card.
   return (
     <button
       type="button"
       onClick={() => onSelect(m)}
-      className="group w-full text-left transition duration-300 ease-premium"
+      className="group flex w-full flex-col rounded-3xl border border-line bg-surface p-2 text-left shadow-sm transition duration-200 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0"
     >
-      <span className="relative block overflow-hidden rounded-2xl shadow-sm transition duration-300 ease-premium group-hover:-translate-y-1 group-hover:shadow-lg">
+      <span className="relative block overflow-hidden rounded-2xl">
         <MarketArt
           tone={m.tone}
           title={m.name}
@@ -135,35 +131,41 @@ function MarketCard({
           featured={m.featured}
           className="aspect-[4/3] w-full"
         />
-        {m.live ? (
-          <span className="absolute left-3 top-3 inline-flex items-center gap-1.5 rounded-full bg-white/95 px-2.5 py-1.5 text-[0.7rem] font-extrabold uppercase tracking-wide text-ink shadow-sm backdrop-blur-sm">
-            <span className="relative flex h-1.5 w-1.5">
-              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-brand-green opacity-75" />
-              <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-brand-green" />
-            </span>
-            {m.venue_type === "supermarket" ? "Fixed price" : "Live now"}
-          </span>
-        ) : (
-          <span className="absolute left-3 top-3 rounded-full bg-white/95 px-2.5 py-1.5 text-[0.7rem] font-extrabold uppercase tracking-wide text-ink shadow-sm backdrop-blur-sm">
-            Coming soon
-          </span>
-        )}
+        <span className="absolute left-3 top-3 inline-flex items-center gap-1.5 rounded-full bg-surface/95 px-2.5 py-1.5 text-[0.7rem] font-extrabold uppercase tracking-wide text-ink shadow-sm">
+          {m.live ? (
+            <>
+              <span className="relative flex h-1.5 w-1.5">
+                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-brand-green opacity-75" />
+                <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-brand-green" />
+              </span>
+              {m.venue_type === "supermarket" ? "Fixed price" : "Live now"}
+            </>
+          ) : (
+            "Coming soon"
+          )}
+        </span>
       </span>
-      <span className="mt-3 block pr-1">
+      <span className="block px-3 pb-3 pt-3">
         <span className={"block truncate font-display font-extrabold tracking-tight text-ink " + (wide ? "text-lg" : "text-base")}>
           {m.name}
         </span>
-        <span className="mt-0.5 flex items-center gap-1 text-sm text-[#6b635a]">
-          <Icon name="pin" className="h-3 w-3 shrink-0 text-[#8a8178]" />
+        <span className="mt-0.5 flex items-center gap-1 text-sm text-muted">
+          <Icon name="pin" className="h-3 w-3 shrink-0 text-faint" />
           <span className="truncate">{m.area}</span>
         </span>
-        <span
-          className={
-            "mt-1.5 inline-block text-xs font-bold " +
-            (m.isPilot ? "text-brand-orange" : "text-brand-green")
-          }
-        >
-          {m.isPilot ? "Pilot — be among the first to shop here" : "New on Quika"}
+        <span className="mt-3 flex items-center justify-between gap-2 border-t border-dashed border-line-strong pt-3">
+          <span
+            className={
+              "inline-flex items-center rounded-full px-2.5 py-1 text-[0.7rem] font-bold " +
+              (m.isPilot ? "bg-brand-orange/15 text-brand-orange-dark" : "bg-brand-green/10 text-brand-green")
+            }
+          >
+            {m.isPilot ? "Pilot" : "New on Qyka"}
+          </span>
+          <span className="flex items-center gap-1 text-xs font-bold text-muted transition group-hover:text-ink">
+            Shop here
+            <Icon name="chevronDown" className="h-3.5 w-3.5 -rotate-90" />
+          </span>
         </span>
       </span>
     </button>
@@ -225,32 +227,16 @@ function FilterBar({
       role="toolbar"
       aria-label="Refine results"
     >
-      <button
-        type="button"
-        aria-pressed={liveOnly}
-        onClick={() => onLiveOnlyChange(!liveOnly)}
-        className={
-          "inline-flex h-9 shrink-0 items-center rounded-full px-3.5 text-sm font-semibold transition " +
-          (liveOnly
-            ? "bg-ink text-white"
-            : "bg-[#f0eeeb] text-ink hover:bg-[#e8e4df]")
-        }
-      >
+      <Chip selected={liveOnly} onClick={() => onLiveOnlyChange(!liveOnly)}>
         Live now
-      </button>
+      </Chip>
 
       <div className="relative shrink-0" ref={sortRef}>
-        <button
-          type="button"
+        <Chip
           aria-haspopup="listbox"
           aria-expanded={sortOpen}
+          selected={sort !== "featured" || sortOpen}
           onClick={() => setSortOpen((o) => !o)}
-          className={
-            "inline-flex h-9 items-center gap-1.5 rounded-full px-3.5 text-sm font-semibold transition " +
-            (sort !== "featured" || sortOpen
-              ? "bg-ink text-white"
-              : "bg-[#f0eeeb] text-ink hover:bg-[#e8e4df]")
-          }
         >
           {sort === "featured" ? "Sort" : sortLabel}
           <svg
@@ -265,12 +251,12 @@ function FilterBar({
               clipRule="evenodd"
             />
           </svg>
-        </button>
+        </Chip>
         {sortOpen && (
           <div
             role="listbox"
             aria-label="Sort venues"
-            className="absolute left-0 top-[calc(100%+6px)] z-20 min-w-[11rem] overflow-hidden rounded-xl border border-[#ebe7e0] bg-white py-1 shadow-[0_12px_28px_rgba(33,26,20,0.12)]"
+            className="absolute left-0 top-[calc(100%+6px)] z-20 min-w-[11rem] overflow-hidden rounded-xl border border-line bg-surface py-1 shadow-[0_12px_28px_rgba(33,26,20,0.12)]"
           >
             {SORT_OPTIONS.map((o) => (
               <button
@@ -283,7 +269,7 @@ function FilterBar({
                   setSortOpen(false);
                 }}
                 className={
-                  "flex w-full px-3.5 py-2 text-left text-sm font-semibold transition hover:bg-[#f7f5f2] " +
+                  "flex w-full px-3.5 py-2 text-left text-sm font-semibold transition hover:bg-sunken-2 " +
                   (sort === o.id ? "text-brand-orange" : "text-ink")
                 }
               >
@@ -346,16 +332,16 @@ function ShopHeroBanner({
   const supers = activity?.active_supermarkets ?? 0;
   const isSuper = venueType === "supermarket";
 
-  let bg = isSuper ? "#1A2E1F" : "#211A14";
-  let image = isSuper ? "/quika-cat-pantry.jpg" : "/quika-cat-produce.jpg";
+  let bg = isSuper ? TONE_COVER.produce.bg : TONE_COVER.mixed.bg;
+  let image = isSuper ? "/qyka-cat-pantry.jpg" : "/qyka-cat-produce.jpg";
   let imageAlt = isSuper ? "Shelved grocery provisions" : "Open-air market produce";
   let eyebrow = isSuper ? "Supermarkets" : "Local markets";
   let title = isSuper
-    ? "Shelf prices. Still Quika delivery."
+    ? "Shelf prices. Still Qyka delivery."
     : "Every purchase photographed. Every price real.";
   let body = isSuper
     ? supers > 0
-      ? `${supers} supermarket${supers === 1 ? "" : "s"} on Quika — fixed prices, no stall-hopping.`
+      ? `${supers} supermarket${supers === 1 ? "" : "s"} on Qyka — fixed prices, no stall-hopping.`
       : "Fixed-price shopping when you know exactly what you need."
     : agents > 0 || markets > 0
       ? `${agents} agent${agents === 1 ? "" : "s"} on duty across ${markets} open-air market${markets === 1 ? "" : "s"} — bargaining for you.`
@@ -364,9 +350,10 @@ function ShopHeroBanner({
   if (listMode && market) {
     const enriched = enrichMarket(market);
     const superList = (market.venue_type || "") === "supermarket";
-    // Ink field (not orange) so the brand-orange eyebrow stays legible
-    bg = superList ? "#1A2E1F" : "#211A14";
-    image = enriched.image || (superList ? "/quika-cat-pantry.jpg" : "/quika-trust-basket.jpg");
+    // Light tint, not a dark field - cream/white surfaces only, per the
+    // app's no-dark-surfaces rule (see vendorVisuals.ts::TONE_COVER).
+    bg = superList ? TONE_COVER.produce.bg : TONE_COVER.mixed.bg;
+    image = enriched.image || (superList ? "/qyka-cat-pantry.jpg" : "/qyka-trust-basket.jpg");
     imageAlt = market.name;
     eyebrow = superList ? `${market.name} · cart` : `${market.name} · list`;
     title = superList ? "Build your cart" : "Build your list";
@@ -377,15 +364,15 @@ function ShopHeroBanner({
         : "Add items with what you expect to pay. Your agent bargains the real prices at the market.";
   } else if (stall && market) {
     const tone = stallTone(stall.stall_description, stall.name);
-    bg = tone === "protein" ? "#6B2A22" : tone === "provisions" ? "#5C3A1E" : tone === "produce" ? "#1F4D2E" : "#C2430F";
+    bg = TONE_COVER[tone].bg;
     image =
       tone === "protein"
-        ? "/quika-cat-protein.jpg"
+        ? "/qyka-cat-protein.jpg"
         : tone === "provisions"
-          ? "/quika-cat-pantry.jpg"
+          ? "/qyka-cat-pantry.jpg"
           : tone === "produce"
-            ? "/quika-cat-produce.jpg"
-            : "/quika-trust-basket.jpg";
+            ? "/qyka-cat-produce.jpg"
+            : "/qyka-trust-basket.jpg";
     imageAlt = stall.name;
     eyebrow = `${market.name} · stall`;
     title = stall.name;
@@ -394,7 +381,7 @@ function ShopHeroBanner({
       "Browse suggested picks and the full stall catalogue — bargain estimates, negotiated live.";
   } else if (market) {
     const enriched = enrichMarket(market);
-    bg = enriched.venue_type === "supermarket" ? "#1A2E1F" : "#211A14";
+    bg = enriched.venue_type === "supermarket" ? TONE_COVER.produce.bg : TONE_COVER.mixed.bg;
     image = enriched.image;
     imageAlt = enriched.name;
     eyebrow = enriched.area || (enriched.venue_type === "supermarket" ? "Supermarket" : "Local market");
@@ -429,15 +416,15 @@ function ShopHeroBanner({
         <p
           className={
             "text-[0.7rem] font-bold uppercase tracking-[0.14em] " +
-            (listMode || stall || (!market && !isSuper) ? "text-brand-orange" : "text-white/55")
+            (listMode || stall || (!market && !isSuper) ? "text-brand-orange" : "text-ink/55")
           }
         >
           {eyebrow}
         </p>
-        <h2 className="mt-1.5 font-display text-xl font-extrabold leading-[1.1] tracking-tight text-white sm:text-2xl">
+        <h2 className="mt-1.5 font-display text-xl font-extrabold leading-[1.1] tracking-tight text-ink sm:text-2xl">
           {title}
         </h2>
-        <p className="mt-1.5 text-[0.8rem] leading-snug text-white/70 line-clamp-2">{body}</p>
+        <p className="mt-1.5 text-[0.8rem] leading-snug text-ink/70 line-clamp-2">{body}</p>
       </div>
     </div>
   );
@@ -458,6 +445,8 @@ function MarketPicker({
   query: queryProp,
   vendorsPanel = null,
   listPanel = null,
+  flowSteps = null,
+  heroActions = null,
 }: any) {
   const router = useRouter();
   const shop = useShopOptional();
@@ -468,8 +457,6 @@ function MarketPicker({
   const activeMarket = inShell ? shop?.market : null;
   const browseStall = inVendors ? shop?.browseStall : null;
   const preferredVendor = inList ? shop?.vendor : null;
-  const activeOrders = useActiveOrders();
-  const headline = activeOrderHeadline(activeOrders);
 
   const [venueType, setVenueType] = useState<VenueType>("local_market");
   const [food, setFood] = useState<FoodCategory | "popular">("popular");
@@ -543,13 +530,16 @@ function MarketPicker({
   const liveOthers = live.filter((m) => !m.isPilot);
   const comingSoon = shown.filter((m) => !m.live);
   const isOverlay = variant === "overlay";
+  // Plain market browse (Step 2 of the order flow) - as opposed to the shell
+  // modes that reuse this picker for a stall page or the list composer.
+  const browseMode = !isOverlay && !inShell;
   const isLocal = venueType === "local_market";
   const cardSize = isLocal ? "lg" : "md";
 
   const sectionCopy = isLocal
     ? {
         pilot: {
-          title: "Pilot on Quika",
+          title: "Pilot on Qyka",
           subtitle: "Be among the first — these markets are live for early shoppers.",
         },
         live: {
@@ -558,21 +548,21 @@ function MarketPicker({
         },
         soon: {
           title: "Coming soon",
-          subtitle: "Markets joining Quika next — not live for shopping yet.",
+          subtitle: "Markets joining Qyka next — not live for shopping yet.",
         },
       }
     : {
         pilot: {
           title: "Pilot stores",
-          subtitle: "Fixed-price partners open for early Quika shoppers.",
+          subtitle: "Fixed-price partners open for early Qyka shoppers.",
         },
         live: {
           title: "Open now",
-          subtitle: "Fixed shelf prices. Quika still picks and delivers.",
+          subtitle: "Fixed shelf prices. Qyka still picks and delivers.",
         },
         soon: {
           title: "Coming soon",
-          subtitle: "More stores joining Quika — not live for shopping yet.",
+          subtitle: "More stores joining Qyka — not live for shopping yet.",
         },
       };
 
@@ -619,65 +609,6 @@ function MarketPicker({
     { id: "freetext", label: "Free-text list", icon: "flag" },
   ];
 
-  const railMode = inList
-    ? "list"
-    : browseStall
-      ? "stall"
-      : inVendors
-        ? "vendors"
-        : "browse";
-
-  function goList() {
-    shop?.setBrowseStall(null);
-    shop?.setStep("list");
-  }
-
-  function shopWholeMarket() {
-    shop?.setBrowseStall(null);
-    shop?.setVendor(null);
-    shop?.setStep("list");
-  }
-
-  function writeOwnList() {
-    if (browseStall) {
-      shop?.setVendor({
-        id: browseStall.id,
-        name: browseStall.name,
-        stall_description: browseStall.stall_description ?? null,
-      });
-    }
-    shop?.setBrowseStall(null);
-    shop?.setStep("list");
-  }
-
-  const rail = (
-    <ShopSideRail
-      mode={railMode}
-      venueType={venueType}
-      venueCounts={counts}
-      onSelectVenueType={selectVenueType}
-      market={activeMarket}
-      stall={browseStall}
-      stallTypeFilter={shop?.stallTypeFilter || "all"}
-      onStallTypeFilter={(id) => shop?.setStallTypeFilter(id)}
-      stallTypeFilters={STALL_TYPE_FILTERS}
-      stallCategories={stallNavCats}
-      stallCategory={shop?.stallCategory || "featured"}
-      onStallCategory={(id) => shop?.setStallCategory(id)}
-      listComposerMode={shop?.listComposerMode || "detailed"}
-      onListComposerMode={(id) => shop?.setListComposerMode(id)}
-      listTools={LIST_TOOLS}
-      onGoList={goList}
-      onShopWholeMarket={shopWholeMarket}
-      onWriteOwnList={writeOwnList}
-      onBackToMarkets={() => {
-        shop?.setBrowseStall(null);
-        shop?.setStep("market");
-      }}
-      onCloseStall={() => shop?.setBrowseStall(null)}
-    />
-  );
-
   const marketsBody = (
     <>
       <FilterBar
@@ -691,9 +622,9 @@ function MarketPicker({
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
           {[0, 1, 2, 3, 4, 5].map((i) => (
             <div key={i}>
-              <div className="aspect-[4/3] animate-pulse rounded-2xl bg-[#ece8e2]" />
-              <div className="mt-3 h-4 w-2/3 animate-pulse rounded bg-[#ece8e2]" />
-              <div className="mt-2 h-3 w-1/2 animate-pulse rounded bg-[#f0eeeb]" />
+              <div className="aspect-[4/3] animate-pulse rounded-2xl bg-sunken-2" />
+              <div className="mt-3 h-4 w-2/3 animate-pulse rounded bg-sunken-2" />
+              <div className="mt-2 h-3 w-1/2 animate-pulse rounded bg-sunken" />
             </div>
           ))}
         </div>
@@ -757,7 +688,7 @@ function MarketPicker({
 
   const body = (
     <>
-      {!isOverlay && (
+      {!isOverlay && !browseMode && (
         <ShopHeroBanner
           venueType={venueType}
           activity={activity}
@@ -779,23 +710,23 @@ function MarketPicker({
         aria-modal="true"
       >
         <button type="button" className="absolute inset-0 cursor-default" aria-label="Close" onClick={onCancel} />
-        <div className="relative z-[1] flex max-h-[90vh] w-full max-w-4xl flex-col overflow-hidden rounded-t-2xl bg-white shadow-xl sm:rounded-2xl">
-          <div className="flex items-start justify-between gap-3 border-b border-[#ebe7e0] px-5 py-4">
+        <div className="relative z-[1] flex max-h-[90vh] w-full max-w-4xl flex-col overflow-hidden rounded-t-2xl bg-surface shadow-xl sm:rounded-2xl">
+          <div className="flex items-start justify-between gap-3 border-b border-line px-5 py-4">
             <div>
               <h2 className="text-xl font-bold tracking-tight text-ink">{title || "Change venue"}</h2>
-              <p className="mt-0.5 text-sm text-[#6b635a]">Your list stays when you switch.</p>
+              <p className="mt-0.5 text-sm text-muted">Your list stays when you switch.</p>
             </div>
             <button
               type="button"
               onClick={onCancel}
-              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-[#6b635a] hover:bg-[#f0eeeb]"
+              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-muted hover:bg-sunken"
               aria-label="Close"
             >
               ×
             </button>
           </div>
           <div className="flex min-h-0 flex-1 overflow-hidden">
-            <div className="hidden w-[200px] shrink-0 border-r border-[#ebe7e0] lg:block">
+            <div className="hidden w-[200px] shrink-0 border-r border-line lg:block">
               <div className="space-y-0.5 p-3">
                 {VENUE_TYPES.map((v) => (
                   <button
@@ -804,7 +735,7 @@ function MarketPicker({
                     onClick={() => setVenueType(v.id)}
                     className={
                       "flex w-full rounded-xl px-3 py-2.5 text-left text-sm font-semibold " +
-                      (venueType === v.id ? "bg-brand-orange/10 text-ink" : "text-[#5c534a]")
+                      (venueType === v.id ? "bg-brand-orange/15 text-brand-orange-dark" : "text-muted")
                     }
                   >
                     {v.label}
@@ -821,68 +752,61 @@ function MarketPicker({
 
   return (
     <div className="flex min-h-[calc(100vh-4rem)] md:min-h-full">
-      {rail}
-
-      <div className="shop-texture min-w-0 flex-1 px-4 py-5 md:px-6 lg:px-8">
-        {/* Mobile: venue chips only on browse; section tools when deeper */}
-        {!inShell && (
-          <div className="mb-3 flex gap-2 overflow-x-auto pb-1 lg:hidden [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-            {VENUE_TYPES.map((v) => (
-              <button
-                key={v.id}
-                type="button"
-                onClick={() => selectVenueType(v.id)}
-                className={
-                  "inline-flex shrink-0 items-center gap-1.5 rounded-full px-3.5 py-2 text-sm font-semibold " +
-                  (venueType === v.id ? "bg-ink text-white" : "bg-[#f0eeeb] text-ink")
-                }
-              >
-                {v.label}
-              </button>
-            ))}
-          </div>
-        )}
-        {/* Categories + page header — one row, every width. Categories are a
-            "refine what I'm looking at" control, the same family as
-            Live-now/Sort below, not app navigation - so it lives in the
-            content area, not the sidebar. When there's an active order, its
-            card takes the other side of this row rather than a separate
-            banner competing for attention. */}
-        {!inList && !browseStall && !inVendors && (
-          <div className="mb-4 flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-            <div className="min-w-0 lg:flex-1">
-              
-              <div className="">
-                <h1 className="font-display text-3xl font-extrabold tracking-tight text-ink md:text-4xl">
-                  {pageTitle}
-                </h1>
-                <p className="mt-1.5 text-[15px] text-[#6b635a]">{pageSubtitle}</p>
+      <div className="min-w-0 flex-1 px-4 py-6 md:px-6 md:py-8 lg:px-8">
+        {/* Step 2's header, top to bottom: the venue switch (what KIND of
+            place - it changes everything below it, so it leads), then the
+            flow's step tracker (`flowHeader`, owned by NewOrderFlow), then
+            the hero. The hero is the same persistent HeroBanner format the
+            rest of the shop uses, and it follows the venue switch: its
+            question, copy, art and figures all change with Local Markets vs
+            Supermarkets instead of being one static banner. */}
+        {browseMode && (
+          <>
+            {/* Switch on the left, the list summary flexed to the far end of
+                the same row - the switch changes what's browsed, the chip
+                is the standing "what am I shopping for" reminder. */}
+            <div className="mb-4 flex flex-wrap items-center gap-3">
+              <div className="w-full max-w-md sm:w-[26rem]">
+                <FilterPills
+                  variant="segmented"
+                  className=""
+                  options={VENUE_TYPES.map((v) => ({ key: v.id, label: `${v.label} · ${counts[v.id] ?? 0}` }))}
+                  value={venueType}
+                  onChange={selectVenueType}
+                />
               </div>
+              {heroActions && <div className="ml-auto">{heroActions}</div>}
             </div>
 
-            {headline && (
-              <button
-                type="button"
-                onClick={() => router.push(headline.href)}
-                className="flex shrink-0 items-center justify-between gap-4 rounded-2xl bg-[#211A14] px-5 py-4 text-left transition hover:brightness-110 lg:w-[340px]"
-              >
-                <div className="min-w-0 flex items-center gap-3">
-                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-brand-orange/15 text-brand-orange">
-                    <Icon name="pin" className="h-5 w-5" />
-                  </span>
-                  <div className="min-w-0">
-                    <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-brand-orange">
-                      Order in progress
-                    </p>
-                    <p className="mt-0.5 truncate text-sm font-bold text-white">{headline.title}</p>
-                  </div>
-                </div>
-                <span className="inline-flex w-fit shrink-0 items-center gap-1 rounded-full bg-white px-4 py-2 text-sm font-bold text-ink">
-                  Track →
-                </span>
-              </button>
-            )}
-          </div>
+            <HeroBanner
+              leading={flowSteps}
+              eyebrow={isLocal ? "Step 2 of 4 · Local markets" : "Step 2 of 4 · Supermarkets"}
+              title={isLocal ? title || "Which market?" : "Which supermarket?"}
+              body={
+                isLocal
+                  ? subtitle || "Where should your agent shop your list?"
+                  : "Where should we shop your list? Fixed shelf prices - Qyka still picks and delivers."
+              }
+              illustration={isLocal ? marketStallArt : shoppingCartArt}
+              banner={<ActiveOrderBanner />}
+            >
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+                {isLocal ? (
+                  <>
+                    <StatTile label="Agents on duty" value={activity?.agents_on_duty ?? "-"} />
+                    <StatTile label="Open-air markets" value={activity?.active_markets ?? counts.local_market} />
+                    <StatTile label="Prices" value="Bargained live" />
+                  </>
+                ) : (
+                  <>
+                    <StatTile label="Supermarkets" value={activity?.active_supermarkets ?? counts.supermarket} />
+                    <StatTile label="Prices" value="Fixed shelf" />
+                    <StatTile label="Delivery" value="By Qyka" />
+                  </>
+                )}
+              </div>
+            </HeroBanner>
+          </>
         )}
 
         {/* Mobile-only: list-composer tools / stall-specific chips — desktop
@@ -891,50 +815,14 @@ function MarketPicker({
           <div className="mb-4 flex gap-2 overflow-x-auto pb-1 lg:hidden [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
             {inList
               ? LIST_TOOLS.map((f) => (
-                  <button
-                    key={f.id}
-                    type="button"
-                    onClick={() => shop?.setListComposerMode(f.id)}
-                    className={
-                      "inline-flex shrink-0 rounded-full px-3 py-1.5 text-sm font-semibold " +
-                      (shop?.listComposerMode === f.id
-                        ? "bg-brand-orange/15 text-brand-orange-dark"
-                        : "bg-[#f7f5f2] text-[#6b635a]")
-                    }
-                  >
-                    {f.label}
-                  </button>
+                  <Chip key={f.id} size="sm" selected={shop?.listComposerMode === f.id} onClick={() => shop?.setListComposerMode(f.id)}>{f.label}</Chip>
                 ))
               : browseStall
                 ? stallNavCats.map((c) => (
-                    <button
-                      key={c.id}
-                      type="button"
-                      onClick={() => shop?.setStallCategory(c.id)}
-                      className={
-                        "inline-flex shrink-0 rounded-full px-3 py-1.5 text-sm font-semibold " +
-                        (shop?.stallCategory === c.id
-                          ? "bg-brand-orange/15 text-brand-orange-dark"
-                          : "bg-[#f7f5f2] text-[#6b635a]")
-                      }
-                    >
-                      {c.label}
-                    </button>
+                    <Chip key={c.id} size="sm" selected={shop?.stallCategory === c.id} onClick={() => shop?.setStallCategory(c.id)}>{c.label}</Chip>
                   ))
                 : STALL_TYPE_FILTERS.map((f) => (
-                    <button
-                      key={f.id}
-                      type="button"
-                      onClick={() => shop?.setStallTypeFilter(f.id)}
-                      className={
-                        "inline-flex shrink-0 rounded-full px-3 py-1.5 text-sm font-semibold " +
-                        (shop?.stallTypeFilter === f.id
-                          ? "bg-brand-orange/15 text-brand-orange-dark"
-                          : "bg-[#f7f5f2] text-[#6b635a]")
-                      }
-                    >
-                      {f.label}
-                    </button>
+                    <Chip key={f.id} size="sm" selected={shop?.stallTypeFilter === f.id} onClick={() => shop?.setStallTypeFilter(f.id)}>{f.label}</Chip>
                   ))}
           </div>
         )}
@@ -944,7 +832,7 @@ function MarketPicker({
             <h1 className="text-2xl font-bold tracking-tight text-ink md:text-[1.75rem]">
               {pageTitle}
             </h1>
-            <p className="mt-1 text-sm text-[#6b635a]">{pageSubtitle}</p>
+            <p className="mt-1 text-sm text-muted">{pageSubtitle}</p>
           </div>
         )}
 

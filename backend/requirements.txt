@@ -11,6 +11,8 @@ passlib[bcrypt]==1.7.4
 httpx==0.28.1
 python-multipart==0.0.20
 livekit-api==1.2.0
+google-auth==2.36.0
+requests==2.32.3
 
 pytest==8.3.4
 pytest-asyncio==0.25.2

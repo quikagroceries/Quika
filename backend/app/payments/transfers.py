@@ -33,7 +33,7 @@ def naira_to_kobo(amount: Decimal) -> int:
 
 async def send_transfer(
     *, account_number: str, bank_code: str, amount_naira: Decimal, reference: str,
-    reason: str = "Quika vendor payment",
+    reason: str = "Qyka vendor payment",
 ) -> dict:
     """Send money to a vendor account. Returns the rail's response incl. fee.
 

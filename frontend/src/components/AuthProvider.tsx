@@ -3,9 +3,10 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { api, setUnauthorizedHandler } from "@/lib/api";
+import { clearShared } from "@/lib/sharedQuery";
 
-const DUTY_KEY = "quika_agent_on_duty";
-const TOKEN_KEY = "quika_token";
+const DUTY_KEY = "qyka_agent_on_duty";
+const TOKEN_KEY = "qyka_token";
 
 const AuthContext = createContext<any>(null);
 
@@ -21,6 +22,7 @@ export function AuthProvider({ children }: any) {
   const [hydrated, setHydrated] = useState(false);
 
   const handleLogout = useCallback(() => {
+    clearShared(); // never show the next person the last one's cached data
     localStorage.removeItem(TOKEN_KEY);
     localStorage.removeItem(DUTY_KEY);
     setToken(null);

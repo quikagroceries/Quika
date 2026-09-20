@@ -17,7 +17,7 @@ function RoleSwitch({ mode, onToggle, busy, error, compact = false }: any) {
         disabled={busy}
         title={isCustomer ? "Switch to agent view" : "Switch to customer view"}
         aria-label={isCustomer ? "Switch to agent view" : "Switch to customer view"}
-        className="flex h-11 w-11 items-center justify-center self-center rounded-xl bg-[#f0eeeb] text-[#6b635a] transition-colors hover:bg-[#e8e4df] disabled:opacity-50"
+        className="flex h-11 w-11 items-center justify-center self-center rounded-xl bg-sunken text-muted transition-colors hover:bg-[#e8e4df] disabled:opacity-50"
       >
         <span className="text-xs font-bold">{isCustomer ? "A" : "C"}</span>
       </button>
@@ -30,19 +30,19 @@ function RoleSwitch({ mode, onToggle, busy, error, compact = false }: any) {
         onClick={() => onToggle(isCustomer ? "agent" : "customer")}
         disabled={busy}
         aria-label={isCustomer ? "Switch to agent view" : "Switch to customer view"}
-        className="relative flex h-10 w-full items-center rounded-full bg-[#f0eeeb] p-1 text-sm font-semibold transition-opacity disabled:opacity-50"
+        className="relative flex h-10 w-full items-center rounded-full bg-sunken p-1 text-sm font-semibold transition-opacity disabled:opacity-50"
       >
         <span
           aria-hidden="true"
           className={
-            "absolute top-1 bottom-1 w-[calc(50%-4px)] rounded-full bg-white shadow-sm transition-transform duration-200 ease-out " +
+            "absolute top-1 bottom-1 w-[calc(50%-4px)] rounded-full bg-surface shadow-sm transition-transform duration-200 ease-out " +
             (isCustomer ? "translate-x-[calc(100%+4px)]" : "translate-x-0")
           }
         />
-        <span className={"relative z-10 flex-1 text-center " + (!isCustomer ? "text-brand-orange" : "text-[#6b635a]")}>
+        <span className={"relative z-10 flex-1 text-center " + (!isCustomer ? "text-brand-orange" : "text-muted")}>
           Agent
         </span>
-        <span className={"relative z-10 flex-1 text-center " + (isCustomer ? "text-brand-orange" : "text-[#6b635a]")}>
+        <span className={"relative z-10 flex-1 text-center " + (isCustomer ? "text-brand-orange" : "text-muted")}>
           Customer
         </span>
       </button>

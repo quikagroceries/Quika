@@ -1,223 +1,206 @@
 'use client';
 
 import { useState } from "react";
+import Link from "next/link";
 import { api } from "@/lib/api";
 import Button from "@/components/Button";
-import Card from "@/components/Card";
 import Input from "@/components/Input";
-import Icon from "@/components/Icon";
+import OtpInput from "@/components/OtpInput";
+
+const isDev = process.env.NODE_ENV !== "production";
+
+function looksLikeEmail(v: string) {
+  return v.includes("@");
+}
 
 // Shown exactly once, right after first login, to anyone with no name saved
-// yet (App.jsx decides). Two different shapes depending on who's arriving:
-//
-//   - A brand-new signup is always role=CUSTOMER (that's the only role OTP
-//     verify ever self-assigns - see auth.routes.verify_otp). They haven't
-//     told us what they're here for yet, so this asks first. Agents are
-//     never self-granted the role though - becoming one goes through the
-//     existing admin-approved agent_applications workflow (see
-//     app/agent_applications). Choosing "agent" here just fast-tracks into
-//     that application with the name/market already collected; the account
-//     stays a customer until an admin approves it.
-//
-//   - An account whose role is ALREADY fixed (an agent provisioned by an
-//     admin, e.g. via dev-seed, who has just never logged in before) has no
-//     role to choose - asking again would be nonsensical - so it's just a
-//     plain name prompt.
+// yet. A brand-new signup is always role=CUSTOMER (the only role OTP verify
+// self-assigns), so this is now just a name (+ optional address, + optional
+// email) prompt. Becoming an agent is its own admin-approved application,
+// reachable from Settings — never self-granted here.
 function ProfileSetup({ user, onDone }: any) {
-  const roleFixed = (user.role || "").toUpperCase() !== "CUSTOMER";
+  const isCustomer = (user.role || "").toUpperCase() === "CUSTOMER";
 
-  const [step, setStep] = useState(roleFixed ? "details" : "role"); // role | details | agent-submitted
-  const [role, setRole] = useState(roleFixed ? "fixed" : null);     // "customer" | "agent" | "fixed"
   const [fullName, setFullName] = useState("");
   const [address, setAddress] = useState("");
-  const [markets, setMarkets] = useState<any[]>([]);
-  const [marketId, setMarketId] = useState("");
-  const [note, setNote] = useState("");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
-  const [savedUser, setSavedUser] = useState<any>(null);
 
-  async function chooseRole(r) {
-    setRole(r);
-    setStep("details");
-    if (r === "agent" && markets.length === 0) {
-      try {
-        setMarkets(await api.getMarkets());
-      } catch {
-        // The market dropdown will just show empty; the submit button stays
-        // disabled without a market, so this fails safe.
-      }
+  // Email is optional here and independent of the main "Continue" action -
+  // a phone signup has no email on file yet (see auth/models.py::User), so
+  // this offers to add + verify one via the same OTP flow sign-in uses,
+  // without blocking anyone who'd rather skip it and add it later from
+  // Settings.
+  const [email, setEmail] = useState("");
+  const [emailStep, setEmailStep] = useState<"idle" | "sent" | "verified">(
+    user.email ? "verified" : "idle"
+  );
+  const [emailCode, setEmailCode] = useState("");
+  const [emailDevOtp, setEmailDevOtp] = useState("");
+  const [emailBusy, setEmailBusy] = useState(false);
+  const [emailError, setEmailError] = useState("");
+
+  async function handleSendEmailCode() {
+    setEmailError("");
+    setEmailBusy(true);
+    try {
+      const data = await api.requestOtp(email.trim());
+      if (data && data.dev_otp) setEmailDevOtp(data.dev_otp);
+      setEmailCode("");
+      setEmailStep("sent");
+    } catch (e: any) {
+      setEmailError("Could not send a code. Check the address and try again.");
+    } finally {
+      setEmailBusy(false);
     }
   }
 
-  async function handleNameContinue() {
-    setError(""); setBusy(true);
+  async function handleVerifyEmailCode() {
+    setEmailError("");
+    setEmailBusy(true);
+    try {
+      await api.linkEmail(email.trim(), emailCode);
+      setEmailStep("verified");
+    } catch (e: any) {
+      setEmailError("Wrong or expired code. Request a new one.");
+    } finally {
+      setEmailBusy(false);
+    }
+  }
+
+  async function handleContinue() {
+    setError("");
+    setBusy(true);
     try {
       const updated = await api.updateProfile({
         full_name: fullName.trim(),
-        ...(role === "customer" ? { default_delivery_address: address.trim() || null } : {}),
+        ...(isCustomer ? { default_delivery_address: address.trim() || null } : {}),
       });
       onDone(updated);
-    } catch (e) {
+    } catch (e: any) {
       setError("Could not save: " + e.message);
       setBusy(false);
     }
   }
 
-  async function handleAgentSubmit() {
-    setError(""); setBusy(true);
-    try {
-      const updated = await api.updateProfile({ full_name: fullName.trim() });
-      await api.applyAsAgent({ market_id: marketId, note: note.trim() || null });
-      setSavedUser(updated);
-      setStep("agent-submitted");
-    } catch (e) {
-      setError("Could not submit: " + e.message);
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  if (step === "role") {
-    return (
-      <div className="mx-auto max-w-sm py-8">
-        <h1 className="mb-2 text-3xl font-extrabold tracking-tight text-slate-900">Welcome to Quika</h1>
-        <p className="mb-8 text-slate-500">What would you like to do?</p>
-
-        <div className="space-y-3">
-          <button
-            onClick={() => chooseRole("customer")}
-            className="w-full rounded-2xl border-2 border-slate-200 bg-white p-5 text-left shadow-card transition-colors hover:border-brand-orange hover:bg-brand-orange/5"
-          >
-            <div className="flex items-center gap-3">
-              <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-brand-orange/10 text-brand-orange">
-                <Icon name="basket" className="h-6 w-6" />
-              </span>
-              <div>
-                <div className="text-lg font-bold text-slate-900">Shop with Quika</div>
-                <div className="text-sm text-slate-500">Place orders and have a market agent shop for you.</div>
-              </div>
-            </div>
-          </button>
-
-          <button
-            onClick={() => chooseRole("agent")}
-            className="w-full rounded-2xl border-2 border-slate-200 bg-white p-5 text-left shadow-card transition-colors hover:border-brand-orange hover:bg-brand-orange/5"
-          >
-            <div className="flex items-center gap-3">
-              <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-brand-green/10 text-brand-green">
-                <Icon name="store" className="h-6 w-6" />
-              </span>
-              <div>
-                <div className="text-lg font-bold text-slate-900">Become an agent</div>
-                <div className="text-sm text-slate-500">Shop on behalf of customers at a market and earn a fee.</div>
-              </div>
-            </div>
-          </button>
-        </div>
-      </div>
-    );
-  }
-
-  if (step === "agent-submitted") {
-    return (
-      <div className="mx-auto max-w-sm py-8">
-        <Card>
-          <p className="mb-2 text-lg font-bold text-slate-900">Application submitted</p>
-          <p className="text-slate-600">
-            We've received your application to become an agent and will let you know once it's reviewed.
-            For now, carry on using Quika as a customer.
-          </p>
-          <Button onClick={() => onDone(savedUser)} fullWidth className="mt-4">
-            Continue
-          </Button>
-        </Card>
-      </div>
-    );
-  }
-
-  // step === "details"
   return (
-    <div className="mx-auto max-w-sm py-8">
-      {!roleFixed && (
-        <button
-          onClick={() => setStep("role")}
-          className="mb-4 text-sm font-semibold text-brand-orange hover:underline"
-        >
-          ← Back
-        </button>
-      )}
-      <h1 className="mb-2 text-3xl font-extrabold tracking-tight text-slate-900">
-        {role === "agent" ? "Apply as an agent" : "Complete your profile"}
+    <div>
+      <h1 className="mb-2 font-display text-2xl font-extrabold tracking-tight text-ink sm:text-3xl">
+        Complete your profile
       </h1>
-      <p className="mb-8 text-slate-500">
-        {role === "agent"
-          ? "Tell us a bit about you and which market you'd shop at."
-          : "Just a couple of details before we get you shopping."}
+      <p className="mb-6 text-muted">
+        Just a couple of details before we get you shopping.
       </p>
 
-      <Card>
-        <div className="space-y-3">
+      <div className="space-y-3">
+        <label className="block">
+          <span className="mb-1 block text-sm font-semibold text-ink">Full name</span>
+          <Input
+            placeholder="e.g. Ada Obi"
+            value={fullName}
+            onChange={(e) => setFullName(e.target.value)}
+          />
+        </label>
+
+        {isCustomer && (
           <label className="block">
-            <span className="mb-1 block text-sm font-semibold text-slate-700">Full name</span>
+            <span className="mb-1 block text-sm font-semibold text-ink">
+              Delivery address <span className="font-normal text-faint">(optional)</span>
+            </span>
             <Input
-              placeholder="e.g. Ada Obi"
-              value={fullName}
-              onChange={(e) => setFullName(e.target.value)}
+              placeholder="e.g. 12 Allen Avenue, Ikeja"
+              value={address}
+              onChange={(e) => setAddress(e.target.value)}
             />
           </label>
+        )}
 
-          {role === "customer" && (
-            <label className="block">
-              <span className="mb-1 block text-sm font-semibold text-slate-700">
-                Delivery address <span className="font-normal text-slate-400">(optional)</span>
-              </span>
-              <Input
-                placeholder="e.g. 12 Allen Avenue, Ikeja"
-                value={address}
-                onChange={(e) => setAddress(e.target.value)}
-              />
-            </label>
-          )}
+        {!user.email && (
+          <div>
+            <span className="mb-1 block text-sm font-semibold text-ink">
+              Email <span className="font-normal text-faint">(optional)</span>
+            </span>
 
-          {role === "agent" && (
-            <>
-              <label className="block">
-                <span className="mb-1 block text-sm font-semibold text-slate-700">Market</span>
-                <Input as="select" value={marketId} onChange={(e) => setMarketId(e.target.value)}>
-                  <option value="">Select a market…</option>
-                  {markets.map((m) => (
-                    <option key={m.id} value={m.id}>{m.name} — {m.city}</option>
-                  ))}
-                </Input>
-              </label>
-              <label className="block">
-                <span className="mb-1 block text-sm font-semibold text-slate-700">
-                  Note <span className="font-normal text-slate-400">(optional)</span>
-                </span>
+            {emailStep === "verified" ? (
+              <p className="flex items-center gap-1.5 text-sm font-semibold text-brand-green">
+                ✓ {email || "Email"} verified
+              </p>
+            ) : emailStep === "sent" ? (
+              <div className="space-y-2">
+                <p className="text-sm text-muted">
+                  Enter the code sent to <span className="font-semibold text-ink">{email}</span>.
+                </p>
+                {isDev && emailDevOtp && (
+                  <p className="text-sm text-muted">
+                    Dev code: <b className="text-ink">{emailDevOtp}</b>
+                  </p>
+                )}
+                <OtpInput value={emailCode} onChange={setEmailCode} autoFocus />
+                <div className="flex gap-2">
+                  <Button
+                    variant="neutral"
+                    onClick={() => setEmailStep("idle")}
+                    disabled={emailBusy}
+                  >
+                    Back
+                  </Button>
+                  <Button
+                    onClick={handleVerifyEmailCode}
+                    busy={emailBusy}
+                    disabled={emailCode.length !== 6}
+                    fullWidth
+                  >
+                    Verify email
+                  </Button>
+                </div>
+              </div>
+            ) : (
+              <div className="flex gap-2">
                 <Input
-                  placeholder="e.g. I already run a stall at this market"
-                  value={note}
-                  onChange={(e) => setNote(e.target.value)}
+                  type="email"
+                  placeholder="you@email.com"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className="flex-1"
                 />
-              </label>
-            </>
-          )}
+                <Button
+                  variant="neutral"
+                  onClick={handleSendEmailCode}
+                  busy={emailBusy}
+                  disabled={!looksLikeEmail(email)}
+                >
+                  Send code
+                </Button>
+              </div>
+            )}
+            {emailError && (
+              <p className="mt-1.5 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{emailError}</p>
+            )}
+          </div>
+        )}
 
-          <Button
-            onClick={role === "agent" ? handleAgentSubmit : handleNameContinue}
-            busy={busy}
-            disabled={!fullName.trim() || (role === "agent" && !marketId)}
-            fullWidth
-            className="mt-2"
-          >
-            {role === "agent" ? "Submit application" : "Continue"}
-          </Button>
-          {error && (
-            <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p>
-          )}
-        </div>
-      </Card>
+        <Button
+          onClick={handleContinue}
+          busy={busy}
+          disabled={!fullName.trim()}
+          fullWidth
+          className="mt-2"
+        >
+          Continue
+        </Button>
+        {error && (
+          <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p>
+        )}
+      </div>
+
+      {isCustomer && (
+        <p className="mt-6 border-t border-line pt-4 text-sm text-muted">
+          Want to shop for Qyka at a market?{" "}
+          <Link href="/settings" className="font-semibold text-brand-orange hover:underline">
+            Apply as an agent →
+          </Link>
+        </p>
+      )}
     </div>
   );
 }

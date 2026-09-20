@@ -10,7 +10,7 @@ export default function OrderDetailPage() {
   return (
     <OrderDetail
       orderId={id}
-      onBack={() => router.push("/history")}
+      onBack={() => router.push("/track")}
       onTopUpWallet={() => router.push("/wallet")}
     />
   );

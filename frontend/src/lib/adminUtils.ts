@@ -43,7 +43,7 @@ export const CHART_STATUS = {
   critical: "#d03b3b",
 };
 
-// The standard status-critical red above sits too close to Quika's own
+// The standard status-critical red above sits too close to Qyka's own
 // brand orange to reliably tell apart (validate_palette.js: ΔE 7.7 normal-
 // vision, below the 15 floor) - this step is validated specifically against
 // that orange (ΔE 20.1) for the one chart that puts them side by side (the

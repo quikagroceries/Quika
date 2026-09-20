@@ -9,9 +9,11 @@ function Input({ as = "input", className = "", children, ...props }: any) {
   return (
     <Component
       className={
-        "w-full min-h-[44px] rounded-xl border border-[#ddd6cb] bg-white px-4 text-base text-ink " +
-        "placeholder:text-[#a89f93] transition-colors " +
-        "hover:border-[#c9c0b3] " +
+        // "pill-ish rounded rectangles" per the design-system spec — was
+        // rounded-xl (12px), now a genuine pill matching the reference.
+        "w-full min-h-[44px] rounded-full border border-line-strong bg-surface px-4 text-base text-ink " +
+        "placeholder:text-faint transition-colors " +
+        "hover:border-line-strong " +
         "focus:outline-none focus:ring-2 focus:ring-brand-orange/40 focus:border-brand-orange " +
         className
       }

@@ -311,7 +311,7 @@ function Shopping({ orderId, onBack }: any) {
 
   if (!order) {
     return (
-      <div className="flex flex-col items-center gap-3 py-16 text-[#6b635a]">
+      <div className="flex flex-col items-center gap-3 py-16 text-muted">
         <svg className="h-8 w-8 animate-spin" viewBox="0 0 24 24" fill="none" aria-hidden="true">
           <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
           <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
@@ -362,7 +362,10 @@ function Shopping({ orderId, onBack }: any) {
     : order.status === "cancelled_unpaid" ? "Balance not paid"
     : "Order status";
 
-  const heroBg = market ? TONE_COVER[marketTone(market.name, market.city)].bg : "#211A14";
+  // Light tint now, not a dark-ink fallback - cream/white surfaces only,
+  // per the app's no-dark-surfaces rule. Text over this hero is dark ink,
+  // not white, to match.
+  const heroBg = market ? TONE_COVER[marketTone(market.name, market.city)].bg : "#F0ECE0";
   const heroBody =
     order.status === "agent_assigned"
       ? "Start shopping when you're ready — bargain live, buy, and keep proof of purchase."
@@ -417,15 +420,15 @@ function Shopping({ orderId, onBack }: any) {
 
         <div className="relative z-10 flex w-full flex-col justify-center gap-1.5 px-5 pb-5 pt-3 sm:w-[60%] sm:px-6 sm:pb-6">
           <div className="flex flex-wrap items-center gap-2">
-            <p className="text-xs font-bold uppercase tracking-[0.14em] text-white/55">
+            <p className="text-xs font-bold uppercase tracking-[0.14em] text-ink/55">
               {market?.name || "Order"} · #{order.id.slice(0, 8)}
             </p>
             <StatusBadge status={order.status} />
           </div>
-          <h2 className="font-display text-xl font-extrabold leading-[1.1] tracking-tight text-white sm:text-2xl">
+          <h2 className="font-display text-xl font-extrabold leading-[1.1] tracking-tight text-ink sm:text-2xl">
             {heroHeadline}
           </h2>
-          <p className="text-sm leading-relaxed text-white/70 sm:text-base line-clamp-2">{heroBody}</p>
+          <p className="text-sm leading-relaxed text-ink/70 sm:text-base line-clamp-2">{heroBody}</p>
         </div>
       </div>
 
@@ -510,7 +513,7 @@ function Shopping({ orderId, onBack }: any) {
                       onChange={(e) => setStallDesc(e.target.value)}
                     />
                   </div>
-                  <p className="mt-2 text-xs text-[#8a8178]">
+                  <p className="mt-2 text-xs text-faint">
                     We&apos;ll tag this stall&apos;s location from your phone automatically — no extra step.
                   </p>
                   <div className="mt-3 flex gap-2">
@@ -555,7 +558,7 @@ function Shopping({ orderId, onBack }: any) {
               const overagePending = !bought && item.availability === "overage_pending";
               const actionable = isShopping && !bought && !dropped && !waitingOnCustomer && !overagePending;
               return (
-                <Card key={item.id} className={(bought || dropped) ? "bg-[#f7f5f2] py-3" : "py-3"}>
+                <Card key={item.id} className={(bought || dropped) ? "bg-sunken-2 py-3" : "py-3"}>
                   <div className="flex items-center gap-2">
                     {actionable && (
                       <label className="-m-2 flex h-11 w-11 shrink-0 cursor-pointer items-center justify-center">
@@ -573,19 +576,19 @@ function Shopping({ orderId, onBack }: any) {
                       </span>
                     )}
                     {dropped && (
-                      <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#e8e4df] text-[#8a8178]">
+                      <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#e8e4df] text-faint">
                         <Icon name="trash" className="h-4 w-4" />
                       </span>
                     )}
                     <div className="min-w-0 flex-1">
-                      <div className={"font-semibold " + (bought || dropped ? "text-[#8a8178] line-through" : "text-ink")}>
+                      <div className={"font-semibold " + (bought || dropped ? "text-faint line-through" : "text-ink")}>
                         {item.description}
                       </div>
                       {item.requested_note && actionable && (
-                        <div className="text-sm text-[#6b635a]">{item.requested_note}</div>
+                        <div className="text-sm text-muted">{item.requested_note}</div>
                       )}
                       {item.listed_price != null && actionable && (
-                        <div className="text-sm text-[#6b635a]">
+                        <div className="text-sm text-muted">
                           Customer expected: ₦{item.listed_price}
                         </div>
                       )}
@@ -600,7 +603,7 @@ function Shopping({ orderId, onBack }: any) {
                         </div>
                       )}
                       {dropped && (
-                        <div className="text-sm font-semibold text-[#8a8178]">Dropped by customer</div>
+                        <div className="text-sm font-semibold text-faint">Dropped by customer</div>
                       )}
                       {waitingOnCustomer && (
                         <div className="text-sm font-semibold text-amber-700">Waiting for customer's decision</div>
@@ -635,7 +638,7 @@ function Shopping({ orderId, onBack }: any) {
               this stall, but each keeps its OWN typed price (#8) - no
               combined total to split evenly and fabricate per-item prices. */}
           {isShopping && selected.length > 0 && (
-              <div className="mt-4 rounded-xl border-2 border-brand-orange bg-white p-4 shadow-sm">
+              <div className="mt-4 rounded-2xl bg-brand-orange/[0.12] p-4">
                 <p className="mb-3 text-lg font-bold text-ink">
                   Pay for {selected.length} item{selected.length === 1 ? "" : "s"} from this stall
                 </p>
@@ -652,7 +655,7 @@ function Shopping({ orderId, onBack }: any) {
                   />
                 </div>
 
-                <div className="mt-3 space-y-2 border-t border-[#ebe7e0] pt-3">
+                <div className="mt-3 space-y-2 border-t border-line pt-3">
                   {selectedItems.map((it) => (
                     <div key={it.id}>
                       <div className="flex items-center gap-2">
@@ -684,15 +687,15 @@ function Shopping({ orderId, onBack }: any) {
                 </div>
 
                 {payTotal > 0 && (
-                  <div className="mt-3 flex justify-between border-t border-[#ebe7e0] pt-2 text-sm">
-                    <span className="text-[#6b635a]">Total to this stall</span>
+                  <div className="mt-3 flex justify-between border-t border-line pt-2 text-sm">
+                    <span className="text-muted">Total to this stall</span>
                     <span className="font-bold text-ink">₦{payTotal.toFixed(2)}</span>
                   </div>
                 )}
 
                 {/* #6: optional proof-of-purchase photo, one per transfer -
                     best-effort only, never required to pay. */}
-                <div className="mt-3 flex items-center gap-2 border-t border-[#ebe7e0] pt-3">
+                <div className="mt-3 flex items-center gap-2 border-t border-line pt-3">
                   {photoUrl ? (
                     <img src={photoUrl} alt="" className="h-14 w-14 rounded-lg object-cover" />
                   ) : (
@@ -700,13 +703,13 @@ function Shopping({ orderId, onBack }: any) {
                       type="button"
                       onClick={() => photoInputRef.current?.click()}
                       disabled={photoUploading}
-                      className="flex h-14 w-14 flex-col items-center justify-center gap-1 rounded-lg border-2 border-dashed border-[#ddd6cb] text-[#8a8178] disabled:opacity-50"
+                      className="flex h-14 w-14 flex-col items-center justify-center gap-1 rounded-lg border-2 border-dashed border-line-strong text-faint disabled:opacity-50"
                     >
                       <Icon name="camera" className="h-5 w-5" />
                       <span className="text-[10px] font-semibold">{photoUploading ? "…" : "Add"}</span>
                     </button>
                   )}
-                  <span className="text-sm text-[#6b635a]">Purchase photo (optional)</span>
+                  <span className="text-sm text-muted">Purchase photo (optional)</span>
                   <input
                     ref={photoInputRef}
                     type="file"
@@ -748,7 +751,7 @@ function Shopping({ orderId, onBack }: any) {
               </p>
               <div className="space-y-2">
                 {missingPhotoPurchases.map((p) => (
-                  <div key={p.id} className="flex items-center justify-between rounded-lg bg-white px-3 py-2">
+                  <div key={p.id} className="flex items-center justify-between rounded-lg bg-surface px-3 py-2">
                     <span className="text-sm font-semibold text-ink/80">₦{p.amount} — {p.account_number}</span>
                     <Button
                       variant="neutral"

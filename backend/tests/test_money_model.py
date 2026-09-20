@@ -1,4 +1,4 @@
-"""Tests for the settled Quika money model: fees, deposit, refunds, wallet."""
+"""Tests for the settled Qyka money model: fees, deposit, refunds, wallet."""
 
 import uuid
 from decimal import Decimal
@@ -11,9 +11,9 @@ PHONE_AGENT = "+2348020000002"
 
 
 async def _login(client, phone):
-    r = await client.post("/auth/request-otp", json={"phone": phone})
+    r = await client.post("/auth/request-otp", json={"identifier": phone})
     code = r.json()["dev_otp"]
-    r = await client.post("/auth/verify-otp", json={"phone": phone, "code": code})
+    r = await client.post("/auth/verify-otp", json={"identifier": phone, "code": code})
     return r.json()["access_token"]
 
 

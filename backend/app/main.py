@@ -8,13 +8,14 @@ from app.agent.routes import router as agent_router
 from app.agent_applications.routes import router as agent_applications_router
 from app.auth.routes import router as auth_router
 from app.calls.routes import router as calls_router
-from app.chat.routes import router as chat_router
+from app.chat.routes import conversations_router, router as chat_router
 from app.core.config import settings
 from app.core.database import AsyncSessionLocal
 from app.delivery.routes import router as delivery_router
 from app.dev.routes import router as dev_router
 from app.float.routes import router as float_router
 from app.jit.routes import router as jit_router
+from app.locations.routes import router as locations_router
 from app.markets.routes import router as markets_router
 from app.notifications.routes import router as notifications_router
 from app.orders.routes import router as orders_router
@@ -62,10 +63,12 @@ app.include_router(float_router, prefix="/float", tags=["float"])
 app.include_router(orders_router, prefix="/orders", tags=["orders"])
 # Same "/orders" prefix as orders_router - messages hang off /orders/{id}/messages.
 app.include_router(chat_router, prefix="/orders", tags=["chat"])
+app.include_router(conversations_router, prefix="/chat", tags=["chat"])
 app.include_router(jit_router, prefix="/jit", tags=["jit"])
 app.include_router(payments_router, prefix="/payments", tags=["payments"])
 app.include_router(wallet_router, prefix="/wallet", tags=["wallet"])
 app.include_router(delivery_router, prefix="/delivery", tags=["delivery"])
+app.include_router(locations_router, prefix="/locations", tags=["locations"])
 # Same "/orders" prefix as chat_router - rating hangs off /orders/{id}/rating.
 app.include_router(ratings_router, prefix="/orders", tags=["ratings"])
 app.include_router(notifications_router, prefix="/notifications", tags=["notifications"])

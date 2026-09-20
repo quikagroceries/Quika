@@ -25,7 +25,7 @@ function ShopPageInner() {
     <>
       <NewOrderFlow
         user={user}
-        onCancel={() => router.push(token && user ? "/history" : "/")}
+        onCancel={() => router.push(token && user ? "/track" : "/")}
         onOrderPlaced={(orderId: string) => router.push(`/orders/${orderId}`)}
       />
     </>

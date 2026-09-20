@@ -15,8 +15,18 @@ class User(Base):
     id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
     )
-    phone: Mapped[str] = mapped_column(String(20), unique=True, index=True)
+    # Primary ID is EITHER phone or email — at least one is always set (enforced
+    # in auth/service.py::get_or_create_user, not a DB constraint). A phone
+    # signup can later gain an email (and vice versa) by linking Google, so
+    # both being set on one row is normal, not a sign of two accounts merging.
+    phone: Mapped[str | None] = mapped_column(String(20), unique=True, index=True, nullable=True)
+    email: Mapped[str | None] = mapped_column(String(255), unique=True, nullable=True)
     full_name: Mapped[str | None] = mapped_column(String(120), nullable=True)
+    # Profile photo: an https URL to an already-uploaded image (the browser
+    # uploads straight to Cloudinary, same as chat photos - no bytes ever touch
+    # this server). Validated in the profile-update schema; cosmetic only.
+    avatar_url: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    google_id: Mapped[str | None] = mapped_column(String(64), unique=True, nullable=True, index=True)
     # Saved address, offered as a default when a new order asks for one.
     # Purely a convenience prefill — never used by any money/eligibility logic.
     default_delivery_address: Mapped[str | None] = mapped_column(Text, nullable=True)
@@ -29,6 +39,7 @@ class User(Base):
 
     # Verification
     is_phone_verified: Mapped[bool] = mapped_column(Boolean, default=False)
+    is_email_verified: Mapped[bool] = mapped_column(Boolean, default=False)
 
     # Risk model — load-bearing from day one.
     # basket_cap is the max order total (in kobo) this user may place.
@@ -50,7 +61,14 @@ class OtpCode(Base):
     id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
     )
-    phone: Mapped[str] = mapped_column(String(20), index=True)
+    # Normalized phone (+234...) or lowercased email — whichever the caller
+    # signed in with (see auth/service.py::normalize_identifier).
+    identifier: Mapped[str] = mapped_column(String(255), index=True)
+    # Where this code was (nominally) sent: "sms" | "whatsapp" | "email".
+    # Real dispatch per channel isn't wired up yet outside email's dev
+    # fallback — see service.create_otp — but the record still matters for
+    # support/debugging.
+    channel: Mapped[str] = mapped_column(String(10), default="sms")
     code: Mapped[str] = mapped_column(String(6))
     expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
     consumed: Mapped[bool] = mapped_column(Boolean, default=False)

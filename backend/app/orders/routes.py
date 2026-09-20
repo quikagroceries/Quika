@@ -10,12 +10,16 @@ from app.core.enums import UserRole
 from app.core.security import get_current_user, require_role
 from app.orders import service
 from app.orders.schemas import (
+    AddItemIn,
+    AssignedAgentOut,
     BargainedListOut,
     AssignAgentIn,
     CreateOrderIn,
+    OrderItemOut,
     OrderOut,
     ProposedAgentOut,
     SeeAnotherOut,
+    UpdateDraftIn,
 )
 
 router = APIRouter()
@@ -34,6 +38,8 @@ async def create_order(
         items=[i.model_dump() for i in body.items],
         delivery_address=body.delivery_address,
         listed_items_total=body.listed_items_total,
+        dropoff_latitude=body.dropoff_latitude,
+        dropoff_longitude=body.dropoff_longitude,
     )
     return order
 
@@ -63,6 +69,24 @@ async def get_order(
     user: User = Depends(get_current_user),
 ) -> OrderOut:
     return await service.get_order(db, order_id)
+
+
+@router.put("/{order_id}/draft", response_model=OrderOut)
+async def update_draft(
+    order_id: uuid.UUID,
+    body: UpdateDraftIn,
+    db: AsyncSession = Depends(get_db),
+    customer: User = Depends(get_current_user),
+) -> OrderOut:
+    """Edit a draft list: replaces its items and re-prices it."""
+    return await service.update_draft(
+        db,
+        order_id=order_id,
+        customer_id=customer.id,
+        items=[i.model_dump() for i in body.items],
+        listed_items_total=body.listed_items_total,
+        delivery_address=body.delivery_address,
+    )
 
 
 @router.delete("/{order_id}", status_code=204)
@@ -96,6 +120,16 @@ async def proposed_agent(
     enough for the customer to recognize/accept them. None once there's no
     pending proposal (already accepted, or nobody available)."""
     return await service.get_proposed_agent(db, order_id)
+
+
+@router.get("/{order_id}/agent", response_model=AssignedAgentOut | None)
+async def assigned_agent(
+    order_id: uuid.UUID,
+    db: AsyncSession = Depends(get_db),
+    customer: User = Depends(get_current_user),
+) -> AssignedAgentOut | None:
+    """Who is shopping this order (name + photo), once accepted. Customer-only."""
+    return await service.get_assigned_agent(db, order_id, customer.id)
 
 
 @router.post("/{order_id}/accept-agent", response_model=OrderOut)
@@ -172,6 +206,22 @@ async def bargained_list(
     """What the customer reviews before paying: real bargained prices."""
     data = await service.get_bargained_list(db, order_id)
     return BargainedListOut(**data)
+
+
+@router.post("/{order_id}/items", response_model=OrderItemOut)
+async def add_item(
+    order_id: uuid.UUID,
+    body: AddItemIn,
+    db: AsyncSession = Depends(get_db),
+    customer: User = Depends(get_current_user),
+) -> OrderItemOut:
+    """Customer adds a new item to an order while it's actively being
+    shopped - additions only (see service.add_item's own docstring for why
+    there's no companion remove/reduce here). Charges the flat
+    fees.ADD_ITEM_FEE from the customer's wallet."""
+    return await service.add_item(
+        db, order_id=order_id, customer_id=customer.id, item=body.model_dump()
+    )
 
 
 @router.post("/{order_id}/items/{item_id}/unavailable")

@@ -2,14 +2,14 @@
 
 // Generic skeleton rectangle — the building block.
 export function Skeleton({ className = "" }: any) {
-  return <div className={"animate-pulse rounded-lg bg-[#ece8e2] " + className} />;
+  return <div className={"animate-pulse rounded-lg bg-line " + className} />;
 }
 
 // Shaped to roughly match an order card (badge row + title + total), so the
 // loading state reads as "this content is coming," not a blank gray block.
 export function CardSkeleton() {
   return (
-    <div className="rounded-2xl border border-[#ebe7e0] bg-white p-5 shadow-sm">
+    <div className="rounded-3xl border border-line bg-surface p-5 shadow-sm">
       <div className="flex items-center justify-between">
         <Skeleton className="h-6 w-20" />
         <Skeleton className="h-4 w-16" />

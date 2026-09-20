@@ -20,12 +20,15 @@ export function stallTone(description?: string | null, name?: string): MarketArt
   return "mixed";
 }
 
-/** Flat cover colors — no rainbow gradients, no “stock photo” pretence. */
+/** Flat cover colors — no rainbow gradients, no "stock photo" pretence.
+ * Light tint background + the tone's own deep shade for the monogram text,
+ * not the other way round — a solid dark fill here is a card background,
+ * which the app's no-dark-surfaces rule (cream/white only) also covers. */
 export const TONE_COVER: Record<MarketArtTone, { bg: string; fg: string }> = {
-  produce: { bg: "#1F4D2E", fg: "#E8F2E4" },
-  provisions: { bg: "#5C3A1E", fg: "#F5E6D3" },
-  protein: { bg: "#6B2A22", fg: "#F8E4DC" },
-  mixed: { bg: "#C2430F", fg: "#FFF0E8" },
+  produce: { bg: "#E8F2E4", fg: "#1F4D2E" },
+  provisions: { bg: "#F5E6D3", fg: "#5C3A1E" },
+  protein: { bg: "#F8E4DC", fg: "#6B2A22" },
+  mixed: { bg: "#FFF0E8", fg: "#C2430F" },
 };
 
 export function vendorTags(description?: string | null): string[] {

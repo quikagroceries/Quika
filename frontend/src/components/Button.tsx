@@ -6,7 +6,9 @@
 // place — see the styling-pass notes on why this comes before screen work.
 
 const BASE =
-  "inline-flex items-center justify-center gap-2 rounded-xl px-5 min-h-[44px] " +
+  // rounded-2xl = 16px, matching the design-system spec's button radius
+  // exactly (was rounded-xl/12px).
+  "inline-flex items-center justify-center gap-2 rounded-2xl px-5 min-h-[44px] " +
   "font-semibold text-base transition-all duration-150 select-none " +
   "active:scale-[0.98] " +
   "focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 " +
@@ -14,17 +16,20 @@ const BASE =
 
 const VARIANTS = {
   // Primary: main buttons, key actions (Pay, Send, Place order, Finish shopping).
+  // Text is fixed dark ink, not theme-reactive `text-ink` — brand-orange is a
+  // light peach fill now, so it needs to stay dark-on-peach in both themes,
+  // the same way the fill itself is intentionally not theme-swapped.
   primary:
-    "bg-brand-orange text-white shadow-sm hover:bg-brand-orange-dark hover:shadow " +
+    "bg-brand-orange text-[#1A1A1A] shadow-sm hover:bg-brand-orange-dark hover:shadow " +
     "active:bg-brand-orange-dark focus-visible:ring-brand-orange",
   // Secondary: confirmations / lower-emphasis positive actions.
   secondary:
-    "border-2 border-brand-green text-brand-green bg-white " +
+    "border-2 border-brand-green text-brand-green bg-surface " +
     "hover:bg-brand-green/5 active:bg-brand-green/10 focus-visible:ring-brand-green",
   // Neutral ("ghost"): Cancel, Back, Log out, Dismiss — anything low-emphasis.
   neutral:
-    "bg-[#f0eeeb] text-ink hover:bg-[#e8e4df] " +
-    "active:bg-[#ddd6cb] focus-visible:ring-ink/30",
+    "bg-sunken text-ink hover:bg-sunken-2 " +
+    "active:bg-line-strong focus-visible:ring-ink/30",
 };
 
 function Spinner() {

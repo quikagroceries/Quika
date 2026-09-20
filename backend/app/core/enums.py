@@ -53,7 +53,7 @@ class TransactionStatus(str, enum.Enum):
 
 
 class VenueType(str, enum.Enum):
-    """Where Quika shops — drives customer flow branching."""
+    """Where Qyka shops — drives customer flow branching."""
 
     LOCAL_MARKET = "local_market"  # open-air; bargain; optional stalls
     SUPERMARKET = "supermarket"  # fixed catalogue / fixed price path

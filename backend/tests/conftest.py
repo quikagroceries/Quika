@@ -1,3 +1,4 @@
+import pytest
 import pytest_asyncio
 from httpx import ASGITransport, AsyncClient
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
@@ -6,6 +7,18 @@ from sqlalchemy.pool import StaticPool
 from app.core.database import Base, get_db
 import app.models  # noqa: F401  (register all tables)
 from app.main import app
+
+
+@pytest.fixture(autouse=True)
+def _no_otp_resend_cooldown(monkeypatch):
+    """Most tests log in repeatedly as the same number within a second; the
+    real resend cooldown (which the OTP-delivery tests set explicitly) would
+    turn that into 429s. Also guarantees no test ever talks to a real SMS
+    provider, whatever the developer's .env holds."""
+    from app.core.config import settings
+
+    monkeypatch.setattr(settings, "otp_resend_cooldown_seconds", 0)
+    monkeypatch.setattr(settings, "sms_api_key", "")
 
 
 @pytest_asyncio.fixture

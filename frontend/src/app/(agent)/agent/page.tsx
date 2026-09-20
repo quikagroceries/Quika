@@ -30,9 +30,9 @@ function TaskCard({ order, marketName, onClick, tone }: any) {
     <Card interactive onClick={onClick} className={"border-2 " + TONE_STYLES[tone]}>
       <div className="flex items-center justify-between">
         <StatusBadge status={order.status} />
-        <span className="text-xs text-[#8a8178]">Order {order.id.slice(0, 8)}…</span>
+        <span className="text-xs text-faint">Order {order.id.slice(0, 8)}…</span>
       </div>
-      <div className="mt-3 text-[#6b635a]">
+      <div className="mt-3 text-muted">
         {order.items ? order.items.length : 0} item{order.items && order.items.length === 1 ? "" : "s"}
       </div>
       <div className="mt-1 text-base font-semibold text-ink/80">{marketName || "—"}</div>
@@ -50,7 +50,7 @@ function TaskSection({ title, subtitle, orders, tone, marketName, onOpen }: any)
   return (
     <div className="mb-8">
       <h2 className="mb-1 text-lg font-extrabold text-ink">{title}</h2>
-      <p className="mb-3 text-sm text-[#6b635a]">{subtitle}</p>
+      <p className="mb-3 text-sm text-muted">{subtitle}</p>
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
         {orders.map((o) => (
           <TaskCard key={o.id} order={o} tone={tone} marketName={marketName(o.market_id)} onClick={() => onOpen(o.id)} />
@@ -93,7 +93,7 @@ export default function AgentHomePage() {
   return (
     <div>
       <h1 className="mb-1 font-display text-3xl font-extrabold tracking-tight text-ink md:text-4xl">Home</h1>
-      <p className="mb-6 text-[#6b635a]">Your tasks, most urgent first.</p>
+      <p className="mb-6 text-muted">Your tasks, most urgent first.</p>
 
       {error && (
         <p className="mb-4 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p>

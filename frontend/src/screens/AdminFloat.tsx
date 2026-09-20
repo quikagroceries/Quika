@@ -13,9 +13,9 @@ function TopUpForm({ market, onSubmit, onCancel, busy, error }: any) {
   const [amount, setAmount] = useState("");
   const [note, setNote] = useState("");
   return (
-    <div className="mt-3 rounded-xl border border-[#ebe7e0] bg-[#f7f5f2] p-3">
-      <Input placeholder="Amount (₦)" value={amount} onChange={(e) => setAmount(e.target.value)} className="mb-2 bg-white" />
-      <Input placeholder="Note (optional)" value={note} onChange={(e) => setNote(e.target.value)} className="mb-2 bg-white" />
+    <div className="mt-3 rounded-xl border border-line bg-sunken-2 p-3">
+      <Input placeholder="Amount (₦)" value={amount} onChange={(e) => setAmount(e.target.value)} className="mb-2 bg-surface" />
+      <Input placeholder="Note (optional)" value={note} onChange={(e) => setNote(e.target.value)} className="mb-2 bg-surface" />
       {error && <p className="mb-2 text-sm text-red-600">{error}</p>}
       <div className="flex gap-2">
         <Button variant="neutral" onClick={onCancel} disabled={busy} className="flex-1 text-sm">Cancel</Button>
@@ -119,7 +119,7 @@ function AdminFloat() {
   return (
     <div>
       <h1 className="mb-1 font-display text-3xl font-extrabold tracking-tight text-ink md:text-4xl">Float</h1>
-      <p className="mb-6 text-[#6b635a]">Working capital per market — top up, move between pools, and the movement trail.</p>
+      <p className="mb-6 text-muted">Working capital per market — top up, move between pools, and the movement trail.</p>
 
       {error && <p className="mb-4 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p>}
 
@@ -173,7 +173,7 @@ function AdminFloat() {
             <select
               value={fromMarketId}
               onChange={(e) => { setFromMarketId(e.target.value); setConfirmingTransfer(false); }}
-              className="w-full min-h-[44px] rounded-xl border border-[#ddd6cb] px-4 text-base text-ink"
+              className="w-full min-h-[44px] rounded-xl border border-line-strong px-4 text-base text-ink"
             >
               <option value="">Select a market…</option>
               {markets?.map((m) => <option key={m.id} value={m.id}>{m.name}</option>)}
@@ -184,7 +184,7 @@ function AdminFloat() {
             <select
               value={toMarketId}
               onChange={(e) => { setToMarketId(e.target.value); setConfirmingTransfer(false); }}
-              className="w-full min-h-[44px] rounded-xl border border-[#ddd6cb] px-4 text-base text-ink"
+              className="w-full min-h-[44px] rounded-xl border border-line-strong px-4 text-base text-ink"
             >
               <option value="">Select a market…</option>
               {markets?.filter((m) => m.id !== fromMarketId).map((m) => <option key={m.id} value={m.id}>{m.name}</option>)}
@@ -193,7 +193,7 @@ function AdminFloat() {
         </div>
 
         {fromMarketId && (
-          <p className="mt-2 text-sm text-[#6b635a]">
+          <p className="mt-2 text-sm text-muted">
             {marketName(fromMarketId)}'s current balance: <span className="font-semibold text-ink">₦{fromBalance?.toFixed(2)}</span>
           </p>
         )}
@@ -226,11 +226,11 @@ function AdminFloat() {
             Review transfer
           </Button>
         ) : (
-          <div className="mt-3 rounded-xl border-2 border-brand-orange bg-white p-3">
+          <div className="mt-3 rounded-2xl bg-brand-orange/[0.12] p-3">
             <p className="mb-2 text-sm font-semibold text-ink">
               Move ₦{Number(transferAmount).toFixed(2)} from {marketName(fromMarketId)} to {marketName(toMarketId)}?
             </p>
-            <div className="mb-3 space-y-1 text-sm text-[#6b635a]">
+            <div className="mb-3 space-y-1 text-sm text-muted">
               <div className="flex justify-between">
                 <span>{marketName(fromMarketId)}</span>
                 <span>₦{fromBalance?.toFixed(2)} → ₦{(fromBalance - Number(transferAmount)).toFixed(2)}</span>
@@ -265,26 +265,26 @@ function AdminFloat() {
           <select
             value={historyMarketId}
             onChange={(e) => setHistoryMarketId(e.target.value)}
-            className="min-h-[36px] rounded-lg border border-[#ddd6cb] px-3 text-sm text-ink"
+            className="min-h-[36px] rounded-lg border border-line-strong px-3 text-sm text-ink"
           >
             {markets?.map((m) => <option key={m.id} value={m.id}>{m.name}</option>)}
           </select>
         </div>
         {!history ? (
-          <p className="text-sm text-[#8a8178]">Loading…</p>
+          <p className="text-sm text-faint">Loading…</p>
         ) : history.recent_movements.length === 0 ? (
-          <p className="text-sm text-[#8a8178]">No movements recorded yet for this market.</p>
+          <p className="text-sm text-faint">No movements recorded yet for this market.</p>
         ) : (
           <div className="space-y-2">
             {history.recent_movements.map((m, i) => (
-              <div key={i} className="flex items-center justify-between border-b border-[#ebe7e0] pb-2 text-sm last:border-0">
+              <div key={i} className="flex items-center justify-between border-b border-line pb-2 text-sm last:border-0">
                 <div>
                   <span className={"font-semibold " + (m.direction === "credit" ? "text-brand-green" : "text-red-600")}>
                     {m.direction === "credit" ? "+" : "−"}₦{m.amount}
                   </span>
-                  <span className="ml-2 text-[#6b635a]">{m.note || "—"}</span>
+                  <span className="ml-2 text-muted">{m.note || "—"}</span>
                 </div>
-                <div className="shrink-0 text-right text-[#8a8178]">
+                <div className="shrink-0 text-right text-faint">
                   <div>Bal. ₦{m.balance_after}</div>
                   <div>{m.at ? new Date(m.at).toLocaleString() : ""}</div>
                 </div>

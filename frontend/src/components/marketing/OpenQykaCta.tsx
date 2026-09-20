@@ -4,9 +4,9 @@ import Link from "next/link";
 import { BoltMark } from "@/components/marketing/BoltBasket";
 
 /** Shared primary CTA — same control in header, hero, and elsewhere. */
-export default function OpenQuikaCta({
+export default function OpenQykaCta({
   className = "",
-  label = "Open Quika",
+  label = "Open Qyka",
   labelClassName = "text-sm font-bold",
   alwaysShowLabel = false,
   onClick,
@@ -23,7 +23,7 @@ export default function OpenQuikaCta({
       href="/shop"
       onClick={onClick}
       className={
-        "inline-flex items-center gap-2 rounded-full bg-brand-green py-1 pl-1 pr-3 text-white transition hover:bg-brand-green/90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gold " +
+        "inline-flex items-center gap-2 rounded-full bg-brand-orange py-1 pl-1 pr-3 text-[#1A1A1A] transition hover:bg-brand-orange-dark focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gold " +
         className
       }
     >

@@ -3,7 +3,7 @@
 import { BoltMark } from "./BoltBasket";
 
 /**
- * Honest device mock — mirrors Quika's real order-status timeline + chat
+ * Honest device mock — mirrors Qyka's real order-status timeline + chat
  * chrome (StatusBadge colors, DeliveryTracking row labels, ChatPanel tone).
  */
 export default function DeviceMockup() {
@@ -53,7 +53,7 @@ export default function DeviceMockup() {
                       (row.done
                         ? "bg-brand-green text-white"
                         : row.current
-                        ? "bg-brand-orange text-white"
+                        ? "bg-brand-orange text-[#1A1A1A]"
                         : "bg-slate-100 text-slate-400")
                     }
                   >
@@ -90,7 +90,7 @@ export default function DeviceMockup() {
               <div className="max-w-[85%] rounded-2xl rounded-tl-sm bg-white px-3 py-2 text-[11px] text-ink shadow-sm">
                 Got the pepper — ₦500. Tomatoes are ₦1,400 today, ok to go?
               </div>
-              <div className="ml-auto max-w-[75%] rounded-2xl rounded-tr-sm bg-brand-orange px-3 py-2 text-[11px] text-white">
+              <div className="ml-auto max-w-[75%] rounded-2xl rounded-tr-sm bg-brand-orange px-3 py-2 text-[11px] text-[#1A1A1A]">
                 Yes, take them. Thanks!
               </div>
             </div>

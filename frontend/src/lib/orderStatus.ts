@@ -10,6 +10,18 @@ export function isHistoryStatus(status) {
   return HISTORY_STATUSES.has(status);
 }
 
+// Terminal statuses that mean "this order isn't actively progressing and
+// never will again" for a reason OTHER than a normal delivered/closed finish
+// - cancelled, unpaid-cancelled, or under dispute. Mirrors
+// app/core/enums.py's OrderStatus exactly. `disputed` is deliberately its
+// own bucket, not folded into HISTORY_STATUSES: it isn't "done", it's
+// "stopped pending review" - a different message, not just a different list.
+export const EXCEPTION_STATUSES = new Set(["cancelled", "cancelled_unpaid", "disputed"]);
+
+export function isExceptionOrder(status) {
+  return EXCEPTION_STATUSES.has(status);
+}
+
 // Mirrors orders.service.delete_order's guard exactly: pre-shopping AND no
 // deposit paid. Takes the whole order (not just status) since deposit state
 // isn't visible from status alone - a deposit can be paid on an
@@ -96,6 +108,12 @@ export function summarizeOrderStatus(order): string {
     case "delivered":
     case "closed":
       return "Delivered";
+    case "cancelled":
+      return "Order cancelled";
+    case "cancelled_unpaid":
+      return "Cancelled — not paid in time";
+    case "disputed":
+      return "Under review — our team is looking into this order";
     default:
       return "In progress";
   }

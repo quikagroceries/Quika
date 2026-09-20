@@ -38,10 +38,10 @@ function AvailabilitySwitch({ on, onToggle, busy }: any) {
       onClick={() => onToggle(!on)}
       disabled={busy}
       aria-label={on ? "Go unavailable for new orders" : "Go available for new orders"}
-      className={"relative h-8 w-14 shrink-0 rounded-full transition-colors disabled:opacity-50 " + (on ? "bg-brand-green" : "bg-[#ddd6cb]")}
+      className={"relative h-8 w-14 shrink-0 rounded-full transition-colors disabled:opacity-50 " + (on ? "bg-brand-green" : "bg-line-strong")}
     >
       <span
-        className={"absolute top-1 h-6 w-6 rounded-full bg-white shadow-sm transition-transform duration-150 " + (on ? "translate-x-7" : "translate-x-1")}
+        className={"absolute top-1 h-6 w-6 rounded-full bg-surface shadow-sm transition-transform duration-150 " + (on ? "translate-x-7" : "translate-x-1")}
       />
     </button>
   );
@@ -77,7 +77,7 @@ export default function AgentDashboardPage() {
   return (
     <div>
       <h1 className="mb-1 font-display text-3xl font-extrabold tracking-tight text-ink md:text-4xl">Dashboard</h1>
-      <p className="mb-6 text-[#6b635a]">Your earnings, tasks, and availability.</p>
+      <p className="mb-6 text-muted">Your earnings, tasks, and availability.</p>
 
       {summaryError && (
         <p className="mb-4 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{summaryError}</p>
@@ -100,11 +100,11 @@ export default function AgentDashboardPage() {
               <div className="relative font-display text-3xl font-extrabold tabular-nums">₦{summary.earnings_today}</div>
             </Card>
             <Card>
-              <div className="text-sm text-[#6b635a]">This week</div>
+              <div className="text-sm text-muted">This week</div>
               <div className="text-3xl font-bold text-ink">₦{summary.earnings_week}</div>
             </Card>
             <Card>
-              <div className="text-sm text-[#6b635a]">All time</div>
+              <div className="text-sm text-muted">All time</div>
               <div className="text-3xl font-bold text-ink">₦{summary.earnings_total}</div>
             </Card>
           </div>
@@ -135,18 +135,18 @@ export default function AgentDashboardPage() {
           <div className="mt-4 grid grid-cols-2 gap-3 text-center">
             <Card className="py-3">
               <div className="text-xl font-extrabold text-ink">{summary.ready_to_shop_count}</div>
-              <div className="text-xs text-[#6b635a]">Ready to shop</div>
+              <div className="text-xs text-muted">Ready to shop</div>
             </Card>
             <Card className="py-3">
               <div className="text-xl font-extrabold text-ink">{summary.in_progress_count}</div>
-              <div className="text-xs text-[#6b635a]">In progress</div>
+              <div className="text-xs text-muted">In progress</div>
             </Card>
           </div>
 
           <Card className="mt-4 flex items-center justify-between gap-4">
             <div>
               <p className="font-semibold text-ink">Available for new orders</p>
-              <p className="text-sm text-[#6b635a]">
+              <p className="text-sm text-muted">
                 Pauses new assignments only — never affects an order you&apos;re already shopping.
               </p>
             </div>
@@ -162,7 +162,7 @@ export default function AgentDashboardPage() {
                 <Card key={o.id} interactive onClick={() => router.push(`/agent/orders/${o.id}`)} className="flex items-center justify-between">
                   <div className="min-w-0">
                     <div className="truncate font-semibold text-ink">{marketName(o.market_id) || "—"}</div>
-                    <div className="text-sm text-[#6b635a]">
+                    <div className="text-sm text-muted">
                       {o.paid_at ? new Date(o.paid_at).toLocaleDateString() : "—"}
                     </div>
                   </div>

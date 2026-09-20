@@ -8,7 +8,7 @@ class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
     # App
-    app_name: str = "Quika Groceries"
+    app_name: str = "Qyka Groceries"
     environment: str = "development"
     debug: bool = True
 
@@ -54,8 +54,30 @@ class Settings(BaseSettings):
     max_transfer_naira: int = 100_000       # no single vendor transfer above this
     max_daily_transfers_naira: int = 500_000  # total outbound per day ceiling
 
-    # SMS (Termii / Africa's Talking) — filled in later
+    # SMS / WhatsApp / voice OTP delivery - all through Termii (one key, one
+    # sender). Leave the key empty in dev/tests: codes are then returned as
+    # `dev_otp` instead of being sent (see auth/otp_delivery.py).
     sms_api_key: str = ""
+    sms_sender_id: str = "Qyka"
+    sms_base_url: str = "https://api.ng.termii.com"
+    # Fallback timing. The UI offers "WhatsApp" / "Call me" once this many
+    # seconds have passed without the SMS being confirmed; the server refuses a
+    # fresh code sooner than the cooldown so a stuck button can't run up SMS
+    # cost or harass a number.
+    otp_fallback_after_seconds: int = 45
+    otp_resend_cooldown_seconds: int = 30
+    # WhatsApp Business API provider (e.g. 360dialog, Twilio) — add later.
+    whatsapp_api_key: str = ""
+    # Transactional email provider (e.g. Resend, Postmark, SES) — add later.
+    # Until set, email OTPs behave like SMS today: shown as dev_otp outside
+    # production, never actually sent (see auth/service.py::create_otp).
+    email_api_key: str = ""
+
+    # Google Sign-In — the OAuth Client ID from Google Cloud Console
+    # (Credentials → OAuth client ID → Web application). Verifies ID tokens
+    # from the frontend's Google Identity Services button; phone stays the
+    # required primary ID (see auth/service.py::get_or_create_user).
+    google_client_id: str = ""
 
     # LiveKit (voice/video call prototype) — get these from your LiveKit
     # Cloud project. Token generation is local (HMAC-signed JWT); nothing

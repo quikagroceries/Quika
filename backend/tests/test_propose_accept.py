@@ -15,9 +15,9 @@ CUST_PHONE = "+2348060000001"
 
 
 async def _login(client, phone, role=None):
-    r = await client.post("/auth/request-otp", json={"phone": phone})
+    r = await client.post("/auth/request-otp", json={"identifier": phone})
     code = r.json()["dev_otp"]
-    body = {"phone": phone, "code": code}
+    body = {"identifier": phone, "code": code}
     if role:
         body["role"] = role
     r = await client.post("/auth/verify-otp", json=body)

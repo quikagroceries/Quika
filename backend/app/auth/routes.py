@@ -1,9 +1,12 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.auth import service
+from app.auth import otp_delivery, service
 from app.auth.models import User
 from app.auth.schemas import (
+    GoogleAuthIn,
+    GoogleAuthOut,
+    LinkEmailIn,
     RequestOtpIn,
     RequestOtpOut,
     TokenOut,
@@ -23,13 +26,38 @@ router = APIRouter()
 async def request_otp(
     body: RequestOtpIn, db: AsyncSession = Depends(get_db)
 ) -> RequestOtpOut:
-    code = await service.create_otp(db, body.phone)
+    identifier, id_type = service.normalize_identifier(body.identifier)
+    # An email identifier can only ever be delivered by email; a phone
+    # identifier honors the caller's chosen channel (default sms).
+    channel = "email" if id_type == "email" else (body.channel or "sms")
+    if id_type == "email" and channel != "email":
+        channel = "email"
+    code = await service.create_otp(db, identifier, channel)
+
+    # Phone codes go out over the chosen channel. Email has no provider wired
+    # yet and stays dev-only (see service.create_otp).
+    if id_type == "phone":
+        try:
+            await otp_delivery.deliver_otp(identifier, code, channel)
+        except otp_delivery.OtpDeliveryError:
+            # Raising rolls the just-created code back (get_db), so a failed
+            # send leaves nothing behind. The message steers the user to the
+            # other routes, which is exactly what the UI offers next.
+            if settings.environment == "production":
+                raise HTTPException(
+                    status.HTTP_502_BAD_GATEWAY,
+                    "We couldn't send that code. Try receiving it another way - WhatsApp or a call.",
+                )
+
     # Expose the code only outside production so the flow is testable.
     dev_otp = code if settings.environment != "production" else None
     return RequestOtpOut(
         detail="OTP sent",
+        channel=channel,
         dev_otp=dev_otp,
         expires_in_seconds=settings.otp_expire_minutes * 60,
+        fallback_after_seconds=settings.otp_fallback_after_seconds,
+        fallback_channels=["sms", "whatsapp", "voice"] if id_type == "phone" else [],
     )
 
 
@@ -37,7 +65,8 @@ async def request_otp(
 async def verify_otp(
     body: VerifyOtpIn, db: AsyncSession = Depends(get_db)
 ) -> TokenOut:
-    ok = await service.verify_otp(db, body.phone, body.code)
+    identifier, id_type = service.normalize_identifier(body.identifier)
+    ok = await service.verify_otp(db, identifier, body.code)
     if not ok:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -47,7 +76,7 @@ async def verify_otp(
     # in production, or anyone could self-assign admin.
     requested_role = body.role if settings.environment != "production" else None
     user = await service.get_or_create_user(
-        db, body.phone, body.full_name, role=requested_role
+        db, identifier, id_type, body.full_name, role=requested_role
     )
     if user.status is UserStatus.LOCKED:
         raise HTTPException(
@@ -56,6 +85,19 @@ async def verify_otp(
         )
     token = create_access_token(user.id, user.role)
     return TokenOut(access_token=token)
+
+
+@router.post("/google", response_model=GoogleAuthOut)
+async def google_auth(
+    body: GoogleAuthIn, db: AsyncSession = Depends(get_db)
+) -> GoogleAuthOut:
+    """Google already verified the identity, so this always completes in one
+    step — link an existing account or create one outright (see
+    service.login_or_create_with_google) — never a separate phone/OTP step."""
+    claims = await service.verify_google_id_token(body.credential)
+    user = await service.login_or_create_with_google(db, claims)
+    token = create_access_token(user.id, user.role)
+    return GoogleAuthOut(access_token=token)
 
 
 @router.get("/me", response_model=UserOut)
@@ -74,4 +116,21 @@ async def update_me(
         current_user,
         full_name=body.full_name,
         default_delivery_address=body.default_delivery_address,
+        avatar_url=body.avatar_url,
+        clear_avatar="avatar_url" in body.model_fields_set and body.avatar_url is None,
     )
+
+
+@router.post("/link-email", response_model=UserOut)
+async def link_email(
+    body: LinkEmailIn,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> User:
+    """Attach a verified email to the signed-in account. The frontend must
+    call POST /auth/request-otp with identifier=email first to get a code
+    sent, then this verifies it the same way sign-in/sign-up does."""
+    email, id_type = service.normalize_identifier(body.email)
+    if id_type != "email":
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "That doesn't look like a valid email")
+    return await service.link_email(db, current_user, email, body.code)

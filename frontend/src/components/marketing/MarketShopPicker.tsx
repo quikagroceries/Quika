@@ -113,7 +113,7 @@ export default function MarketShopPicker({
     if (!notifyMarket || !notifyEmail.trim()) return;
     const subject = encodeURIComponent(`Notify me — ${notifyMarket.name}`);
     const body = encodeURIComponent(
-      `Please notify me when Quika opens at ${notifyMarket.name} (${notifyMarket.city}).\n\nEmail: ${notifyEmail.trim()}\n`
+      `Please notify me when Qyka opens at ${notifyMarket.name} (${notifyMarket.city}).\n\nEmail: ${notifyEmail.trim()}\n`
     );
     window.location.href = `mailto:hello@quika.ng?subject=${subject}&body=${body}`;
     setNotifySent(true);
@@ -172,7 +172,7 @@ export default function MarketShopPicker({
         />
         <button
           type="submit"
-          className="m-1.5 inline-flex min-h-10 shrink-0 items-center gap-2 rounded-full bg-brand-green px-4 text-sm font-bold text-white transition hover:bg-brand-green/90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gold sm:px-5"
+          className="m-1.5 inline-flex min-h-10 shrink-0 items-center gap-2 rounded-full bg-brand-orange px-4 text-sm font-bold text-[#1A1A1A] transition hover:bg-brand-orange-dark focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gold sm:px-5"
         >
           Continue
         </button>
@@ -266,7 +266,7 @@ export default function MarketShopPicker({
                 />
                 <button
                   type="submit"
-                  className="shrink-0 rounded-full bg-brand-orange px-4 text-sm font-bold text-white transition hover:bg-brand-orange/90"
+                  className="shrink-0 rounded-full bg-brand-orange px-4 text-sm font-bold text-[#1A1A1A] transition hover:bg-brand-orange-dark"
                 >
                   Notify me
                 </button>

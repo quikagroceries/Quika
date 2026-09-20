@@ -30,6 +30,14 @@ from app.payments.models import Transaction
 from app.wallet import service as wallet_service
 
 
+def _paystack_email(user: User) -> str:
+    """Paystack requires an email on every charge; our users don't always
+    have one. Real email wins when set; a phone-only account (still
+    guaranteed one of the two — see auth/service.py::get_or_create_user)
+    falls back to a synthetic address Paystack will accept but never sends to."""
+    return user.email or f"{user.phone.lstrip('+')}@qyka.com"
+
+
 async def _load_order(db: AsyncSession, order_id: uuid.UUID) -> Order:
     result = await db.execute(
         select(Order).where(Order.id == order_id).options(selectinload(Order.items))
@@ -61,7 +69,7 @@ async def start_checkout(
             "Order is not awaiting payment",
         )
 
-    reference = f"quika_{order.id.hex[:12]}_{uuid.uuid4().hex[:8]}"
+    reference = f"qyka_{order.id.hex[:12]}_{uuid.uuid4().hex[:8]}"
     txn = Transaction(
         order_id=order.id,
         paystack_reference=reference,
@@ -72,7 +80,7 @@ async def start_checkout(
     await db.flush()
 
     # Email is optional on our user model; Paystack requires one, so fall back.
-    email = f"{customer.phone.lstrip('+')}@quika.com"
+    email = _paystack_email(customer)
     # Deep-link back to the order page so Next.js can verify without a
     # localStorage "pending order" handoff.
     callback_url = (
@@ -284,7 +292,7 @@ async def init_wallet_funding(
     )
     db.add(txn)
     await db.flush()
-    email = f"{customer.phone.lstrip('+')}@quika.com"
+    email = _paystack_email(customer)
     callback_url = f"{origin}/wallet?funded={reference}" if origin else None
     data = await paystack.initialize_transaction(
         email=email, amount_naira=amount, reference=reference,
@@ -421,7 +429,7 @@ async def init_deposit_checkout(
     )
     db.add(txn)
     await db.flush()
-    email = f"{customer.phone.lstrip('+')}@quika.com"
+    email = _paystack_email(customer)
     callback_url = (
         f"{origin}/orders/{order.id}?order_deposit_ref={reference}" if origin else None
     )

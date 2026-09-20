@@ -64,31 +64,16 @@ async def _transition(db: AsyncSession, order: Order, target: OrderStatus) -> No
     await db.flush()
 
 
-async def create_order(
+async def _estimates(
     db: AsyncSession,
-    *,
     customer_id: uuid.UUID,
-    market_id: uuid.UUID,
     items: list[dict],
-    delivery_address: str | None = None,
-    listed_items_total: Decimal = Decimal("0.00"),
+    listed_items_total: Decimal,
     must_prepay: bool = False,
-) -> Order:
-    """Create the order and work out whether a deposit is required.
-
-    listed_items_total is what the CUSTOMER expects the items WITHOUT their
-    own listed_price to cost — i.e. only the unstructured/budget remainder.
-    It's ADDED to the sum of real per-item listed_price values, never
-    overridden by them, so a single order can freely mix priced ("detailed")
-    items and un-priced ("budget") items and still get a correct combined
-    total. Pure detailed: every item is priced, so this stays 0.00. Pure
-    budget: no item is priced, so this IS the whole goods total (unchanged
-    behavior from before mixed lists existed). Either way this figure drives
-    both the deposit threshold (via estimated_value, which adds delivery +
-    fee) and the JIT spending cap (see jit.service.get_or_create_authorization,
-    which sets cap = order.goods_estimate - goods only, since delivery/fee
-    are never paid through the authorization).
-    """
+) -> tuple[Decimal, Decimal, Decimal]:
+    """(goods_estimate, estimated_value, deposit) for a list - shared by
+    create_order and update_draft so an edited list is priced by exactly the
+    same rules as a new one."""
     item_prices = [
         i["listed_price"] for i in items if i.get("listed_price") is not None
     ]
@@ -106,12 +91,47 @@ async def create_order(
     deposit = fees.required_deposit(
         listed_items_total, estimated_value, must_prepay=effective_prepay
     )
+    return listed_items_total, estimated_value, deposit
+
+
+async def create_order(
+    db: AsyncSession,
+    *,
+    customer_id: uuid.UUID,
+    market_id: uuid.UUID,
+    items: list[dict],
+    delivery_address: str | None = None,
+    listed_items_total: Decimal = Decimal("0.00"),
+    must_prepay: bool = False,
+    dropoff_latitude: float | None = None,
+    dropoff_longitude: float | None = None,
+) -> Order:
+    """Create the order and work out whether a deposit is required.
+
+    listed_items_total is what the CUSTOMER expects the items WITHOUT their
+    own listed_price to cost — i.e. only the unstructured/budget remainder.
+    It's ADDED to the sum of real per-item listed_price values, never
+    overridden by them, so a single order can freely mix priced ("detailed")
+    items and un-priced ("budget") items and still get a correct combined
+    total. Pure detailed: every item is priced, so this stays 0.00. Pure
+    budget: no item is priced, so this IS the whole goods total (unchanged
+    behavior from before mixed lists existed). Either way this figure drives
+    both the deposit threshold (via estimated_value, which adds delivery +
+    fee) and the JIT spending cap (see jit.service.get_or_create_authorization,
+    which sets cap = order.goods_estimate - goods only, since delivery/fee
+    are never paid through the authorization).
+    """
+    listed_items_total, estimated_value, deposit = await _estimates(
+        db, customer_id, items, listed_items_total, must_prepay
+    )
 
     order = Order(
         customer_id=customer_id,
         market_id=market_id,
         status=OrderStatus.DRAFT,
         delivery_address=delivery_address,
+        dropoff_latitude=dropoff_latitude,
+        dropoff_longitude=dropoff_longitude,
         estimated_value=estimated_value,
         goods_estimate=listed_items_total,
         deposit_amount=deposit,
@@ -140,6 +160,49 @@ async def create_order(
         await db.flush()
     # If none free, order stays DRAFT/unassigned; admin oversight surfaces it.
 
+    return order
+
+
+async def update_draft(
+    db: AsyncSession,
+    *,
+    order_id: uuid.UUID,
+    customer_id: uuid.UUID,
+    items: list[dict],
+    listed_items_total: Decimal = Decimal("0.00"),
+    delivery_address: str | None = None,
+) -> Order:
+    """Replace a draft order's list. Only while DRAFT: no agent has been
+    proposed or assigned and no deposit can have been taken, so nobody is
+    relying on the current items. Estimates and deposit are recomputed with
+    the same rules as create_order."""
+    order = await _load(db, order_id)
+    if order.customer_id != customer_id:
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "Not your order")
+    if order.status is not OrderStatus.DRAFT:
+        raise HTTPException(
+            status.HTTP_409_CONFLICT, "Only a draft list can be edited"
+        )
+    goods, estimated, deposit = await _estimates(
+        db, customer_id, items, listed_items_total
+    )
+    order.goods_estimate = goods
+    order.estimated_value = estimated
+    order.deposit_amount = deposit
+    if delivery_address is not None:
+        order.delivery_address = delivery_address
+    order.items = [
+        OrderItem(
+            description=i["description"],
+            requested_note=i.get("requested_note"),
+            listed_price=i.get("listed_price"),
+            quantity=i.get("quantity"),
+            preferred_stall_id=i.get("preferred_stall_id"),
+        )
+        for i in items
+    ]
+    await db.flush()
+    await db.refresh(order, attribute_names=["items"])
     return order
 
 
@@ -509,8 +572,90 @@ async def finish_shopping(
     return order
 
 
+async def add_item(
+    db: AsyncSession, *, order_id: uuid.UUID, customer_id: uuid.UUID, item: dict
+) -> OrderItem:
+    """Customer adds a new item to an order that's actively being shopped.
+
+    Additions ONLY - there is deliberately no companion "remove" or "reduce"
+    on this same path. The customer explicitly asked for that split: an
+    agent may already be en route or bargaining, so pulling an item back out
+    isn't offered here at all (existing items are still droppable through
+    the normal unavailable-item flow if the AGENT can't find them, but the
+    customer can't retract one they already committed to). Only legal while
+    SHOPPING - before that the customer can just edit their draft list
+    directly (no fee, no endpoint needed); after, the agent isn't buying
+    anything else for this order.
+
+    Costs a flat ADD_ITEM_FEE (fees.py), charged immediately from the
+    customer's wallet - a platform fee, not goods money, so it's kept OUT of
+    the spending authorization the same way delivery/combined_fee already
+    are (see jit.get_or_create_authorization's own comment). The
+    authorization's cap is separately raised by the new item's own
+    listed_price, in the same call an agent-requested overage uses, so the
+    agent actually has room to buy it.
+    """
+    order = await _load(db, order_id)
+    if order.customer_id != customer_id:
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "Not your order")
+    if order.status is not OrderStatus.SHOPPING:
+        raise HTTPException(
+            status.HTTP_409_CONFLICT,
+            "Can only add an item while your agent is actively shopping",
+        )
+
+    try:
+        await wallet_service.debit(
+            db, customer_id, fees.ADD_ITEM_FEE, order_id=order.id,
+            note="Mid-order add-item fee",
+        )
+    except ValueError:
+        raise HTTPException(
+            status.HTTP_402_PAYMENT_REQUIRED,
+            "Insufficient wallet balance to add an item - top up your wallet",
+        )
+
+    new_item = OrderItem(
+        order_id=order.id,
+        description=item["description"],
+        requested_note=item.get("requested_note"),
+        listed_price=item["listed_price"],
+        quantity=item.get("quantity"),
+        preferred_stall_id=item.get("preferred_stall_id"),
+    )
+    db.add(new_item)
+    await db.flush()
+
+    from app.jit import service as jit_service
+    await jit_service.raise_authorization(db, order.id, item["listed_price"])
+
+    await notif_service.send(
+        db, user_id=order.agent_id, order_id=order.id,
+        kind="item_added",
+        message=f"The customer added a new item to the list: {new_item.description}.",
+    )
+
+    return new_item
+
+
 async def get_order(db: AsyncSession, order_id: uuid.UUID) -> Order:
     return await _load(db, order_id)
+
+
+async def get_assigned_agent(
+    db: AsyncSession, order_id: uuid.UUID, customer_id: uuid.UUID
+):
+    """The agent actually assigned to this order (accepted, not merely
+    proposed), for the order's own customer only. None until one is assigned."""
+    from app.auth.models import User
+
+    order = await _load(db, order_id)
+    if order.customer_id != customer_id:
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "Not your order")
+    if order.agent_id is None:
+        return None
+    result = await db.execute(select(User).where(User.id == order.agent_id))
+    return result.scalar_one_or_none()
 
 
 async def get_proposed_agent(db: AsyncSession, order_id: uuid.UUID):

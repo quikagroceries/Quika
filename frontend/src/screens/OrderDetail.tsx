@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from "react";
+import Image from "next/image";
 import { api } from "@/lib/api";
 import ChatPanel from "@/screens/ChatPanel";
 import DeliveryTracking from "@/screens/DeliveryTracking";
@@ -8,14 +9,24 @@ import Button from "@/components/Button";
 import Card from "@/components/Card";
 import Input from "@/components/Input";
 import PurchaseChecklist from "@/components/PurchaseChecklist";
+import ShoppingFeed from "@/components/ShoppingFeed";
 import StatusBadge from "@/components/StatusBadge";
 import PaymentChooser from "@/components/PaymentChooser";
 import StarRating from "@/components/StarRating";
 import Modal from "@/components/Modal";
 import Icon from "@/components/Icon";
-import { isChatAvailable, isRateable, summarizeOrderStatus } from "@/lib/orderStatus";
+import HeroBanner from "@/components/HeroBanner";
+import Avatar from "@/components/Avatar";
+import SectionHeader from "@/components/SectionHeader";
+import MarketArt from "@/components/shop/MarketArt";
+import agentCustomerConversation from "@/assets/illustrations/agent-customer-conversation.png";
+import personShoppingList from "@/assets/illustrations/person-shopping-list.png";
+import riderScooter from "@/assets/illustrations/rider-scooter-basket-2.png";
+import orderHandoff from "@/assets/illustrations/order-handoff-vendor-customer.png";
+import { isChatAvailable, isExceptionOrder, isRateable, summarizeOrderStatus } from "@/lib/orderStatus";
 import { marketTone, TONE_COVER } from "@/lib/vendorVisuals";
 import { coverImageForMarket } from "@/lib/marketDirectory";
+import { illustrationForItem } from "@/lib/foodVisuals";
 
 const POLL_MS = 5000;
 
@@ -72,6 +83,9 @@ function OrderDetail({ orderId, onBack, onTopUpWallet }: any) {
   // from the last "see another" outcome (only-option / nobody-left), which
   // needs to persist on screen rather than flash-and-vanish like a toast.
   const [proposedAgent, setProposedAgent] = useState<any>(null);
+  // The agent actually shopping this order (name + photo), for the hero chip.
+  const [assignedAgent, setAssignedAgent] = useState<any>(null);
+  const assignedAgentIdRef = useRef<string | null>(null);
   const [assignmentNotice, setAssignmentNotice] = useState("");
   // #7: agent rating - `rating` is the already-submitted one (if any), null
   // while none exists yet. draftStars/draftComment hold the in-progress form.
@@ -94,6 +108,16 @@ function OrderDetail({ orderId, onBack, onTopUpWallet }: any) {
       setAuthorization(await api.getAuthorization(orderId));
     } catch {
       setAuthorization(null);
+    }
+  }
+
+  // Vendor transfers carry the purchase photos. Polled while shopping so the
+  // live feed's photos appear as the agent attaches them, not only post-pay.
+  async function loadPurchases() {
+    try {
+      setPurchases(await api.getPurchases(orderId));
+    } catch {
+      // best-effort — keep whatever's already shown on a transient failure
     }
   }
 
@@ -147,8 +171,20 @@ function OrderDetail({ orderId, onBack, onTopUpWallet }: any) {
         await loadAuthorization();
         await loadPendingOverage();
       }
+      if (fresh.status === "shopping" || fresh.status === "awaiting_payment") {
+        await loadPurchases();
+      }
       if (fresh.status === "proposed") {
         await loadProposedAgent();
+      }
+      // Fetch the assigned agent once per agent (not every 5s poll); a
+      // re-assignment changes agent_id and refetches.
+      if (fresh.agent_id && assignedAgentIdRef.current !== fresh.agent_id) {
+        assignedAgentIdRef.current = fresh.agent_id;
+        api.getOrderAgent(orderId).then(setAssignedAgent).catch(() => {});
+      } else if (!fresh.agent_id && assignedAgentIdRef.current) {
+        assignedAgentIdRef.current = null;
+        setAssignedAgent(null);
       }
       if (isRateable(fresh.status)) {
         await loadRating();
@@ -361,9 +397,24 @@ function OrderDetail({ orderId, onBack, onTopUpWallet }: any) {
     }
   }
 
+  // Mid-order item addition - unlike the other handlers here, this one
+  // deliberately does NOT catch its own errors into the page-level `error`
+  // banner: ShoppingFeed's add-item modal shows the failure inline (wrong
+  // place to lose a half-filled form to a banner at the top of the page),
+  // so the error needs to propagate back to it, not be swallowed here.
+  async function handleAddItem(item) {
+    setBusy(true);
+    try {
+      await api.addOrderItem(orderId, item);
+      await refresh();
+    } finally {
+      setBusy(false);
+    }
+  }
+
   if (!order) {
     return (
-      <div className="flex flex-col items-center gap-3 py-16 text-[#8a8178]">
+      <div className="flex flex-col items-center gap-3 py-16 text-faint">
         <svg className="h-8 w-8 animate-spin" viewBox="0 0 24 24" fill="none" aria-hidden="true">
           <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
           <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
@@ -396,6 +447,10 @@ function OrderDetail({ orderId, onBack, onTopUpWallet }: any) {
     ? Math.round((Number(order.deposit_amount) / Number(order.estimated_value)) * 100)
     : 0;
   const isPaidOrLater = PAID_OR_LATER.has(order.status);
+  // The live shopping view: the agent is buying (or has just finished and the
+  // bill's coming). Purchases + real prices + savings tally in place of the
+  // plain pre-shopping list.
+  const showShoppingFeed = order.status === "shopping" || order.status === "awaiting_payment";
   const pendingDecisionCount = items.filter((it) => it.availability === "unavailable").length;
   // #5: items with a pending per-item overage - derived straight from the
   // order itself (not a notification fetch), so it's always in sync with
@@ -403,77 +458,137 @@ function OrderDetail({ orderId, onBack, onTopUpWallet }: any) {
   const pendingItemOverages = items.filter((it) => it.availability === "overage_pending");
   // #1: chat is scoped to the shopping window - see isChatAvailable.
   const showChat = isChatAvailable(order.status);
+  // Cancelled/cancelled_unpaid/disputed - none of these are "unpriced" (so
+  // isPriced is true) and none are PAID_OR_LATER, so without an explicit
+  // check they fell through BOTH gates at once: the pre-shopping "Your
+  // list / Deposit / Order estimate" row AND the priced "Order summary"
+  // card rendered simultaneously, showing two conflicting views of the
+  // same stopped order. Give exception statuses their own dedicated card
+  // instead of relying on the normal statuses' gates to happen to exclude them.
+  const isException = isExceptionOrder(order.status);
 
-  const heroBg = market ? TONE_COVER[marketTone(market.name, market.city)].bg : "#211A14";
+  // Light tint now, not a dark-ink fallback - cream/white surfaces only,
+  // per the app's no-dark-surfaces rule. Text over this hero is dark ink,
+  // not white, to match.
   const heroBody = isPaidOrLater
     ? "Live delivery status below — packaging, handover code, and confirm on arrival."
     : "Your agent is on it — items and any approvals needed appear below as they come in.";
 
-  return (
-    <div>
-      {/* Leads with the market's identity and a live status line, the same
-          scale and gradient-bleed technique as Shop's own hero banner - so
-          opening a tracked order still feels like the same product, not a
-          plain utility screen bolted onto it. Back + chat float over the
-          banner itself (a modern order-tracking convention) instead of
-          sitting in their own plain row above it. */}
-      <div
-        className="relative mb-4 min-h-[200px] overflow-hidden rounded-2xl shadow-md sm:min-h-[240px]"
-        style={{ backgroundColor: heroBg }}
-      >
-        {market && (
-          <div className="pointer-events-none absolute inset-y-0 right-0 w-full sm:w-[60%]">
-            <img
-              src={coverImageForMarket(market)}
-              alt={market.name}
-              className="h-full w-full object-cover object-center"
-            />
-            <div
-              className="absolute inset-0"
-              style={{
-                background: `linear-gradient(90deg, ${heroBg} 0%, ${heroBg} 12%, ${heroBg}cc 28%, ${heroBg}66 48%, transparent 72%)`,
-              }}
-            />
-            <div
-              className="absolute inset-0 sm:hidden"
-              style={{
-                background: `linear-gradient(90deg, ${heroBg} 0%, ${heroBg}e6 35%, ${heroBg}99 55%, transparent 85%)`,
-              }}
-            />
-          </div>
-        )}
+  // State-aware hero art: the illustration should show what's actually
+  // happening to this order right now, not one generic image for every
+  // status.
+  const heroIllustration =
+    order.status === "delivered" || order.status === "closed"
+      ? orderHandoff
+      : order.status === "out_for_delivery" || order.status === "packed" || order.status === "paid"
+        ? riderScooter
+        : order.status === "shopping" || order.status === "awaiting_payment"
+          ? agentCustomerConversation
+          : personShoppingList;
 
-        <div className="relative z-20 px-4 pt-4 sm:px-5 sm:pt-5">
+  return (
+    // `animate-reveal-up` - a one-time entrance (fade + rise, the app's
+    // premium easing) that plays when this screen actually mounts, i.e.
+    // once per navigation into an order, not on every 5s poll refresh
+    // (React doesn't replay a CSS animation on a re-render of the same DOM
+    // node, only on a genuine mount). Gives "opening an order" its own
+    // distinct, deliberate feel instead of the plain instant page-swap it
+    // had before - the same tool ShopHeroSpotlight-adjacent screens
+    // already reach for elsewhere.
+    <div className="animate-reveal-up">
+      {/* The same illustrated HeroBanner the Shop page and Track lead with -
+          this used to be a market cover PHOTO behind a gradient bleed, which
+          was the one banner in the app not built from the illustration
+          system everything else uses. The market's identity now rides in the
+          badge row (its own art + name + status) and the right-hand column
+          carries a state-aware illustration instead: who's doing what to
+          your order right now. */}
+      <HeroBanner
+        leading={
           <button
             type="button"
             onClick={onBack}
             aria-label="Back"
-            className="flex h-11 w-11 items-center justify-center rounded-full bg-white/90 text-ink shadow-sm backdrop-blur-sm transition hover:bg-white"
+            className="inline-flex h-10 items-center gap-1.5 rounded-full border border-line-strong bg-surface pl-2.5 pr-4 text-sm font-bold text-ink transition hover:bg-sunken-2"
           >
-            <Icon name="chevronDown" className="h-5 w-5 rotate-90" />
+            <Icon name="chevronDown" className="h-4 w-4 rotate-90" />
+            Back
           </button>
-        </div>
-
-        <div className="relative z-10 flex w-full flex-col justify-center gap-2 px-5 pb-6 pt-3 sm:w-[55%] sm:px-6 sm:pb-8 lg:w-[48%]">
+        }
+        badge={
           <div className="flex flex-wrap items-center gap-2">
-            <p className="text-xs font-bold uppercase tracking-[0.14em] text-white/55">
+            {market ? (
+              <MarketArt
+                tone={marketTone(market.name, market.city)}
+                title={market.name}
+                image={coverImageForMarket(market)}
+                compact
+                className="h-8 w-8 shrink-0 rounded-full"
+              />
+            ) : null}
+            <span className="text-xs font-bold uppercase tracking-[0.14em] text-muted">
               {market?.name || "Order"} · #{order.id.slice(0, 8)}
-            </p>
+            </span>
             <StatusBadge status={order.status} />
           </div>
-          <h2 className="font-display text-2xl font-extrabold leading-[1.1] tracking-tight text-white sm:text-3xl">
-            {summarizeOrderStatus({ ...order, marketName: market?.name })}
-          </h2>
-          <p className="text-sm leading-relaxed text-white/70 sm:text-base line-clamp-2">{heroBody}</p>
-        </div>
-      </div>
+        }
+        title={summarizeOrderStatus({ ...order, marketName: market?.name })}
+        body={heroBody}
+        illustration={heroIllustration}
+        illustrationAlt=""
+        actions={
+          !isException && (assignedAgent || showChat) ? (
+            <>
+              {assignedAgent && (
+                <div className="inline-flex items-center gap-2.5 rounded-full border border-line-strong bg-surface py-1 pl-1 pr-4">
+                  <Avatar src={assignedAgent.avatar_url} name={assignedAgent.full_name} className="h-9 w-9" />
+                  <span className="min-w-0 leading-tight">
+                    <span className="block text-[0.65rem] font-bold uppercase tracking-wide text-faint">Your agent</span>
+                    <span className="block truncate text-sm font-bold text-ink">{assignedAgent.full_name || "Your agent"}</span>
+                  </span>
+                </div>
+              )}
+              {/* Labelled - an icon alone left people guessing what it was.
+                  Mounted only here: ChatPanel registers this order with the
+                  shell's ChatDock on mount, so it must render exactly once. */}
+              {showChat && <ChatPanel orderId={orderId} variant="pill" label="Chat with agent" person={assignedAgent} />}
+            </>
+          ) : undefined
+        }
+      />
 
       {verifyingPayment && (
-        <p className="mb-4 rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-700">Confirming your payment…</p>
+        <p className="mb-4 rounded-lg bg-brand-orange/15 px-3 py-2 text-sm text-brand-orange-dark">Confirming your payment…</p>
       )}
 
       {error && (
         <p className="mb-4 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p>
+      )}
+
+      {/* Stopped order - cancelled, cancelled-unpaid, or under dispute. One
+          plain card explaining what happened, nothing else: no item list,
+          no payment prompts, no money summary that might mix pre-shopping
+          estimate numbers with whatever the order happened to reach before
+          it stopped. Red, not peach - this is PROBLEM territory per
+          StatusBadge's own color mapping, not a normal in-progress state. */}
+      {isException && (
+        <Card className="border-transparent bg-red-50">
+          <div className="mb-2 flex items-center gap-2.5">
+            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-red-600 text-white">
+              <Icon name="alert" className="h-4 w-4" />
+            </span>
+            <p className="text-xs font-bold uppercase tracking-wide text-red-700">
+              {order.status === "disputed" ? "Order under review" : "Order cancelled"}
+            </p>
+          </div>
+          <p className="text-ink/80">
+            {order.status === "disputed"
+              ? "Our team is looking into this order. If you have photos or details that could help, send them in chat or reach support."
+              : order.status === "cancelled_unpaid"
+                ? "This order was cancelled after payment wasn't completed in time."
+                : "This order was cancelled."}
+          </p>
+        </Card>
       )}
 
       {/* Propose->accept, as a focused modal: blurs the page and demands a
@@ -487,17 +602,18 @@ function OrderDetail({ orderId, onBack, onTopUpWallet }: any) {
           name/phone are shown. */}
       <Modal open={order.status === "proposed" && !needsDeposit} title="Your shopping agent">
         {proposedAgent ? (
-          <>
-            <p className="mb-1 text-ink/80">
-              <span className="font-semibold">{proposedAgent.full_name || "Unnamed agent"}</span>
-            </p>
-            <p className="mb-3 text-sm text-[#8a8178]">{proposedAgent.phone}</p>
-          </>
+          <div className="mb-3 flex items-center gap-3">
+            <Avatar src={proposedAgent.avatar_url} name={proposedAgent.full_name} className="h-14 w-14 text-base" iconClassName="h-6 w-6" />
+            <div className="min-w-0">
+              <p className="truncate font-semibold text-ink">{proposedAgent.full_name || "Unnamed agent"}</p>
+              <p className="text-sm text-faint">{proposedAgent.phone}</p>
+            </div>
+          </div>
         ) : (
-          <p className="mb-3 text-sm text-[#8a8178]">Looking for an available agent…</p>
+          <p className="mb-3 text-sm text-faint">Looking for an available agent…</p>
         )}
         {assignmentNotice && (
-          <p className="mb-3 rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-700">{assignmentNotice}</p>
+          <p className="mb-3 rounded-lg bg-brand-orange/15 px-3 py-2 text-sm text-brand-orange-dark">{assignmentNotice}</p>
         )}
         <div className="flex gap-2">
           <Button onClick={handleAcceptAgent} busy={busy} disabled={!proposedAgent} className="flex-1">
@@ -509,6 +625,8 @@ function OrderDetail({ orderId, onBack, onTopUpWallet }: any) {
         </div>
       </Modal>
 
+      {!isException && (
+      <>
       {/* Anything that blocks progress or needs an immediate decision stays
           full-width, above the two-column split below - these are never
           "just another card" among the order's normal content. */}
@@ -520,16 +638,31 @@ function OrderDetail({ orderId, onBack, onTopUpWallet }: any) {
         {pendingItemOverages.map((item) => {
           const extra = Number(item.overage_requested_price) - Number(item.listed_price);
           return (
-            <Card key={item.id} className="border-2 border-amber-400 bg-amber-50/60">
-              <p className="mb-1 text-xs font-bold uppercase tracking-wide text-amber-700">
-                Price approval needed
-              </p>
-              <p className="mb-1 text-ink/80">
-                <span className="font-semibold">{item.description}</span> costs{" "}
-                <span className="font-semibold">₦{item.overage_requested_price}</span> at the stall —
-                ₦{extra.toFixed(2)} more than the ₦{item.listed_price} you listed.
-              </p>
-              <p className="mb-3 text-sm text-[#8a8178]">
+            // Soft peach tile + icon well, NOT a 2px outlined alert box -
+            // nothing in the Shop design uses a thick coloured border, and
+            // attention here reads better as warmth than as a warning frame.
+            <Card key={item.id} className="border-transparent bg-brand-orange/[0.12]">
+              <div className="mb-2 flex items-center gap-2.5">
+                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-brand-orange text-[#1A1A1A]">
+                  <Icon name="alert" className="h-4 w-4" />
+                </span>
+                <p className="text-xs font-bold uppercase tracking-wide text-brand-orange-dark">
+                  Price approval needed
+                </p>
+              </div>
+              <div className="mb-3 flex items-center gap-3 rounded-2xl bg-surface/70 p-3">
+                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-sunken-2 p-1.5">
+                  <Image src={illustrationForItem(item.description)} alt="" className="h-full w-full object-contain" />
+                </span>
+                <div className="min-w-0">
+                  <p className="truncate font-semibold text-ink">{item.description}</p>
+                  <p className="text-sm text-muted">
+                    ₦{item.overage_requested_price} at the stall · ₦{extra.toFixed(2)} over your ₦
+                    {item.listed_price}
+                  </p>
+                </div>
+              </div>
+              <p className="mb-3 text-sm text-muted">
                 You can hop on a call to confirm the price with the seller directly.
               </p>
               <div className="flex gap-2">
@@ -553,33 +686,96 @@ function OrderDetail({ orderId, onBack, onTopUpWallet }: any) {
           );
         })}
 
-        {/* Prominent: while proposed, this is the ONLY thing shown - the
-            agent-selection modal above stays closed until it's paid (#8:
-            deposit before assignment). Once agent_assigned, it's still here
-            in case it's somehow still unpaid (shopping can't start until it
-            is - agent's start-shopping 402s otherwise). */}
-        {needsDeposit && (
-          <div className="rounded-xl border-2 border-brand-orange bg-white p-4 shadow-sm">
-            <p className="mb-3 text-ink/80">
-              <b className="text-ink">Deposit required:</b>{" "}
-              {depositPct >= 99
-                ? "full payment upfront (a previous order wasn't paid) "
-                : `${depositPct}% upfront `}
-              {order.status === "proposed"
-                ? "before you can see and accept your shopping agent."
-                : "before shopping can start."}
-            </p>
-            <PaymentChooser
-              amountDue={Number(order.deposit_amount)}
-              walletBalance={walletBalance}
-              onPayWallet={handlePayDepositWallet}
-              onPayTransfer={handlePayDepositTransfer}
-              onTopUp={onTopUpWallet}
-              busy={busy}
-            />
-          </div>
-        )}
       </div>
+
+      {/* "Your list", "Deposit required" and "Order estimate" in one row -
+          this is the pre-shopping trio: nothing's been bought yet, so there's
+          no live feed/final bill to show, just what you asked for, what it'll
+          roughly cost, and what's standing between here and an agent
+          shopping it. Once shopping actually starts, the list becomes the
+          live ShoppingFeed and the deposit's already paid, so this row only
+          makes sense before that - same condition the old plain "Your list"
+          view used. */}
+      {!isPaidOrLater && !showShoppingFeed && (
+        <div className="mb-4 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <Card className="flex flex-col">
+            <SectionHeader icon="basket" title="Your list ({items.length})" className="mb-3" />
+            <div className="-mx-5 max-h-64 divide-y divide-dashed divide-line-strong overflow-y-auto">
+              {items.map((item) => (
+                <div key={item.id} id={`item-${item.id}`} className="flex items-center gap-3 px-5 py-2.5">
+                  <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-sunken-2 p-1">
+                    <Image src={illustrationForItem(item.description)} alt="" className="h-full w-full object-contain" />
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-semibold text-ink">{item.description}</p>
+                    {item.requested_note && (
+                      <p className="truncate text-xs text-faint">{item.requested_note}</p>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </Card>
+
+          {/* Prominent: while proposed, this is the ONLY step standing
+              between here and the agent-selection modal above, which stays
+              closed until it's paid (#8: deposit before assignment). Once
+              agent_assigned, it's still here in case it's somehow still
+              unpaid (shopping can't start until it is - agent's
+              start-shopping 402s otherwise). */}
+          {needsDeposit && (
+            <Card className="border-transparent bg-brand-orange/[0.12]">
+              <div className="mb-3 flex items-center gap-2.5">
+                <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-brand-orange text-[#1A1A1A]">
+                  <Icon name="wallet" className="h-4 w-4" />
+                </span>
+                <p className="text-xs font-bold uppercase tracking-wide text-brand-orange-dark">
+                  Deposit required
+                </p>
+              </div>
+              <p className="mb-3 text-sm text-ink/80">
+                {depositPct >= 99
+                  ? "Full payment upfront (a previous order wasn't paid) "
+                  : `${depositPct}% upfront `}
+                {order.status === "proposed"
+                  ? "before you can see and accept your shopping agent."
+                  : "before shopping can start."}
+              </p>
+              <PaymentChooser
+                amountDue={Number(order.deposit_amount)}
+                walletBalance={walletBalance}
+                onPayWallet={handlePayDepositWallet}
+                onPayTransfer={handlePayDepositTransfer}
+                onTopUp={onTopUpWallet}
+                busy={busy}
+              />
+            </Card>
+          )}
+
+          <Card>
+            <SectionHeader icon="chart" title="Order estimate" className="mb-2" />
+            <div className="space-y-1 text-muted">
+              <div className="flex justify-between"><span>Goods estimate</span><span className="font-semibold">₦{goodsEstimate.toFixed(2)}</span></div>
+              <div className="flex justify-between"><span>Delivery quote</span><span className="font-semibold">₦{DELIVERY_QUOTE.toFixed(2)}</span></div>
+              {/* No grand total shown here on purpose - the service fee is
+                  time-based and unknown until shopping finishes, so a number
+                  shown now wouldn't match the real bill later. See the same
+                  reasoning in NewOrderFlow.jsx's quote screen. */}
+              {depositPaid && (
+                <div className="flex justify-between">
+                  <span>Deposit</span>
+                  <span className="font-semibold">₦{order.deposit_amount} (paid)</span>
+                </div>
+              )}
+              <div className="flex justify-between">
+                <span>Status</span>
+                <StatusBadge status={order.status} />
+              </div>
+            </div>
+            <p className="mt-2 text-xs text-faint">Final fees and total are set once shopping is finished.</p>
+          </Card>
+        </div>
+      )}
 
       {/* Everything else splits into "what's happening" (wide, left - the
           timeline and the items themselves) and "manage this order"
@@ -610,98 +806,75 @@ function OrderDetail({ orderId, onBack, onTopUpWallet }: any) {
                 const first = items.find((it) => it.availability === "unavailable");
                 if (first) document.getElementById(`item-${first.id}`)?.scrollIntoView({ behavior: "smooth", block: "center" });
               }}
-              className="flex w-full items-center gap-3 rounded-xl border-2 border-amber-400 bg-amber-50 px-4 py-3 text-left"
+              className="flex w-full items-center gap-3 rounded-2xl bg-brand-orange/[0.12] px-4 py-3 text-left transition hover:bg-brand-orange/20"
             >
-              <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-amber-400 text-sm font-bold text-white">
+              {/* `text-[#1A1A1A]` (dark ink), not `text-white` - white on
+                  the light `brand-orange` fill is weak contrast; every
+                  other solid-peach fill in the app (Button's primary
+                  variant, the sidebar's active pill) pairs it with dark
+                  ink text instead, per the same convention. */}
+              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-brand-orange text-sm font-bold text-[#1A1A1A]">
                 {pendingDecisionCount}
               </span>
-              <span className="font-semibold text-amber-800">
-                {pendingDecisionCount === 1 ? "1 item needs your decision" : `${pendingDecisionCount} items need your decision`}
+              <span className="min-w-0 flex-1">
+                <span className="block font-bold text-ink">
+                  {pendingDecisionCount === 1 ? "1 item needs your decision" : `${pendingDecisionCount} items need your decision`}
+                </span>
+                <span className="block text-xs text-muted">Tap to jump to it</span>
               </span>
+              <Icon name="chevronDown" className="h-4 w-4 shrink-0 -rotate-90 text-brand-orange-dark" />
             </button>
           )}
 
-          {/* Phase 1: post-payment, the plain item list becomes a bought/not-
-              bought checklist with each stall's purchase photo as proof.
-              Before payment, keep the original list with decide-buttons. */}
+          {/* Post-payment: bought/not-bought checklist with each stall's
+              purchase photo as proof. While shopping (or awaiting payment):
+              the live feed — real prices vs the customer's estimate, photos,
+              a running savings tally. Before shopping starts: the plain list. */}
           {isPaidOrLater ? (
             <PurchaseChecklist items={items} purchases={purchases} />
-          ) : (
-            <div>
-              <p className="mb-2 font-bold text-ink">Your list</p>
-              <div className="space-y-2">
-                {items.map((item) => (
-                  <Card key={item.id} id={`item-${item.id}`} className="py-3">
-                    <div className="font-semibold text-ink">{item.description}</div>
-                    {item.requested_note && (
-                      <div className="text-sm text-[#8a8178]">{item.requested_note}</div>
-                    )}
-                    {item.confirmed_price != null && (
-                      <div className="font-semibold text-brand-green">
-                        Bought — ₦{item.confirmed_price}
-                      </div>
-                    )}
-                    {item.availability === "unavailable" && (
-                      <div className="mt-2">
-                        <p className="mb-2 text-sm text-amber-700">
-                          Not found at the market. What should we do?
-                        </p>
-                        <div className="flex gap-2">
-                          <Button
-                            variant="secondary"
-                            onClick={() => handleDecide(item.id, "buy_elsewhere")}
-                            disabled={busy}
-                            className="text-sm"
-                          >
-                            Buy elsewhere
-                          </Button>
-                          <Button
-                            variant="neutral"
-                            onClick={() => handleDecide(item.id, "dropped")}
-                            disabled={busy}
-                            className="text-sm"
-                          >
-                            Drop item
-                          </Button>
-                        </div>
-                      </div>
-                    )}
-                  </Card>
-                ))}
-              </div>
-            </div>
-          )}
+          ) : showShoppingFeed ? (
+            <ShoppingFeed
+              items={items}
+              purchases={purchases}
+              onDecide={handleDecide}
+              onAddItem={handleAddItem}
+              busy={busy}
+              status={order.status}
+            />
+          ) : null}
         </div>
 
         <div className="order-1 flex flex-col gap-4 lg:order-2 lg:sticky lg:top-6">
-          {/* Labeled, not just an icon - makes it obvious a chat with the
-              agent exists at all, for the one window (agent_assigned/
-              shopping) it's actually available. Lives in the sidebar now:
-              this is a "manage the order" action, not part of the status
-              feed. */}
-          {showChat && <ChatPanel orderId={orderId} variant="button" />}
-
           {/* Spending cap: only relevant while shopping is in progress. Alert
-              state (amber border, headline, the agent's actual message)
-              whenever there's an unread overage_approval for this order -
-              persists here regardless of whether the toast was dismissed. */}
+              state (brand-orange border, headline, the agent's actual
+              message) whenever there's an unread overage_approval for this
+              order - persists here regardless of whether the toast was
+              dismissed. */}
           {order.status === "shopping" && authorization && (
-            <Card className={pendingOverage ? "border-2 border-amber-400 bg-amber-50/60" : ""}>
+            <Card className={pendingOverage ? "border-transparent bg-brand-orange/[0.12]" : ""}>
               {pendingOverage ? (
                 <>
-                  <p className="mb-1 text-xs font-bold uppercase tracking-wide text-amber-700">
-                    Your agent needs approval
-                  </p>
+                  <div className="mb-2 flex items-center gap-2.5">
+                    <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-brand-orange text-[#1A1A1A]">
+                      <Icon name="alert" className="h-4 w-4" />
+                    </span>
+                    <p className="text-xs font-bold uppercase tracking-wide text-brand-orange-dark">
+                      Your agent needs approval
+                    </p>
+                  </div>
                   <p className="mb-3 text-ink/80">{pendingOverage.message}</p>
                 </>
               ) : (
-                <p className="mb-2 font-bold text-ink">Spending approval</p>
+                // Icon-well + title, the same "feature badge" pattern
+                // ShopHeroSpotlight's own cards use, instead of a bare bold
+                // line of text - every right-column card gets this now.
+                <SectionHeader icon="wallet" title="Spending approval" className="mb-3" />
               )}
-              <div className="flex justify-between text-[#6b635a]">
+              <div className="flex justify-between text-muted">
                 <span>Cap</span>
                 <span className="font-semibold">₦{authorization.cap}</span>
               </div>
-              <div className="flex justify-between text-[#6b635a]">
+              <div className="flex justify-between text-muted">
                 <span>Spent so far</span>
                 <span className="font-semibold">₦{authorization.spent}</span>
               </div>
@@ -719,7 +892,7 @@ function OrderDetail({ orderId, onBack, onTopUpWallet }: any) {
 
           {order.status === "awaiting_payment" && (
             <Card>
-              <p className="mb-3 text-lg font-bold text-ink">Pay balance</p>
+              <SectionHeader icon="wallet" title="Pay balance" className="mb-3" />
               <PaymentChooser
                 amountDue={amountDue}
                 walletBalance={walletBalance}
@@ -739,12 +912,12 @@ function OrderDetail({ orderId, onBack, onTopUpWallet }: any) {
               the estimate instead of a card full of misleading ₦0.00 lines. */}
           {isPriced ? (
             <Card>
-              <p className="mb-2 font-bold text-ink">Order summary</p>
-              <div className="space-y-1 text-[#6b635a]">
+              <SectionHeader icon="chart" title="Order summary" className="mb-2" />
+              <div className="space-y-1 text-muted">
                 <div className="flex justify-between"><span>Goods total</span><span className="font-semibold">₦{order.items_total}</span></div>
                 <div className="flex justify-between"><span>Fees</span><span className="font-semibold">₦{fees.toFixed(2)}</span></div>
                 <div className="flex justify-between"><span>Delivery</span><span className="font-semibold">₦{order.delivery_fee}</span></div>
-                <div className="flex justify-between border-t border-[#ebe7e0] pt-1 text-ink">
+                <div className="flex justify-between border-t border-line pt-1 text-ink">
                   <span className="font-semibold">Grand total</span>
                   <span className="font-bold">₦{order.grand_total}</span>
                 </div>
@@ -764,16 +937,17 @@ function OrderDetail({ orderId, onBack, onTopUpWallet }: any) {
                 </div>
               </div>
             </Card>
-          ) : (
+          ) : showShoppingFeed ? (
+            // Pre-shopping, this same card lives in the "Your list / Deposit
+            // required / Order estimate" row above instead - it only
+            // reappears here once shopping's actually under way (still
+            // unpriced, but the row above no longer renders since the list
+            // has become the live ShoppingFeed by then).
             <Card>
-              <p className="mb-2 font-bold text-ink">Order estimate</p>
-              <div className="space-y-1 text-[#6b635a]">
+              <SectionHeader icon="chart" title="Order estimate" className="mb-2" />
+              <div className="space-y-1 text-muted">
                 <div className="flex justify-between"><span>Goods estimate</span><span className="font-semibold">₦{goodsEstimate.toFixed(2)}</span></div>
                 <div className="flex justify-between"><span>Delivery quote</span><span className="font-semibold">₦{DELIVERY_QUOTE.toFixed(2)}</span></div>
-                {/* No grand total shown here on purpose - the service fee is
-                    time-based and unknown until shopping finishes, so a number
-                    shown now wouldn't match the real bill later. See the same
-                    reasoning in NewOrderFlow.jsx's quote screen. */}
                 {depositPaid && (
                   <div className="flex justify-between">
                     <span>Deposit</span>
@@ -785,9 +959,9 @@ function OrderDetail({ orderId, onBack, onTopUpWallet }: any) {
                   <StatusBadge status={order.status} />
                 </div>
               </div>
-              <p className="mt-2 text-xs text-[#8a8178]">Final fees and total are set once shopping is finished.</p>
+              <p className="mt-2 text-xs text-faint">Final fees and total are set once shopping is finished.</p>
             </Card>
-          )}
+          ) : null}
 
           {/* #7: agent rating - customer feedback only, once the order is
               genuinely finished. Never feeds assignment or agent pay. Once
@@ -795,13 +969,15 @@ function OrderDetail({ orderId, onBack, onTopUpWallet }: any) {
               prompt (below, outside this list) is only for COLLECTING one. */}
           {isRateable(order.status) && rating && (
             <Card>
-              <p className="mb-2 font-bold text-ink">Your rating</p>
+              <SectionHeader icon="star" title="Your rating" className="mb-2" />
               <StarRating value={rating.stars} readOnly size={22} />
-              {rating.comment && <p className="mt-2 text-sm text-[#6b635a]">{rating.comment}</p>}
+              {rating.comment && <p className="mt-2 text-sm text-muted">{rating.comment}</p>}
             </Card>
           )}
         </div>
       </div>
+      </>
+      )}
 
       {/* #7: the rating pop-up itself - a prompt, not an inline section.
           Feedback only, so it's freely dismissible (onClose) rather than
@@ -817,7 +993,7 @@ function OrderDetail({ orderId, onBack, onTopUpWallet }: any) {
           onChange={(e) => setDraftComment(e.target.value)}
           placeholder="Optional comment"
           rows={3}
-          className="mt-3 w-full rounded-xl border border-[#ddd6cb] px-4 py-3 text-base text-ink placeholder:text-[#8a8178] focus:outline-none focus:ring-2 focus:ring-brand-orange focus:border-brand-orange"
+          className="mt-3 w-full rounded-xl border border-line-strong px-4 py-3 text-base text-ink placeholder:text-faint focus:outline-none focus:ring-2 focus:ring-brand-orange focus:border-brand-orange"
         />
         <Button
           onClick={handleSubmitRating}

@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Settings from "@/screens/Settings";
 import Card from "@/components/Card";
 import Icon from "@/components/Icon";
+import SectionHeader from "@/components/SectionHeader";
 import { api } from "@/lib/api";
 import { useAuth } from "@/components/AuthProvider";
 
@@ -30,16 +31,16 @@ function SystemStatusCard() {
   const tone =
     status === "ok" ? "bg-brand-green/10 text-brand-green"
     : status === "down" ? "bg-red-100 text-red-700"
-    : "bg-[#f0eeeb] text-[#6b635a]";
+    : "bg-sunken text-muted";
   const dot =
     status === "ok" ? "bg-brand-green"
     : status === "down" ? "bg-red-600"
-    : "bg-[#8a8178]";
+    : "bg-faint";
   const label = status === "ok" ? "API reachable" : status === "down" ? "API unreachable" : "Checking…";
 
   return (
     <Card>
-      <p className="mb-3 text-sm font-bold uppercase tracking-wide text-[#8a8178]">System</p>
+      <SectionHeader icon="settings" title="System" className="mb-4" />
       <div className="flex items-center justify-between">
         <span className={"inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-sm font-bold " + tone}>
           <span className={"h-1.5 w-1.5 rounded-full " + dot} />
@@ -49,14 +50,14 @@ function SystemStatusCard() {
           type="button"
           onClick={check}
           disabled={status === "checking"}
-          className="flex h-9 w-9 items-center justify-center rounded-full text-[#8a8178] transition hover:bg-[#f0eeeb] hover:text-ink disabled:opacity-40"
+          className="flex h-9 w-9 items-center justify-center rounded-full text-faint transition hover:bg-sunken hover:text-ink disabled:opacity-40"
           aria-label="Check again"
         >
           <Icon name="clock" className="h-4 w-4" />
         </button>
       </div>
       {checkedAt && (
-        <p className="mt-2 text-xs text-[#8a8178]">
+        <p className="mt-2 text-xs text-faint">
           Last checked {checkedAt.toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" })}
         </p>
       )}

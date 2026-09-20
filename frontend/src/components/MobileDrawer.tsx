@@ -30,22 +30,25 @@ function MobileDrawer({ open, onClose, navItems, activeKey, user, onLogout, role
         onClick={onClose}
         aria-hidden="true"
         className={
-          "fixed inset-0 z-40 bg-ink/40 transition-opacity duration-300 " +
+          "fixed inset-0 z-40 bg-ink/40 transition-opacity duration-300 ease-premium " +
           (open ? "opacity-100" : "pointer-events-none opacity-0")
         }
       />
 
+      {/* `duration-500 ease-[cubic-bezier(0.34,1.56,0.64,1)]` - the same
+          bounce ShopBag's own mobile drawer slides with, not the flatter
+          `ease-premium`. Every drawer in the app follows this one now. */}
       <div
         role="dialog"
         aria-modal="true"
         aria-label="Navigation menu"
         className={
-          "fixed inset-y-0 left-0 z-50 flex w-72 max-w-[80%] transform flex-col bg-canvas shadow-xl transition-transform duration-300 ease-in-out " +
+          "fixed inset-y-0 left-0 z-50 flex w-72 max-w-[80%] transform flex-col bg-canvas shadow-xl transition-transform duration-500 ease-[cubic-bezier(0.34,1.56,0.64,1)] " +
           (open ? "translate-x-0" : "-translate-x-full")
         }
       >
         <div className="flex items-center justify-between px-4 py-5">
-          <Image src={logo} alt="Quika Groceries" className="h-9 w-auto object-contain" />
+          <Image src={logo} alt="Qyka Groceries" className="h-9 w-auto object-contain" />
           <button
             onClick={onClose}
             aria-label="Close menu"
@@ -74,7 +77,7 @@ function MobileDrawer({ open, onClose, navItems, activeKey, user, onLogout, role
                 className={
                   "flex w-full items-center gap-3 rounded-2xl px-3 min-h-[48px] text-base font-semibold transition-colors " +
                   (active
-                    ? "bg-brand-orange text-white shadow-stamp"
+                    ? "bg-brand-orange text-[#1A1A1A] shadow-stamp"
                     : "text-ink/55 hover:bg-white/70 hover:text-ink")
                 }
               >
@@ -90,7 +93,7 @@ function MobileDrawer({ open, onClose, navItems, activeKey, user, onLogout, role
             <Link
               href="/login?next=/shop"
               onClick={onClose}
-              className="flex w-full items-center justify-center gap-3 rounded-2xl bg-brand-green px-3 min-h-[48px] text-base font-bold text-white shadow-stamp hover:bg-brand-green-dark"
+              className="flex w-full items-center justify-center gap-3 rounded-2xl bg-brand-orange px-3 min-h-[48px] text-base font-bold text-[#1A1A1A] shadow-stamp hover:bg-brand-orange-dark"
             >
               <Icon name="user" className="h-5 w-5 shrink-0" />
               Sign in
@@ -102,10 +105,10 @@ function MobileDrawer({ open, onClose, navItems, activeKey, user, onLogout, role
                 onClick={onClose}
                 className="mb-2 flex w-full items-center gap-2.5 rounded-2xl px-2 py-2 text-left transition-colors hover:bg-white/70"
               >
-                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white text-ink/50">
+                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-surface text-ink/50">
                   <Icon name="user" className="h-4 w-4" />
                 </span>
-                <span className="truncate text-sm font-semibold text-ink">{user?.phone}</span>
+                <span className="truncate text-sm font-semibold text-ink">{user?.full_name || user?.phone}</span>
               </Link>
               <button
                 onClick={() => {

@@ -14,11 +14,11 @@ async def test_otp_request_rate_limited(client):
     from app.core.config import settings
 
     for _ in range(settings.otp_max_requests_per_hour):
-        r = await client.post("/auth/request-otp", json={"phone": PHONE})
+        r = await client.post("/auth/request-otp", json={"identifier": PHONE})
         assert r.status_code == 200, r.text
 
     # One more than the cap must be rejected.
-    r = await client.post("/auth/request-otp", json={"phone": PHONE})
+    r = await client.post("/auth/request-otp", json={"identifier": PHONE})
     assert r.status_code == 429, r.text
 
 
@@ -26,32 +26,32 @@ async def test_otp_request_rate_limited(client):
 async def test_otp_verify_locks_after_max_wrong_attempts(client):
     from app.core.config import settings
 
-    r = await client.post("/auth/request-otp", json={"phone": PHONE})
+    r = await client.post("/auth/request-otp", json={"identifier": PHONE})
     code = r.json()["dev_otp"]
 
     for _ in range(settings.otp_max_verify_attempts):
         r = await client.post(
-            "/auth/verify-otp", json={"phone": PHONE, "code": "000000"}
+            "/auth/verify-otp", json={"identifier": PHONE, "code": "000000"}
         )
         assert r.status_code == 400
 
     # The code is now locked — even the CORRECT code must fail, forcing the
     # customer to request a fresh one.
-    r = await client.post("/auth/verify-otp", json={"phone": PHONE, "code": code})
+    r = await client.post("/auth/verify-otp", json={"identifier": PHONE, "code": code})
     assert r.status_code == 400, "code should be locked after too many wrong guesses"
 
 
 @pytest.mark.asyncio
 async def test_otp_verify_succeeds_within_attempt_budget(client):
     """Sanity check: a few wrong guesses followed by the right one still works."""
-    r = await client.post("/auth/request-otp", json={"phone": "+2348010000098"})
+    r = await client.post("/auth/request-otp", json={"identifier": "+2348010000098"})
     code = r.json()["dev_otp"]
 
     await client.post(
-        "/auth/verify-otp", json={"phone": "+2348010000098", "code": "000000"}
+        "/auth/verify-otp", json={"identifier": "+2348010000098", "code": "000000"}
     )
     r = await client.post(
-        "/auth/verify-otp", json={"phone": "+2348010000098", "code": code}
+        "/auth/verify-otp", json={"identifier": "+2348010000098", "code": code}
     )
     assert r.status_code == 200, r.text
 

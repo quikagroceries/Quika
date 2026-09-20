@@ -15,9 +15,9 @@ PHONE_AGENT = "+2348020000002"
 
 
 async def _login(client, phone):
-    r = await client.post("/auth/request-otp", json={"phone": phone})
+    r = await client.post("/auth/request-otp", json={"identifier": phone})
     code = r.json()["dev_otp"]
-    r = await client.post("/auth/verify-otp", json={"phone": phone, "code": code})
+    r = await client.post("/auth/verify-otp", json={"identifier": phone, "code": code})
     return r.json()["access_token"]
 
 
@@ -209,7 +209,7 @@ async def test_checkout_verify_rejects_someone_elses_reference(client, db_sessio
 
     r = await client.post(
         f"/payments/orders/{oid}/checkout/verify", headers=cust_h,
-        json={"reference": "quika_not_a_real_reference"},
+        json={"reference": "qyka_not_a_real_reference"},
     )
     assert r.status_code == 403, r.text
 

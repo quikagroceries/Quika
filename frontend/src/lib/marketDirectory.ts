@@ -37,7 +37,7 @@ export const DIRECTORY_MARKETS: DirectoryMarket[] = [
     blurb: "Dense stalls, sharp bargaining, provisions and produce in one dense loop.",
     venueType: "local_market",
     categories: ["provisions", "produce", "spices"],
-    image: "/quika-cat-produce.jpg",
+    image: "/qyka-cat-produce.jpg",
   },
   {
     id: "mile-12",
@@ -48,7 +48,7 @@ export const DIRECTORY_MARKETS: DirectoryMarket[] = [
     blurb: "Wholesale produce hub — peppers, tomatoes, and bulk restocks.",
     venueType: "local_market",
     categories: ["produce", "fish", "grains"],
-    image: "/quika-cat-protein.jpg",
+    image: "/qyka-cat-protein.jpg",
   },
   {
     id: "bodija",
@@ -59,7 +59,7 @@ export const DIRECTORY_MARKETS: DirectoryMarket[] = [
     blurb: "Classic open-air shopping for families across Ibadan.",
     venueType: "local_market",
     categories: ["produce", "provisions", "grains"],
-    image: "/quika-cat-pantry.jpg",
+    image: "/qyka-cat-pantry.jpg",
   },
   {
     id: "wuse",
@@ -70,7 +70,7 @@ export const DIRECTORY_MARKETS: DirectoryMarket[] = [
     blurb: "Capital city stalls for everyday groceries and specialty finds.",
     venueType: "local_market",
     categories: ["provisions", "protein", "household"],
-    image: "/quika-trust-basket.jpg",
+    image: "/qyka-trust-basket.jpg",
   },
   {
     id: "shoprite-ikeja",
@@ -81,7 +81,7 @@ export const DIRECTORY_MARKETS: DirectoryMarket[] = [
     blurb: "Fixed prices, labelled aisles — faster when you know exactly what you need.",
     venueType: "supermarket",
     categories: ["provisions", "produce", "protein", "household"],
-    image: "/quika-cat-pantry.jpg",
+    image: "/qyka-cat-pantry.jpg",
   },
   {
     id: "spar-lekki",
@@ -89,10 +89,10 @@ export const DIRECTORY_MARKETS: DirectoryMarket[] = [
     city: "Lekki",
     state: "Lagos",
     status: "pilot",
-    blurb: "Shelf prices you can trust — Quika still picks and delivers.",
+    blurb: "Shelf prices you can trust — Qyka still picks and delivers.",
     venueType: "supermarket",
     categories: ["provisions", "produce", "household"],
-    image: "/quika-trust-basket.jpg",
+    image: "/qyka-trust-basket.jpg",
   },
 ];
 
@@ -138,5 +138,5 @@ export function findDirectoryMarket(m: { name?: string | null }): DirectoryMarke
 export function coverImageForMarket(m: { name?: string | null; venue_type?: string | null }): string {
   const dir = findDirectoryMarket(m);
   if (dir?.image) return dir.image;
-  return (m.venue_type || "") === "supermarket" ? "/quika-cat-pantry.jpg" : "/quika-cat-produce.jpg";
+  return (m.venue_type || "") === "supermarket" ? "/qyka-cat-pantry.jpg" : "/qyka-cat-produce.jpg";
 }

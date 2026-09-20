@@ -61,7 +61,10 @@ export function OrderDetailPanel({ orderId, markets, agents, onBack, onAssigned 
     );
   }
 
-  const heroBg = market ? TONE_COVER[marketTone(market.name, market.city)].bg : "#211A14";
+  // Light tint now, not a dark-ink fallback - cream/white surfaces only,
+  // per the app's no-dark-surfaces rule. Text over this hero is dark ink,
+  // not white, to match.
+  const heroBg = market ? TONE_COVER[marketTone(market.name, market.city)].bg : "#F0ECE0";
 
   return (
     <div>
@@ -107,12 +110,12 @@ export function OrderDetailPanel({ orderId, markets, agents, onBack, onAssigned 
 
         <div className="relative z-10 flex w-full flex-col justify-center gap-1.5 px-5 pb-5 pt-3 sm:w-[60%] sm:px-6 sm:pb-6">
           <div className="flex flex-wrap items-center gap-2">
-            <p className="text-xs font-bold uppercase tracking-[0.14em] text-white/55">
+            <p className="text-xs font-bold uppercase tracking-[0.14em] text-ink/55">
               {market?.name || "Order"} · #{order.id.slice(0, 8)}
             </p>
             <StatusBadge status={order.status} />
           </div>
-          <h2 className="font-display text-xl font-extrabold leading-[1.1] tracking-tight text-white sm:text-2xl">
+          <h2 className="font-display text-xl font-extrabold leading-[1.1] tracking-tight text-ink sm:text-2xl">
             {summarizeOrderStatus({ ...order, marketName: market?.name })}
           </h2>
         </div>
@@ -129,7 +132,7 @@ export function OrderDetailPanel({ orderId, markets, agents, onBack, onAssigned 
           <p className="mb-2 font-bold text-ink">Items ({(order.items || []).length})</p>
           <div className="space-y-2">
             {(order.items || []).map((it) => (
-              <div key={it.id} className="flex items-center justify-between border-b border-[#ebe7e0] pb-2 text-sm last:border-0">
+              <div key={it.id} className="flex items-center justify-between border-b border-line pb-2 text-sm last:border-0">
                 <span className="min-w-0 flex-1 truncate text-ink/80">{it.description}</span>
                 <span className="shrink-0 font-semibold text-ink">
                   {it.confirmed_price != null ? `₦${it.confirmed_price}` : it.availability}
@@ -144,13 +147,13 @@ export function OrderDetailPanel({ orderId, markets, agents, onBack, onAssigned 
             <Card className="border-2 border-amber-400">
               <p className="mb-2 font-bold text-ink">Assign an agent</p>
               {marketAgents.length === 0 ? (
-                <p className="text-sm text-[#6b635a]">No agents are registered for this market yet.</p>
+                <p className="text-sm text-muted">No agents are registered for this market yet.</p>
               ) : (
                 <>
                   <select
                     value={pickedAgent}
                     onChange={(e) => setPickedAgent(e.target.value)}
-                    className="mb-2 w-full min-h-[44px] rounded-xl border border-[#ddd6cb] px-4 text-base text-ink"
+                    className="mb-2 w-full min-h-[44px] rounded-xl border border-line-strong px-4 text-base text-ink"
                   >
                     <option value="">Select an agent…</option>
                     {marketAgents.map((a) => (
@@ -221,7 +224,7 @@ function AdminOrders() {
   return (
     <div>
       <h1 className="mb-1 font-display text-3xl font-extrabold tracking-tight text-ink md:text-4xl">Orders</h1>
-      <p className="mb-6 text-[#6b635a]">Every order still in flight — not yet delivered, closed, or cancelled.</p>
+      <p className="mb-6 text-muted">Every order still in flight — not yet delivered, closed, or cancelled.</p>
 
       {error && <p className="mb-4 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p>}
 
@@ -230,10 +233,10 @@ function AdminOrders() {
       ) : data.orders.length === 0 ? (
         <EmptyState icon="basket" title="Nothing in flight" subtitle="Every order is delivered, closed, or cancelled." />
       ) : (
-        <div className="overflow-x-auto rounded-2xl border border-[#ebe7e0] bg-white shadow-sm">
+        <div className="overflow-x-auto rounded-3xl border border-line bg-surface shadow-sm">
           <table className="w-full min-w-[720px] text-left text-sm">
             <thead>
-              <tr className="border-b border-[#ebe7e0] text-xs uppercase tracking-wide text-[#8a8178]">
+              <tr className="border-b border-line text-xs uppercase tracking-wide text-faint">
                 <th className="px-4 py-3 font-semibold">Status</th>
                 <th className="px-4 py-3 font-semibold">Market</th>
                 <th className="px-4 py-3 font-semibold">Agent</th>
@@ -249,7 +252,7 @@ function AdminOrders() {
                   <tr
                     key={o.id}
                     onClick={() => router.push(`/admin/orders/${o.id}`)}
-                    className="cursor-pointer border-b border-[#ebe7e0] last:border-0 hover:bg-[#f7f5f2]"
+                    className="cursor-pointer border-b border-line last:border-0 hover:bg-sunken-2"
                   >
                     <td className="px-4 py-3"><StatusBadge status={o.status} /></td>
                     <td className="px-4 py-3 text-ink/80">{marketName(o.market_id)}</td>
@@ -260,14 +263,14 @@ function AdminOrders() {
                         <span className="rounded-full bg-amber-50 px-2 py-0.5 text-xs font-bold text-amber-700">Unassigned</span>
                       )}
                     </td>
-                    <td className="px-4 py-3 text-[#6b635a]">{o.customer_id.slice(0, 8)}…</td>
+                    <td className="px-4 py-3 text-muted">{o.customer_id.slice(0, 8)}…</td>
                     <td className="px-4 py-3">
-                      <span className={stuck ? "flex items-center gap-1 font-bold text-red-600" : "text-[#6b635a]"}>
+                      <span className={stuck ? "flex items-center gap-1 font-bold text-red-600" : "text-muted"}>
                         {stuck && <Icon name="alert" className="h-3.5 w-3.5" />}
                         {formatAge(now - new Date(o.created_at).getTime())}
                       </span>
                     </td>
-                    <td className="px-4 py-3 text-right text-[#8a8178]">›</td>
+                    <td className="px-4 py-3 text-right text-faint">›</td>
                   </tr>
                 );
               })}

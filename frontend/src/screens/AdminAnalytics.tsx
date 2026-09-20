@@ -12,7 +12,7 @@ import ChartTooltip from "@/components/ChartTooltip";
 import { CardSkeleton } from "@/components/Skeleton";
 import { CHART_STATUS, CHART_GRID, CHART_AXIS_TEXT } from "@/lib/adminUtils";
 
-// Quika's own brand hues for the two single-series charts (order volume,
+// Qyka's own brand hues for the two single-series charts (order volume,
 // revenue) - a single series carries its identity in the card title, so it
 // needs no categorical assignment, just the brand's own hue. The rates
 // breakdown below is genuinely status data (completed/cancelled/non-payment/
@@ -65,13 +65,13 @@ function AdminAnalytics() {
   return (
     <div>
       <h1 className="mb-1 font-display text-3xl font-extrabold tracking-tight text-ink md:text-4xl">Analytics</h1>
-      <p className="mb-6 text-[#6b635a]">Last 30 days, plus lifetime agent/market activity — computed only from what's actually recorded.</p>
+      <p className="mb-6 text-muted">Last 30 days, plus lifetime agent/market activity — computed only from what's actually recorded.</p>
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         <Card>
           <p className="mb-3 font-bold text-ink">Order volume</p>
           {volume.length === 0 ? (
-            <p className="py-8 text-center text-sm text-[#8a8178]">No paid orders in the last 30 days.</p>
+            <p className="py-8 text-center text-sm text-faint">No paid orders in the last 30 days.</p>
           ) : (
             <ResponsiveContainer width="100%" height={220}>
               <BarChart data={volume}>
@@ -88,7 +88,7 @@ function AdminAnalytics() {
         <Card>
           <p className="mb-3 font-bold text-ink">Revenue (company share)</p>
           {revenue.length === 0 ? (
-            <p className="py-8 text-center text-sm text-[#8a8178]">No paid orders in the last 30 days.</p>
+            <p className="py-8 text-center text-sm text-faint">No paid orders in the last 30 days.</p>
           ) : (
             <ResponsiveContainer width="100%" height={220}>
               <LineChart data={revenue}>
@@ -107,7 +107,7 @@ function AdminAnalytics() {
         <Card>
           <p className="mb-3 font-bold text-ink">Agent activity (lifetime)</p>
           {agents.length === 0 ? (
-            <p className="text-sm text-[#8a8178]">No agents yet.</p>
+            <p className="text-sm text-faint">No agents yet.</p>
           ) : (
             <>
               {/* Summary before detail: a ranking (who earned the most) is
@@ -134,12 +134,12 @@ function AdminAnalytics() {
                 </BarChart>
               </ResponsiveContainer>
               {agents.length > 8 && (
-                <p className="mb-3 mt-1 text-xs text-[#8a8178]">Top 8 of {agents.length} agents shown — full list below.</p>
+                <p className="mb-3 mt-1 text-xs text-faint">Top 8 of {agents.length} agents shown — full list below.</p>
               )}
             <div className="mt-3 overflow-x-auto">
               <table className="w-full text-left text-sm">
                 <thead>
-                  <tr className="border-b border-[#ebe7e0] text-xs uppercase tracking-wide text-[#8a8178]">
+                  <tr className="border-b border-line text-xs uppercase tracking-wide text-faint">
                     <th className="py-2 pr-3 font-semibold">Agent</th>
                     <th className="py-2 pr-3 font-semibold">Completed</th>
                     <th className="py-2 font-semibold">Earnings</th>
@@ -147,7 +147,7 @@ function AdminAnalytics() {
                 </thead>
                 <tbody>
                   {agents.map((a) => (
-                    <tr key={a.agent_id} className="border-b border-[#ebe7e0] last:border-0">
+                    <tr key={a.agent_id} className="border-b border-line last:border-0">
                       <td className="py-2 pr-3 font-semibold text-ink">{a.full_name || a.phone}</td>
                       <td className="py-2 pr-3 text-ink/80">{a.completed_orders}</td>
                       <td className="py-2 font-semibold text-ink">₦{a.earnings}</td>
@@ -163,7 +163,7 @@ function AdminAnalytics() {
         <Card>
           <p className="mb-3 font-bold text-ink">Order outcomes</p>
           {rates.total_terminal === 0 ? (
-            <p className="text-sm text-[#8a8178]">No orders have reached a final outcome yet.</p>
+            <p className="text-sm text-faint">No orders have reached a final outcome yet.</p>
           ) : (
             <>
               <ResponsiveContainer width="100%" height={160}>
@@ -177,7 +177,7 @@ function AdminAnalytics() {
               <div className="mt-2 space-y-1 text-sm">
                 {rateSlices.map((s) => (
                   <div key={s.key} className="flex items-center justify-between">
-                    <span className="flex items-center gap-1.5 text-[#6b635a]">
+                    <span className="flex items-center gap-1.5 text-muted">
                       <span className="shrink-0" style={{ color: RATE_STYLE[s.key].color }}>
                         <Icon name={RATE_STYLE[s.key].icon} className="h-3.5 w-3.5" />
                       </span>
@@ -197,7 +197,7 @@ function AdminAnalytics() {
       <Card className="mt-4">
         <p className="mb-3 font-bold text-ink">Market activity (lifetime)</p>
         {marketsSorted.length === 0 ? (
-          <p className="text-sm text-[#8a8178]">No paid orders yet.</p>
+          <p className="text-sm text-faint">No paid orders yet.</p>
         ) : (
           <>
             {/* Orders-by-market only, not float turnover alongside it in the
@@ -223,12 +223,12 @@ function AdminAnalytics() {
               </BarChart>
             </ResponsiveContainer>
             {marketsSorted.length > 8 && (
-              <p className="mb-3 mt-1 text-xs text-[#8a8178]">Top 8 of {marketsSorted.length} markets shown — full list below.</p>
+              <p className="mb-3 mt-1 text-xs text-faint">Top 8 of {marketsSorted.length} markets shown — full list below.</p>
             )}
           <div className="mt-3 overflow-x-auto">
             <table className="w-full text-left text-sm">
               <thead>
-                <tr className="border-b border-[#ebe7e0] text-xs uppercase tracking-wide text-[#8a8178]">
+                <tr className="border-b border-line text-xs uppercase tracking-wide text-faint">
                   <th className="py-2 pr-3 font-semibold">Market</th>
                   <th className="py-2 pr-3 font-semibold">Orders</th>
                   <th className="py-2 font-semibold">Float turnover</th>
@@ -236,7 +236,7 @@ function AdminAnalytics() {
               </thead>
               <tbody>
                 {marketsSorted.map((m) => (
-                  <tr key={m.market_id} className="border-b border-[#ebe7e0] last:border-0">
+                  <tr key={m.market_id} className="border-b border-line last:border-0">
                     <td className="py-2 pr-3 font-semibold text-ink">{marketName(m.market_id)}</td>
                     <td className="py-2 pr-3 text-ink/80">{m.orders}</td>
                     <td className="py-2 font-semibold text-ink">₦{m.float_turnover}</td>

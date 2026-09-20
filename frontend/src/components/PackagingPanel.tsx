@@ -84,13 +84,13 @@ function PackagingPanel({ order, onPacked }: any) {
               ? "bg-red-100 text-red-700"
               : nearOverrun
               ? "bg-amber-100 text-amber-700"
-              : "bg-[#f0eeeb] text-[#6b635a]")
+              : "bg-sunken text-muted")
           }
         >
           {formatRemaining(remaining)}
         </span>
       </div>
-      <p className="mb-3 text-sm text-[#6b635a]">
+      <p className="mb-3 text-sm text-muted">
         Aim to have the order packed within ~10 minutes of payment — a guide only, you can still hand over after it runs out.
       </p>
 
@@ -102,7 +102,7 @@ function PackagingPanel({ order, onPacked }: any) {
           type="button"
           onClick={() => fileInputRef.current?.click()}
           disabled={uploading}
-          className="flex h-16 w-16 flex-col items-center justify-center gap-1 rounded-lg border-2 border-dashed border-[#ddd6cb] text-[#8a8178] disabled:opacity-50"
+          className="flex h-16 w-16 flex-col items-center justify-center gap-1 rounded-lg border-2 border-dashed border-line-strong text-faint disabled:opacity-50"
         >
           <Icon name="camera" className="h-5 w-5" />
           <span className="text-[10px] font-semibold">{uploading ? "…" : "Add"}</span>

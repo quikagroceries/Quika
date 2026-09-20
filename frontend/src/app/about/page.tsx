@@ -1,9 +1,9 @@
 import AboutUs from "@/screens/AboutUs";
 
 export const metadata = {
-  title: "About Us — Quika Groceries",
+  title: "About Us — Qyka Groceries",
   description:
-    "Quika is a remote personal shopper for Nigerian open-air markets — free-text lists, agents, transfers, and courier delivery.",
+    "Qyka is a remote personal shopper for groceries — open-air markets and supermarkets alike. Free-text lists, agents, transfers, and rider delivery.",
 };
 
 export default function AboutPage() {
