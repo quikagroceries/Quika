@@ -125,10 +125,7 @@ function MarketCard({
     <button
       type="button"
       onClick={() => onSelect(m)}
-      className={
-        "group shrink-0 snap-start text-left transition duration-300 ease-premium " +
-        (wide ? "w-[300px] sm:w-[340px]" : "w-[250px] sm:w-[270px]")
-      }
+      className="group w-full text-left transition duration-300 ease-premium"
     >
       <span className="relative block overflow-hidden rounded-2xl shadow-sm transition duration-300 ease-premium group-hover:-translate-y-1 group-hover:shadow-lg">
         <MarketArt
@@ -224,7 +221,7 @@ function FilterBar({
 
   return (
     <div
-      className="mb-5 flex flex-nowrap items-center gap-2 overflow-x-auto pb-0.5 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+      className="mb-4 flex flex-nowrap items-center gap-2 overflow-x-auto pb-0.5 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
       role="toolbar"
       aria-label="Refine results"
     >
@@ -300,100 +297,27 @@ function FilterBar({
   );
 }
 
-function CarouselSection({
+function MarketSection({
   title,
-  subtitle,
   items,
   onSelect,
   cardSize = "md",
   sort = "featured",
 }: {
   title: string;
-  subtitle?: string;
   items: any[];
   onSelect: (m: any) => void;
   cardSize?: "md" | "lg";
   sort?: SortMode;
 }) {
-  const scrollerRef = useRef<HTMLDivElement>(null);
-  const [canLeft, setCanLeft] = useState(false);
-  const [canRight, setCanRight] = useState(true);
   const ordered = useMemo(() => sortMarkets(items, sort), [items, sort]);
-
-  function updateArrows() {
-    const el = scrollerRef.current;
-    if (!el) return;
-    setCanLeft(el.scrollLeft > 8);
-    setCanRight(el.scrollLeft + el.clientWidth < el.scrollWidth - 8);
-  }
-
-  useEffect(() => {
-    updateArrows();
-    const el = scrollerRef.current;
-    if (!el) return;
-    el.addEventListener("scroll", updateArrows, { passive: true });
-    window.addEventListener("resize", updateArrows);
-    return () => {
-      el.removeEventListener("scroll", updateArrows);
-      window.removeEventListener("resize", updateArrows);
-    };
-  }, [ordered]);
-
-  function scroll(dir: -1 | 1) {
-    scrollerRef.current?.scrollBy({
-      left: dir * Math.min(600, (scrollerRef.current?.clientWidth || 400) * 0.85),
-      behavior: "smooth",
-    });
-  }
 
   if (!ordered.length) return null;
 
   return (
-    <section className="mb-9">
-      <div className="mb-3 flex items-end justify-between gap-3">
-        <div className="min-w-0">
-          <h2 className="font-display text-2xl font-extrabold tracking-tight text-ink">{title}</h2>
-          {subtitle && (
-            <p className="mt-1 max-w-2xl text-sm leading-relaxed text-[#6b635a]">{subtitle}</p>
-          )}
-        </div>
-        <div className="flex shrink-0 items-center gap-2">
-          <button
-            type="button"
-            aria-label="Scroll left"
-            disabled={!canLeft}
-            onClick={() => scroll(-1)}
-            className="flex h-9 w-9 items-center justify-center rounded-full border border-[#ddd6cb] bg-white text-ink shadow-[0_1px_2px_rgba(33,26,20,0.06)] transition hover:bg-[#faf9f7] disabled:opacity-30"
-          >
-            <svg viewBox="0 0 20 20" className="h-4 w-4" fill="currentColor" aria-hidden>
-              <path
-                fillRule="evenodd"
-                d="M12.79 5.23a.75.75 0 01-.02 1.06L8.83 10l3.94 3.71a.75.75 0 11-1.04 1.08l-4.5-4.25a.75.75 0 010-1.08l4.5-4.25a.75.75 0 011.06.02z"
-                clipRule="evenodd"
-              />
-            </svg>
-          </button>
-          <button
-            type="button"
-            aria-label="Scroll right"
-            disabled={!canRight}
-            onClick={() => scroll(1)}
-            className="flex h-9 w-9 items-center justify-center rounded-full border border-[#ddd6cb] bg-white text-ink shadow-[0_1px_2px_rgba(33,26,20,0.06)] transition hover:bg-[#faf9f7] disabled:opacity-30"
-          >
-            <svg viewBox="0 0 20 20" className="h-4 w-4" fill="currentColor" aria-hidden>
-              <path
-                fillRule="evenodd"
-                d="M7.21 14.77a.75.75 0 01.02-1.06L11.17 10 7.23 6.29a.75.75 0 111.04-1.08l4.5 4.25a.75.75 0 010 1.08l-4.5 4.25a.75.75 0 01-1.06-.02z"
-                clipRule="evenodd"
-              />
-            </svg>
-          </button>
-        </div>
-      </div>
-      <div
-        ref={scrollerRef}
-        className="flex gap-4 overflow-x-auto scroll-smooth pb-2 snap-x snap-mandatory [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
-      >
+    <section className="mb-6">
+      <h2 className="mb-3 font-display text-xl font-extrabold tracking-tight text-ink">{title}</h2>
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
         {ordered.map((m) => (
           <MarketCard key={m.id} m={m} onSelect={onSelect} size={cardSize} />
         ))}
@@ -482,7 +406,7 @@ function ShopHeroBanner({
 
   return (
     <div
-      className="relative mb-6 min-h-[220px] overflow-hidden rounded-2xl shadow-md sm:min-h-[280px]"
+      className="relative mb-4 min-h-[132px] overflow-hidden rounded-2xl shadow-md sm:min-h-[150px]"
       style={{ backgroundColor: bg }}
     >
       <div className="pointer-events-none absolute inset-y-0 right-0 w-full sm:w-[60%]">
@@ -501,19 +425,19 @@ function ShopHeroBanner({
         />
       </div>
 
-      <div className="relative z-10 flex w-full flex-col justify-center px-5 py-7 sm:w-[45%] sm:px-8 sm:py-9 lg:w-[40%]">
+      <div className="relative z-10 flex w-full flex-col justify-center px-5 py-5 sm:w-[52%] sm:px-8 sm:py-6 lg:w-[46%]">
         <p
           className={
-            "text-xs font-bold uppercase tracking-[0.14em] " +
+            "text-[0.7rem] font-bold uppercase tracking-[0.14em] " +
             (listMode || stall || (!market && !isSuper) ? "text-brand-orange" : "text-white/55")
           }
         >
           {eyebrow}
         </p>
-        <h2 className="mt-2.5 font-display text-3xl font-extrabold leading-[1.05] tracking-tight text-white sm:text-4xl lg:text-[2.75rem]">
+        <h2 className="mt-1.5 font-display text-xl font-extrabold leading-[1.1] tracking-tight text-white sm:text-2xl">
           {title}
         </h2>
-        <p className="mt-3 text-sm leading-relaxed text-white/70 sm:text-base line-clamp-3">{body}</p>
+        <p className="mt-1.5 text-[0.8rem] leading-snug text-white/70 line-clamp-2">{body}</p>
       </div>
     </div>
   );
@@ -764,10 +688,10 @@ function MarketPicker({
       />
 
       {loading && (
-        <div className="mb-8 flex gap-4 overflow-hidden">
-          {[0, 1, 2, 3].map((i) => (
-            <div key={i} className="w-[280px] shrink-0">
-              <div className="aspect-[16/10] animate-pulse rounded-xl bg-[#ece8e2]" />
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
+          {[0, 1, 2, 3, 4, 5].map((i) => (
+            <div key={i}>
+              <div className="aspect-[4/3] animate-pulse rounded-2xl bg-[#ece8e2]" />
               <div className="mt-3 h-4 w-2/3 animate-pulse rounded bg-[#ece8e2]" />
               <div className="mt-2 h-3 w-1/2 animate-pulse rounded bg-[#f0eeeb]" />
             </div>
@@ -790,9 +714,8 @@ function MarketPicker({
       )}
 
       {!loading && pilots.length > 0 && (
-        <CarouselSection
+        <MarketSection
           title={sectionCopy.pilot.title}
-          subtitle={sectionCopy.pilot.subtitle}
           items={pilots}
           onSelect={onSelect}
           cardSize={cardSize}
@@ -801,9 +724,8 @@ function MarketPicker({
       )}
 
       {!loading && liveOthers.length > 0 && (
-        <CarouselSection
+        <MarketSection
           title={sectionCopy.live.title}
-          subtitle={sectionCopy.live.subtitle}
           items={liveOthers}
           onSelect={onSelect}
           cardSize={cardSize}
@@ -812,9 +734,8 @@ function MarketPicker({
       )}
 
       {!loading && pilots.length === 0 && live.length > 0 && (
-        <CarouselSection
+        <MarketSection
           title={sectionCopy.live.title}
-          subtitle={sectionCopy.live.subtitle}
           items={live}
           onSelect={onSelect}
           cardSize={cardSize}
@@ -823,9 +744,8 @@ function MarketPicker({
       )}
 
       {!loading && comingSoon.length > 0 && (
-        <CarouselSection
+        <MarketSection
           title={sectionCopy.soon.title}
-          subtitle={sectionCopy.soon.subtitle}
           items={comingSoon}
           onSelect={onSelect}
           cardSize={cardSize}
@@ -900,7 +820,7 @@ function MarketPicker({
   }
 
   return (
-    <div className="flex min-h-[calc(100vh-4rem)]">
+    <div className="flex min-h-[calc(100vh-4rem)] md:min-h-full">
       {rail}
 
       <div className="shop-texture min-w-0 flex-1 px-4 py-5 md:px-6 lg:px-8">

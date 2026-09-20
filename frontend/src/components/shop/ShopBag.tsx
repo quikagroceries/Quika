@@ -48,7 +48,7 @@ function ShopBag() {
               </span>
               <p className="font-display text-lg font-bold text-ink">Nothing here yet</p>
               <p className="mt-1 max-w-xs text-sm text-[#6b635a]">
-                Choose a market and build your list. Your agent bargains the real prices.
+                Build your list — your agent bargains the real prices at the market.
               </p>
             </div>
           ) : (
@@ -76,7 +76,11 @@ function ShopBag() {
             </div>
           )}
           <div className="flex flex-col gap-2">
-            {step !== "list" && market && (
+            {step === "list" ? (
+              <Button fullWidth variant="neutral" onClick={() => setBagOpen(false)}>
+                Keep editing
+              </Button>
+            ) : (
               <Button
                 fullWidth
                 onClick={() => {
@@ -87,14 +91,10 @@ function ShopBag() {
                 {empty ? "Build your list" : "Edit list"}
               </Button>
             )}
-            {step === "list" && (
-              <Button fullWidth variant="neutral" onClick={() => setBagOpen(false)}>
-                Keep editing
-              </Button>
-            )}
-            {!market && (
+            {!market && !empty && step !== "list" && step !== "market" && (
               <Button
                 fullWidth
+                variant="neutral"
                 onClick={() => {
                   setBagOpen(false);
                   setStep("market");

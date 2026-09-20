@@ -233,8 +233,8 @@ export function ShopSideRail({
           <div className="border-t border-ink/8 px-3 py-4">
             {mode === "browse" && (
               <Tip>
-                <span className="font-semibold text-ink">Agents shop and deliver for you</span> —
-                pick a market, then build your list.
+                <span className="font-semibold text-ink">Your list&apos;s ready</span> — pick where
+                your agent shops it. They bargain the real prices stall to stall.
               </Tip>
             )}
 

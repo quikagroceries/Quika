@@ -62,8 +62,9 @@ export default function CustomerLayout({ children }: any) {
           guest={guest}
           bare
           bottomNav
+          floating
         >
-          <ShopShell>{children}</ShopShell>
+          <ShopShell floating>{children}</ShopShell>
         </AppShell>
       </ShopProvider>
     );

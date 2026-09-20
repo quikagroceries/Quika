@@ -24,7 +24,7 @@ export const SIDEBAR_SHOP_EXTRA_ID = "app-sidebar-shop-extra";
  * visits) - collapsing just holds the lg+ column at the same icon-only
  * width the rail already uses, rather than introducing a third layout.
  */
-function Sidebar({ navItems, activeKey, user, onLogout, roleSwitch, guest = false }: any) {
+function Sidebar({ navItems, activeKey, user, onLogout, roleSwitch, guest = false, floating = false }: any) {
   const [collapsed, setCollapsed] = useState(false);
 
   useEffect(() => {
@@ -40,17 +40,25 @@ function Sidebar({ navItems, activeKey, user, onLogout, roleSwitch, guest = fals
   }
 
   const expanded = !collapsed;
-  // Only ever adds "hidden lg:inline"/"hidden lg:block" back in when NOT
-  // collapsed - collapsed forces icon-only at every width, same as the
-  // classes below just never gaining their lg: variant.
-  const labelInline = expanded ? "hidden lg:inline" : "hidden";
-  const labelBlock = expanded ? "hidden lg:block" : "hidden";
-  const alignStart = expanded ? "lg:justify-start" : "";
+  // Labels stay mounted at lg+ and slide/fade between states rather than
+  // snapping via `display` - so the whole rail reads as one smooth
+  // collapse/expand, width and contents moving together. Below lg they're
+  // always gone (icon-only rail), hence the leading `hidden`.
+  const labelInline =
+    "hidden min-w-0 overflow-hidden whitespace-nowrap transition-[max-width,opacity] duration-300 ease-premium lg:block " +
+    (expanded ? "lg:max-w-[168px] lg:opacity-100" : "lg:max-w-0 lg:opacity-0");
+  const labelBlock =
+    "hidden overflow-hidden transition-[max-height,opacity] duration-300 ease-premium lg:block " +
+    (expanded ? "lg:max-h-[1200px] lg:opacity-100" : "lg:max-h-0 lg:opacity-0 lg:pointer-events-none");
+  const alignStart = expanded ? "lg:justify-start lg:gap-3" : "lg:justify-center lg:gap-0";
 
   return (
     <aside
       className={
-        "sticky top-0 hidden h-screen shrink-0 flex-col border-r border-ink/8 bg-white md:flex md:w-[72px] " +
+        "sticky hidden shrink-0 flex-col bg-white transition-[width] duration-300 ease-premium md:flex md:w-[72px] " +
+        (floating
+          ? "top-4 h-[calc(100vh-2rem)] rounded-[1.25rem] shadow-pop ring-1 ring-ink/5 "
+          : "top-0 h-screen border-r border-ink/8 ") +
         (expanded ? "lg:w-[240px]" : "")
       }
     >
@@ -72,15 +80,15 @@ function Sidebar({ navItems, activeKey, user, onLogout, roleSwitch, guest = fals
         <Icon name="chevronDown" className={"h-3.5 w-3.5 transition-transform " + (collapsed ? "-rotate-90" : "rotate-90")} />
       </button>
 
-      <div className="flex min-h-0 flex-1 flex-col overflow-y-auto">
-        <div className={"flex items-center px-2 py-6 " + (expanded ? "lg:px-5" : "")}>
+      <div className="flex min-h-0 flex-1 flex-col overflow-y-auto overflow-x-hidden">
+        <div className={"flex h-16 shrink-0 items-center px-2 transition-[padding] duration-300 ease-premium " + (expanded ? "lg:px-5" : "")}>
           <Link
             href={navItems[0]?.href || "/"}
             className={"flex flex-1 items-center justify-center " + alignStart}
             aria-label="Quika home"
           >
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={favicon} alt="" className="h-14 w-14 shrink-0 object-contain" />
+            <img src={favicon} alt="" className="h-10 w-10 shrink-0 object-contain" />
           </Link>
         </div>
 
@@ -111,7 +119,7 @@ function Sidebar({ navItems, activeKey, user, onLogout, roleSwitch, guest = fals
                 title={item.label}
                 style={active ? { backgroundColor: `${color}16` } : undefined}
                 className={
-                  "flex w-full items-center justify-center gap-3 rounded-full px-2 py-2 min-h-[44px] text-sm font-bold transition-colors duration-150 " +
+                  "flex w-full items-center justify-center gap-3 rounded-full px-2 py-2 min-h-[44px] text-sm font-bold transition-[color,background-color,padding] duration-300 ease-premium " +
                   alignStart + " " + (expanded ? "lg:pr-4" : "") + " " +
                   (active ? "text-ink" : "text-ink/50 hover:bg-ink/[0.03] hover:text-ink")
                 }
@@ -133,7 +141,7 @@ function Sidebar({ navItems, activeKey, user, onLogout, roleSwitch, guest = fals
         <div id={SIDEBAR_SHOP_EXTRA_ID} className={labelBlock} />
       </div>
 
-      <div className={"border-t border-ink/8 p-3 " + (expanded ? "lg:p-4" : "")}>
+      <div className={"border-t border-ink/8 p-3 transition-[padding] duration-300 ease-premium " + (expanded ? "lg:p-4" : "")}>
         {guest ? (
           <Link
             href="/login?next=/shop"
@@ -151,7 +159,7 @@ function Sidebar({ navItems, activeKey, user, onLogout, roleSwitch, guest = fals
               <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-canvas text-ink/50">
                 <Icon name="user" className="h-4 w-4" />
               </span>
-              <span className={"truncate text-sm " + labelBlock}>{user?.phone}</span>
+              <span className={"truncate text-sm " + labelInline}>{user?.phone}</span>
             </Link>
             <button
               onClick={onLogout}

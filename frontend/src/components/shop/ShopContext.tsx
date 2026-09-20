@@ -90,7 +90,7 @@ type ShopContextValue = {
 const ShopContext = createContext<ShopContextValue | null>(null);
 
 export function ShopProvider({ children }: { children: ReactNode }) {
-  const [step, setStep] = useState<ShopStep>("market");
+  const [step, setStep] = useState<ShopStep>("list");
   const [market, setMarket] = useState<any | null>(null);
   const [vendor, setVendor] = useState<ShopVendor | null>(null);
   const [browseStall, setBrowseStallState] = useState<StallBrowse | null>(null);
@@ -118,7 +118,25 @@ export function ShopProvider({ children }: { children: ReactNode }) {
   const pickMarket = useCallback(
     (m: any) => {
       setMarket((prev: any) => {
-        if (prev?.id !== m.id) setVendor(null);
+        if (prev?.id !== m.id) {
+          setVendor(null);
+          // Stall preferences are market-scoped — a preferred stall id from
+          // a different market is meaningless. Drop them from the in-progress
+          // list draft when the market changes.
+          setListDraft((d) =>
+            d
+              ? {
+                  ...d,
+                  rows: d.rows.map((r) => ({ ...r, stallId: undefined, stallName: undefined })),
+                  items: d.items.map((it: any) =>
+                    it && it.preferred_stall_id != null
+                      ? { ...it, preferred_stall_id: null }
+                      : it
+                  ),
+                }
+              : d
+          );
+        }
         return m;
       });
       setBrowseStall(null);
@@ -126,11 +144,10 @@ export function ShopProvider({ children }: { children: ReactNode }) {
       setSearchQuery("");
       setVenueOpen(false);
       rememberVenue(m.id);
-      // Straight to the list either way — the classic "send someone to the
-      // market" flow is list-first, not a catalogue to browse. Local-market
-      // customers can still prefer a specific (real, agent-registered)
-      // stall per item right there in the list builder.
-      setStep("list");
+      // List-first: the list is already composed by the time a market is
+      // chosen — advance straight to delivery. (List editing stays reachable
+      // via the bag and the "Edit list" affordance.)
+      setStep("address");
     },
     [setBrowseStall]
   );

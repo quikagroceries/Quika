@@ -446,6 +446,7 @@ function ListBuilder({
   onDraftChange,
   pricingMode = "estimate",
   embedded = false,
+  standalone = false,
 }: {
   initial?: any;
   onContinue: (payload: ShopListDraft) => void;
@@ -453,7 +454,11 @@ function ListBuilder({
   marketName?: string;
   onDraftChange?: (draft: ShopListDraft) => void;
   pricingMode?: "estimate" | "fixed";
+  /** Rendered inside the shop shell's right column — rail drives mode, footer sticks within the panel. */
   embedded?: boolean;
+  /** Rendered as its own page (list-first landing) — shows its own mode
+      toggle, footer sticks within a normal-width container. */
+  standalone?: boolean;
 }) {
   const shop = useShopOptional();
   const [mode, setMode] = useState<"detailed" | "freetext">(
@@ -485,6 +490,9 @@ function ListBuilder({
   const chips = smartChipsForMarket(marketName);
   const draft = buildDraft(mode, rows, budgetText, budget);
   const isFixed = pricingMode === "fixed";
+  // Both embedded and standalone keep the footer sticky within a padded
+  // container rather than fixed to the viewport.
+  const panelLayout = embedded || standalone;
 
   // A real total AND an explicit confirm — however the total was composed
   // (priced detailed rows, auto-parsed free-text lines, or the manual
@@ -524,7 +532,7 @@ function ListBuilder({
   }
 
   return (
-    <div className={"relative " + (embedded ? "w-full pb-4" : "pb-28")}>
+    <div className={"relative " + (panelLayout ? "w-full pb-4" : "pb-28")}>
       {!embedded && (
         <div className="mb-4 flex rounded-full border border-[#ebe7e0] bg-[#f0eeeb] p-1">
           {(
@@ -639,12 +647,12 @@ function ListBuilder({
       {/* Embedded: sticky within the right panel only — never covers the left rail */}
       <div
         className={
-          embedded
+          panelLayout
             ? "sticky bottom-16 z-20 -mx-4 mt-8 border-t border-[#ebe7e0] bg-white/95 px-4 py-3 shadow-[0_-8px_24px_-8px_rgb(33_26_20_/_0.1)] backdrop-blur md:bottom-0 md:-mx-6 md:px-6 lg:-mx-8 lg:px-8"
             : "fixed bottom-16 left-0 right-0 z-20 border-t border-[#ebe7e0] bg-white/95 px-4 py-3 shadow-[0_-8px_24px_-8px_rgb(33_26_20_/_0.1)] backdrop-blur md:bottom-0"
         }
       >
-        <div className={"flex w-full items-center gap-3 " + (embedded ? "" : "mx-auto max-w-3xl")}>
+        <div className={"flex w-full items-center gap-3 " + (panelLayout ? "" : "mx-auto max-w-3xl")}>
           <div className={"min-w-0 flex-1 rounded-xl px-3 py-2 transition " + flashClass(pulse)}>
             <p className="text-[0.65rem] font-bold uppercase tracking-wide text-[#8a8178]">
               {isFixed ? "Cart total" : "Your estimate"} · {draft.itemCount} item
@@ -659,7 +667,7 @@ function ListBuilder({
             disabled={!canContinue}
             className="shrink-0 px-5"
           >
-            Continue
+            {marketId ? "Continue" : "Next: pick market"}
           </Button>
         </div>
         {!canContinue && (

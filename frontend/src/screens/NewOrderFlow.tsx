@@ -19,7 +19,10 @@ import { matchSlugToApiMarket } from "@/lib/marketDirectory";
 // (MarketPicker.tsx) — kept local and simple (no market image lookup) since
 // these two steps are a focused, distraction-free hand-off to payment, not
 // part of the browsing shell.
-const CHECKOUT_STEPS = ["List", "Delivery", "Quote"] as const;
+// List-first flow: List → Market → Delivery → Quote. The list and market
+// steps don't render this hero, so `step` here is only ever 3 or 4, but the
+// full 4-segment track still gives an honest "you're almost there" read.
+const CHECKOUT_STEPS = ["List", "Market", "Delivery", "Quote"] as const;
 
 function CheckoutHero({
   isSuper,
@@ -32,10 +35,7 @@ function CheckoutHero({
   eyebrow: string;
   title: string;
   body: string;
-  /** Which of the 3 checkout steps this screen is (1-indexed) — list itself
-      never renders this hero, so this only ever shows 2 or 3, but the full
-      3-segment track still gives an honest "you're almost there" read. */
-  step: 2 | 3;
+  step: 3 | 4;
 }) {
   return (
     <div className="mb-6">
@@ -61,7 +61,7 @@ function CheckoutHero({
         style={{ backgroundColor: isSuper ? "#1A2E1F" : "#211A14" }}
       >
         <p className="text-xs font-bold uppercase tracking-[0.14em] text-brand-orange">
-          Step {step} of 3 · {eyebrow}
+          Step {step} of 4 · {eyebrow}
         </p>
         <h1 className="mt-2 font-display text-2xl font-extrabold tracking-tight text-white sm:text-3xl">
           {title}
@@ -111,9 +111,12 @@ function NewOrderFlow({ user, onCancel, onOrderPlaced }: any) {
     hydratedRef.current = true;
     const draft = loadGuestDraft();
     if (!draft) return;
-    // "vendors" is a retired step from an older build — coerce any stale
-    // stored draft straight to the list rather than a step that no longer exists.
-    if (draft.step) setStep(draft.step === "vendors" ? "list" : draft.step);
+    // loadGuestDraft already normalizes legacy steps; additionally, a stored
+    // "market" step with no list belongs to the old market-first flow —
+    // send it to the list.
+    if (draft.step) {
+      setStep(draft.step === "market" && !draft.stagedList ? "list" : draft.step);
+    }
     if (draft.stagedList) setListDraft(draft.stagedList as ShopListDraft);
     if (draft.address) setAddress(draft.address);
   }, [setStep, setListDraft, setAddress]);
@@ -131,29 +134,24 @@ function NewOrderFlow({ user, onCancel, onOrderPlaced }: any) {
       setHandoffReady(true);
       return;
     }
+    // List-first: a market from the draft or a ?market= deep link is only
+    // pre-selected — it never advances the step. The customer still lands on
+    // the list (or wherever their saved draft left them).
     const draft = loadGuestDraft();
     if (draft?.marketId) {
       const found = markets.find((m: any) => m.id === draft.marketId);
       if (found) {
         setMarket(found);
-        if (!draft.step || draft.step === "market" || draft.step === "vendors") {
-          setStep("list");
-        }
         setHandoffReady(true);
         return;
       }
     }
     if (marketSlug) {
       const matched = matchSlugToApiMarket(marketSlug, markets);
-      if (matched) {
-        setMarket(matched);
-        if (!draft?.step || draft.step === "market" || draft.step === "vendors") {
-          setStep("list");
-        }
-      }
+      if (matched) setMarket(matched);
     }
     setHandoffReady(true);
-  }, [markets, marketsLoading, marketSlug, setMarket, setStep]);
+  }, [markets, marketsLoading, marketSlug, setMarket]);
 
   useEffect(() => {
     if (!hydratedRef.current) return;
@@ -166,23 +164,25 @@ function NewOrderFlow({ user, onCancel, onOrderPlaced }: any) {
     });
   }, [market, step, listDraft, address, marketSlug]);
 
+  // Flow guards — can't be past the list without a list, or past the market
+  // step without a market.
   useEffect(() => {
-    if ((step === "address" || step === "quote") && !stagedList) setStep("list");
-  }, [step, stagedList, setStep]);
+    if ((step === "address" || step === "quote") && !stagedList) {
+      setStep("list");
+    } else if ((step === "address" || step === "quote") && !market) {
+      setStep("market");
+    }
+  }, [step, stagedList, market, setStep]);
 
   // Clear search when leaving the market-browse step
   useEffect(() => {
     if (step !== "market") setSearchQuery("");
   }, [step, setSearchQuery]);
 
-  function handleBackFromList() {
-    setBrowseStall(null);
-    setStep("market");
-  }
-
   function handleListContinue(payload: ShopListDraft) {
     setListDraft(payload);
-    setStep("address");
+    setBrowseStall(null);
+    setStep(market ? "address" : "market");
   }
 
   function summarize(list: ShopListDraft) {
@@ -249,55 +249,73 @@ function NewOrderFlow({ user, onCancel, onOrderPlaced }: any) {
     );
   }
 
-  if (!market || step === "market" || step === "list") {
-    const isSuper = market ? (market.venue_type || "local_market") === "supermarket" : false;
+  const isSuper = market ? (market.venue_type || "local_market") === "supermarket" : false;
+
+  // Step 1 — compose the list. The landing screen. No market required yet.
+  if (step === "list") {
     return (
-      <MarketPicker
-        markets={markets}
-        loading={marketsLoading}
-        onSelect={pickMarket}
-        onCancel={onCancel}
-        title="Which market?"
-        subtitle="Choose where your agent shops, then build your list."
-        listPanel={
-          step === "list" && market ? (
-            <div className="w-full min-w-0">
-              <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-                <div className="min-w-0">
-                  <p className="shop-label">{isSuper ? "Supermarket cart" : "Your list"}</p>
-                  <h2 className="mt-1 font-display text-xl font-extrabold tracking-tight text-ink md:text-2xl">
-                    {isSuper ? "Add items" : "Compose your list"}
-                  </h2>
-                  {/* Which market this is stays the header's and the hero
-                      banner's job — this line explains the PRICING model
-                      instead of repeating a name already stated twice above. */}
-                  <p className="shop-sub mt-2 max-w-2xl">
-                    {isSuper
-                      ? "Shelf prices — closer to checkout than open-air bargaining."
-                      : "Real prices come from bargaining at the market, not a catalogue."}
-                  </p>
-                </div>
-                <button
-                  type="button"
-                  onClick={handleBackFromList}
-                  className="inline-flex h-11 shrink-0 items-center justify-center rounded-full border border-[#ddd6cb] bg-white px-4 text-sm font-bold text-ink transition hover:bg-[#faf9f7] lg:hidden"
-                >
-                  ← Markets
-                </button>
-              </div>
-              <ListBuilder
-                embedded
-                initial={stagedList}
-                marketId={market.id}
-                marketName={market.name}
-                pricingMode={isSuper ? "fixed" : "estimate"}
-                onContinue={handleListContinue}
-                onDraftChange={setListDraft}
-              />
-            </div>
-          ) : null
-        }
-      />
+      <div className="mx-auto w-full max-w-3xl px-4 py-8 md:px-6 md:py-12 lg:px-8">
+        <div className="mb-6">
+          <p className="shop-label">{isSuper ? "Supermarket cart" : "Step 1 · Your list"}</p>
+          <h1 className="mt-1 font-display text-2xl font-extrabold tracking-tight text-ink md:text-3xl">
+            {isSuper ? "Add your items" : "What do you need from the market?"}
+          </h1>
+          <p className="shop-sub mt-2 max-w-xl">
+            Write it the way you&apos;d tell someone — the item, and roughly what you expect to pay.
+            {market ? "" : " You&apos;ll choose the market next."}
+          </p>
+          {market && (
+            <button
+              type="button"
+              onClick={() => setStep("market")}
+              className="mt-3 inline-flex items-center gap-1.5 rounded-full border border-[#ddd6cb] bg-white px-3 py-1.5 text-xs font-bold text-ink transition hover:bg-[#faf9f7]"
+            >
+              <Icon name="pin" className="h-3.5 w-3.5 text-brand-green" />
+              Shopping at {market.name}
+              <span className="font-semibold text-[#8a8178]">· change</span>
+            </button>
+          )}
+        </div>
+        <ListBuilder
+          standalone
+          initial={stagedList}
+          marketId={market?.id}
+          marketName={market?.name}
+          pricingMode={isSuper ? "fixed" : "estimate"}
+          onContinue={handleListContinue}
+          onDraftChange={setListDraft}
+        />
+      </div>
+    );
+  }
+
+  // Step 2 — choose where the agent shops the (already composed) list.
+  if (step === "market") {
+    return (
+      <div className="flex w-full flex-col">
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#ebe7e0] px-4 py-3 md:px-6 lg:px-8">
+          <button
+            type="button"
+            onClick={() => setStep("list")}
+            className="inline-flex items-center gap-2 text-sm font-bold text-ink transition hover:text-brand-orange"
+          >
+            <span aria-hidden>←</span>
+            Your list · {stagedList?.itemCount ?? 0} item
+            {(stagedList?.itemCount ?? 0) === 1 ? "" : "s"}
+          </button>
+          <span className="text-xs font-bold uppercase tracking-[0.12em] text-[#8a8178]">
+            Step 2 · Choose market
+          </span>
+        </div>
+        <MarketPicker
+          markets={markets}
+          loading={marketsLoading}
+          onSelect={pickMarket}
+          onCancel={onCancel}
+          title="Which market?"
+          subtitle="Where should your agent shop your list?"
+        />
+      </div>
     );
   }
 
@@ -306,7 +324,6 @@ function NewOrderFlow({ user, onCancel, onOrderPlaced }: any) {
       return <div className="flex min-h-[30vh] items-center justify-center text-ink/50">Loading list…</div>;
     }
     const savedAddress = user?.default_delivery_address;
-    const isSuper = (market?.venue_type || "local_market") === "supermarket";
     return (
       <div className="mx-auto w-full max-w-lg px-4 py-8 md:px-6 md:py-12">
         <Button variant="neutral" onClick={() => setStep("list")} className="mb-4">
@@ -317,7 +334,7 @@ function NewOrderFlow({ user, onCancel, onOrderPlaced }: any) {
           eyebrow="Delivery"
           title="Where to?"
           body={`We'll deliver your haul from ${market?.name || "the market"} here.`}
-          step={2}
+          step={3}
         />
 
         <Card>
@@ -353,13 +370,9 @@ function NewOrderFlow({ user, onCancel, onOrderPlaced }: any) {
   }
 
   if (!market || !stagedList) {
+    // Guard effect will redirect on the next tick.
     return (
-      <MarketPicker
-        markets={markets}
-        loading={marketsLoading}
-        onSelect={pickMarket}
-        onCancel={onCancel}
-      />
+      <div className="flex min-h-[30vh] items-center justify-center text-ink/50">Loading…</div>
     );
   }
 
@@ -387,7 +400,7 @@ function NewOrderFlow({ user, onCancel, onOrderPlaced }: any) {
             ? `Shelf prices at ${market.name} — closer to a fixed cart than open-air bargaining.`
             : `Not a fixed catalogue total — your agent bargains real prices at ${market.name}.`
         }
-        step={3}
+        step={4}
       />
 
       {stagedList.items?.length > 0 && (

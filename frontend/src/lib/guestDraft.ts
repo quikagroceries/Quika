@@ -2,7 +2,16 @@
 
 export const GUEST_DRAFT_KEY = "quika_guest_draft";
 
-export type ShopStep = "market" | "vendors" | "list" | "address" | "quote";
+// List-first flow: compose the list, then choose the market, then delivery,
+// then quote. "vendors" is a retired step kept only so old drafts coerce.
+export type ShopStep = "list" | "market" | "address" | "quote";
+
+const VALID_STEPS: ShopStep[] = ["list", "market", "address", "quote"];
+
+/** Coerce any stored/legacy step onto the current flow — unknown → "list". */
+export function normalizeStep(step: unknown): ShopStep {
+  return VALID_STEPS.includes(step as ShopStep) ? (step as ShopStep) : "list";
+}
 
 export type GuestDraft = {
   marketId: string | null;
@@ -20,10 +29,9 @@ export function loadGuestDraft(): GuestDraft | null {
     const raw = localStorage.getItem(GUEST_DRAFT_KEY);
     if (!raw) return null;
     const draft = JSON.parse(raw) as GuestDraft;
-    // Migrate older drafts that jumped market → list
-    if (draft.step === "list" && draft.marketId && !draft.vendorId && draft.vendorName === undefined) {
-      // keep list if they already built one; otherwise vendors is fine via flow
-    }
+    // Coerce legacy/unknown steps ("vendors", "market" from the old
+    // market-first flow) onto the current list-first flow.
+    draft.step = normalizeStep(draft.step);
     return draft;
   } catch {
     return null;

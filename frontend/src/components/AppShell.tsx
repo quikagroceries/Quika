@@ -29,6 +29,7 @@ function AppShell({
   bottomNav = false,
   fullWidth = false,
   contentClassName = "",
+  floating = false,
   children,
 }: any) {
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -41,7 +42,14 @@ function AppShell({
     // flex context, which is what let the canvas color show through below
     // short content instead of the page's real background reaching the
     // bottom-nav's reserved space.
-    <div className="flex min-h-screen flex-col bg-canvas md:flex-row">
+    <div
+      className={
+        "flex min-h-screen flex-col md:flex-row " +
+        (floating
+          ? "shop-ground md:h-screen md:min-h-screen md:overflow-hidden md:gap-4 md:p-4"
+          : "bg-canvas")
+      }
+    >
       <Sidebar
         navItems={navItems}
         activeKey={activeKey}
@@ -49,9 +57,17 @@ function AppShell({
         onLogout={onLogout}
         roleSwitch={roleSwitch}
         guest={guest}
+        floating={floating}
       />
 
-      <div className="flex min-w-0 flex-1 flex-col">
+      <div
+        className={
+          "flex min-w-0 flex-1 flex-col " +
+          (floating
+            ? "md:min-h-0 md:overflow-hidden md:rounded-[1.25rem] md:bg-[#fdfaf5] md:shadow-pop md:ring-1 md:ring-ink/5"
+            : "")
+        }
+      >
         {!bare && (
           <>
             <MobileHeader onMenuClick={() => setDrawerOpen(true)} />
@@ -72,7 +88,7 @@ function AppShell({
             padding on this element, so putting the color here instead of
             one level in covers that reserved strip too, instead of leaving
             it to show the canvas color behind the fixed tab bar. */}
-        <div className={"flex flex-1 flex-col " + (bottomNav ? "pb-16 md:pb-0" : "") + " " + contentClassName}>
+        <div className={"flex flex-1 flex-col " + (bottomNav ? "pb-16 md:pb-0" : "") + (floating ? " md:min-h-0 md:overflow-hidden" : "") + " " + contentClassName}>
           {bare ? children : (
             <PageContainer full={fullWidth} className="flex-1">
               {children}

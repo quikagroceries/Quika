@@ -43,7 +43,7 @@ function Chevron({ open = false }: { open?: boolean }) {
 }
 
 /** Sticky marketplace header — max-width centered, venue + search as primary discovery. */
-function ShopHeader() {
+function ShopHeader({ floating = false }: { floating?: boolean }) {
   const { user, token, handleLogout, roleSwitch } = useAuth();
   const {
     market,
@@ -67,7 +67,7 @@ function ShopHeader() {
   const mobileGroupRef = useRef<HTMLButtonElement>(null);
   const guest = !token || !user;
   const itemCount = listDraft?.itemCount || 0;
-  const searchEnabled = step === "market" || step === "vendors";
+  const searchEnabled = step === "market";
   const venueSelected = Boolean(market?.name);
   const venueAnchorRef = isNarrow ? mobileGroupRef : desktopGroupRef;
 
@@ -98,7 +98,12 @@ function ShopHeader() {
   const deliverLabel = address.trim() || "Add address";
 
   return (
-    <header className="sticky top-0 z-40 border-b border-[#ebe7e0] bg-white">
+    <header
+      className={
+        "sticky z-40 border-b border-[#ebe7e0] bg-white " +
+        (floating ? "top-0 md:top-4 md:rounded-t-[1.25rem] md:bg-[#fdfaf5]" : "top-0")
+      }
+    >
       <div className="flex h-[64px] w-full items-center gap-3 px-4 md:gap-4 md:px-6 lg:px-8">
         {/* The sidebar (from AppShell) carries the logo from md: up — this
             stays mobile-only so the brand mark exists exactly once at any
@@ -161,7 +166,7 @@ function ShopHeader() {
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             disabled={!searchEnabled}
-            placeholder={step === "vendors" ? "Search stalls" : "Search venues, produce, stalls…"}
+            placeholder="Search markets by name or area…"
             className={
               "h-11 w-full rounded-full border bg-[#f0eeeb] py-2.5 pl-11 pr-4 text-sm text-ink outline-none transition placeholder:text-[#8a8178] focus:border-brand-orange/40 focus:bg-white focus:ring-2 focus:ring-brand-orange/15 disabled:cursor-not-allowed disabled:opacity-45 " +
               BORDER
@@ -331,7 +336,7 @@ function ShopHeader() {
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               disabled={!searchEnabled}
-              placeholder={step === "vendors" ? "Search stalls" : "Search venues…"}
+              placeholder="Search markets…"
               className={
                 "h-10 w-full rounded-full border bg-[#f0eeeb] py-2 pl-10 pr-3 text-sm text-ink outline-none placeholder:text-[#8a8178] disabled:opacity-45 " +
                 BORDER
