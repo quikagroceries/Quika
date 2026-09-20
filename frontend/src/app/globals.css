@@ -29,6 +29,37 @@
   --auth-wash-alpha: 0.78;
 }
 
+/* ── Fluid type scale ─────────────────────────────────────── */
+.text-display {
+  font-size: clamp(2.5rem, 7vw, 5rem);
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  line-height: 1.02;
+}
+
+.text-h2 {
+  font-size: clamp(1.875rem, 4vw, 3rem);
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  line-height: 1.1;
+}
+
+.text-eyebrow {
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+}
+
+/* ── Text wrapping ────────────────────────────────────────── */
+.text-balance {
+  text-wrap: balance;
+}
+
+.text-pretty {
+  text-wrap: pretty;
+}
+
 .force-light {
   --canvas: 240 236 224;
   --canvas-deep: 229 222 205;
@@ -230,16 +261,7 @@ body {
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
 }
 
-/* Custom cursor (marketing pages, fine-pointer devices only — see
-   CustomCursor.tsx) — hide the OS cursor only once the component confirms
-   it's active, so touch/keyboard users never lose their pointer. */
-.custom-cursor-active {
-  cursor: none;
-}
-.custom-cursor-active a,
-.custom-cursor-active button {
-  cursor: none;
-}
+
 
 /* ── Shop system - was a deliberately separate white "product surface" vs.
    the rest of the app's cream wash; unified onto the same cream canvas as

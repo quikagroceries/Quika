@@ -135,3 +135,44 @@ export function StaggerItem({
     </motion.div>
   );
 }
+
+export function ClipReveal({
+  children,
+  direction = "up",
+  delay = 0,
+  className,
+}: {
+  children: ReactNode;
+  direction?: "up" | "left" | "right";
+  delay?: number;
+  className?: string;
+}) {
+  const reduced = useReducedMotion();
+  if (reduced) return <div className={className}>{children}</div>;
+
+  const clipVariants = {
+    hidden: {
+      clipPath: direction === "up"
+        ? "inset(100% 0% 0% 0%)"
+        : direction === "left"
+          ? "inset(0% 100% 0% 0%)"
+          : "inset(0% 0% 0% 100%)",
+    },
+    visible: {
+      clipPath: "inset(0% 0% 0% 0%)",
+      transition: { duration: 0.8, ease: EASE, delay },
+    },
+  };
+
+  return (
+    <motion.div
+      className={className}
+      initial="hidden"
+      whileInView="visible"
+      viewport={{ once: true, margin: "-15%" }}
+      variants={clipVariants}
+    >
+      {children}
+    </motion.div>
+  );
+}

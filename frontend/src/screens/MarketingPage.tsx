@@ -2,7 +2,6 @@
 
 import { useEffect, useState, type FormEvent, type MouseEvent } from "react";
 import Link from "next/link";
-import ClipReveal from "@/components/marketing/ClipReveal";
 import CountUpNumber from "@/components/marketing/CountUpNumber";
 import DeviceMockup from "@/components/marketing/DeviceMockup";
 import HelpWidget from "@/components/marketing/HelpWidget";
@@ -10,9 +9,8 @@ import ImagePlaceholder from "@/components/marketing/ImagePlaceholder";
 import MarketShopPicker from "@/components/marketing/MarketShopPicker";
 import MarketingFooter from "@/components/marketing/MarketingFooter";
 import MarketingHeader from "@/components/marketing/MarketingHeader";
-import { HeroIn, Reveal, Stagger, StaggerItem } from "@/components/marketing/motion";
+import { HeroIn, Reveal, Stagger, StaggerItem, ClipReveal } from "@/components/marketing/motion";
 import SplitReveal from "@/components/marketing/SplitReveal";
-import TiltCard from "@/components/marketing/TiltCard";
 import { DIRECTORY_MARKETS } from "@/lib/marketDirectory";
 import { hashFromHref, scrollToSection } from "@/lib/scrollToSection";
 import { FAQS, HELP_TOPICS, PILOT } from "@/lib/helpContent";
@@ -191,7 +189,7 @@ const TONE_BG: Record<StartCard["tone"], string> = {
 
 function StartTile({ card }: { card: StartCard }) {
   return (
-    <TiltCard max={6}>
+    <div>
     <Link
       href={card.href}
       data-cursor={card.cta}
@@ -232,7 +230,7 @@ function StartTile({ card }: { card: StartCard }) {
         </span>
       </div>
     </Link>
-    </TiltCard>
+    </div>
   );
 }
 

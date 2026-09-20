@@ -76,6 +76,7 @@ module.exports = {
       },
       transitionTimingFunction: {
         premium: "cubic-bezier(0.16, 1, 0.3, 1)",
+        "ease-premium": "cubic-bezier(0.16, 1, 0.3, 1)",
       },
       borderRadius: {
         "2xl": "1rem",
