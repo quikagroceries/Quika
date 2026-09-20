@@ -125,11 +125,11 @@ def test_deposit_threshold_and_rate():
     from app.orders.fees import required_deposit, estimate_order_value
     def dep(goods):
         return required_deposit(Decimal(goods), estimate_order_value(Decimal(goods)))
-    assert dep("15000") == Decimal("0.00")    # est 15000+3600+2000=20600, under 30k
-    assert dep("24400") == Decimal("0.00")    # est exactly 30000, at threshold
-    assert dep("80000") == Decimal("16000.00")   # est 85600 > 30k -> 20% of 80000
+    assert dep("2000") == Decimal("0.00")     # est 2000+3600+2000=7600, under 10k
+    assert dep("4400") == Decimal("0.00")     # est exactly 10000, at threshold
+    assert dep("80000") == Decimal("24000.00")   # est 85600 > 10k -> 30% of 80000
     # protection scales with order size
-    assert dep("200000") == Decimal("40000.00")
+    assert dep("200000") == Decimal("60000.00")
 
 
 # ---------- Deposit on a large order ----------
@@ -148,7 +148,7 @@ async def test_large_order_requires_deposit(client, db_session_factory):
     order = r.json()
     # estimate = 78000 items + 3600 delivery + 2000 combined base
     assert Decimal(order["estimated_value"]) == Decimal("83600.00")
-    assert Decimal(order["deposit_amount"]) == Decimal("15600.00")
+    assert Decimal(order["deposit_amount"]) == Decimal("23400.00")
     assert order["delivery_address"] == "12 Aba Road, Port Harcourt"
 
 
@@ -180,7 +180,7 @@ async def test_nothing_found_refunds_whole_deposit(client, db_session_factory):
     })
     oid = r.json()["id"]
     deposit = Decimal(r.json()["deposit_amount"])
-    assert deposit == Decimal("15600.00")
+    assert deposit == Decimal("23400.00")
 
     await client.post(f"/orders/{oid}/assign-agent", headers=admin_h, json={"agent_id": str(agent_id)})
     await _pay_deposit(client, db_session_factory, oid, cust_id, admin_h, deposit)
@@ -218,7 +218,7 @@ async def test_customer_cancel_refunds_deposit_exactly_once(client, db_session_f
     })
     oid = r.json()["id"]
     deposit = Decimal(r.json()["deposit_amount"])
-    assert deposit == Decimal("15600.00")
+    assert deposit == Decimal("23400.00")
 
     await client.post(f"/orders/{oid}/assign-agent", headers=admin_h, json={"agent_id": str(agent_id)})
     await _pay_deposit(client, db_session_factory, oid, cust_id, admin_h, deposit)
@@ -312,7 +312,7 @@ async def test_lapsed_balance_payment_forfeits_deposit(client, db_session_factor
     })
     oid = r.json()["id"]
     deposit = Decimal(r.json()["deposit_amount"])
-    assert deposit == Decimal("15600.00")
+    assert deposit == Decimal("23400.00")
 
     await client.post(f"/orders/{oid}/assign-agent", headers=admin_h, json={"agent_id": str(agent_id)})
     await _pay_deposit(client, db_session_factory, oid, cust_id, admin_h, deposit)
@@ -377,7 +377,7 @@ async def test_partial_shortfall_credits_wallet(client, db_session_factory, monk
         "items": [{"description": "bulk rice bags"}, {"description": "yams"}],
     })
     oid = r.json()["id"]
-    deposit = Decimal(r.json()["deposit_amount"])  # 15600
+    deposit = Decimal(r.json()["deposit_amount"])  # 23400
 
     await client.post(f"/orders/{oid}/assign-agent", headers=admin_h, json={"agent_id": str(agent_id)})
     await _pay_deposit(client, db_session_factory, oid, cust_id, admin_h, deposit)
@@ -393,7 +393,7 @@ async def test_partial_shortfall_credits_wallet(client, db_session_factory, monk
 
     grand = Decimal(final["grand_total"])  # 2000 items + 2000 fee + 3600 delivery = 7600
     assert grand == Decimal("7600.00")
-    expected_refund = deposit - grand  # 15600 - 7600 = 8000
+    expected_refund = deposit - grand  # 23400 - 7600 = 15800
 
     async with db_session_factory() as s:
         balance = await wallet_service.get_balance(s, cust_id)
@@ -521,7 +521,7 @@ async def test_shopping_blocked_until_deposit_paid(client, db_session_factory):
         "items": [{"description": "bulk rice bags"}],
     })
     oid = r.json()["id"]
-    assert Decimal(r.json()["deposit_amount"]) == Decimal("15600.00")
+    assert Decimal(r.json()["deposit_amount"]) == Decimal("23400.00")
 
     await client.post(f"/orders/{oid}/assign-agent", headers=admin_h, json={"agent_id": str(agent_id)})
 
@@ -530,7 +530,7 @@ async def test_shopping_blocked_until_deposit_paid(client, db_session_factory):
     assert r.status_code == 402, "shopping should be blocked until deposit paid"
 
     # Pay it, then shopping is allowed
-    await _pay_deposit(client, db_session_factory, oid, cust_id, admin_h, Decimal("15600.00"))
+    await _pay_deposit(client, db_session_factory, oid, cust_id, admin_h, Decimal("23400.00"))
     r = await client.post(f"/orders/{oid}/start-shopping", headers=agent_h)
     assert r.status_code == 200
 

@@ -103,7 +103,7 @@ class UserOut(BaseModel):
     non_payment_count: int
     # Set when a payment window lapsed on a prior order; drives 100% up-front
     # deposits on this customer's next order (see orders.fees.required_deposit)
-    # instead of the normal 20%-above-threshold rule. Exposed so the frontend
-    # can explain that up front rather than showing a flat "20%" that's wrong
-    # for a flagged customer.
+    # instead of the normal DEPOSIT_RATE-above-threshold rule. Exposed so the
+    # frontend can explain that up front rather than showing a flat percentage
+    # that's wrong for a flagged customer.
     must_prepay: bool

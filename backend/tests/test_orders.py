@@ -228,7 +228,7 @@ async def test_itemized_prices_drive_estimate_deposit_and_cap(client, db_session
     admin_headers = {"Authorization": f"Bearer {cust_token}"}
     agent_headers = {"Authorization": f"Bearer {agent_token}"}
 
-    # Goods total 40,000 -> well past the 30,000 deposit threshold.
+    # Goods total 40,000 -> well past the 10,000 deposit threshold.
     r = await client.post(
         "/orders",
         headers=admin_headers,
@@ -246,8 +246,8 @@ async def test_itemized_prices_drive_estimate_deposit_and_cap(client, db_session
 
     # estimate = 40000 (goods) + 3600 (delivery) + 2000 (combined fee) = 45600
     assert Decimal(order["estimated_value"]) == Decimal("45600.00"), order
-    # deposit = 20% of the GOODS total (40000), not the grand estimate.
-    assert Decimal(order["deposit_amount"]) == Decimal("8000.00"), order
+    # deposit = 30% of the GOODS total (40000), not the grand estimate.
+    assert Decimal(order["deposit_amount"]) == Decimal("12000.00"), order
 
     # No Market row exists for this random market_id, so auto-assign can't
     # fire - assign manually via the same public endpoint the admin UI uses.
@@ -261,7 +261,7 @@ async def test_itemized_prices_drive_estimate_deposit_and_cap(client, db_session
     # Pay the deposit (dev wallet-fund shortcut) so start-shopping's gate
     # doesn't block this check.
     r = await client.post(
-        "/wallet/fund", headers=admin_headers, json={"amount": "8000.00"}
+        "/wallet/fund", headers=admin_headers, json={"amount": "12000.00"}
     )
     assert r.status_code == 200, r.text
     r = await client.post(

@@ -64,8 +64,8 @@ function CheckoutHero({
 
 const DELIVERY_QUOTE = 3600;
 const COMBINED_FEE_ESTIMATE = 2000;
-const DEPOSIT_THRESHOLD = 30000;
-const DEPOSIT_RATE = 0.2;
+const DEPOSIT_THRESHOLD = 10000;
+const DEPOSIT_RATE = 0.3;
 
 function NewOrderFlow({ user, onCancel, onOrderPlaced }: any) {
   const { token } = useAuth();
@@ -480,7 +480,7 @@ function NewOrderFlow({ user, onCancel, onOrderPlaced }: any) {
                   </>
                 ) : (
                   <>
-                    This estimate is over ₦30,000 — a 20% deposit (₦{depositAmount.toFixed(2)}) will be
+                    This estimate is over ₦10,000 — a 30% deposit (₦{depositAmount.toFixed(2)}) will be
                     required before shopping can start.
                   </>
                 )}

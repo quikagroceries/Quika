@@ -55,6 +55,15 @@ async def _order_shopping(client, admin_h, agent_h, market_id, listed="5000.00",
     r = await client.post("/orders", headers=admin_h, json={
         "market_id": str(market_id), "listed_items_total": listed, "items": items})
     oid = r.json()["id"]
+    deposit = Decimal(r.json()["deposit_amount"])
+    if deposit > 0:
+        # accept-agent is gated on the deposit being paid - fund and pay it
+        # via the same dev-only wallet shortcut other suites use, so orders
+        # over the threshold can still reach shopping in these tests.
+        r = await client.post("/wallet/fund", headers=admin_h, json={"amount": str(deposit)})
+        assert r.status_code == 200, r.text
+        r = await client.post(f"/payments/orders/{oid}/deposit/pay-from-wallet", headers=admin_h)
+        assert r.status_code == 200, r.text
     # Phase 1: the agent is only PROPOSED at creation - accept before shopping can start.
     r = await client.post(f"/orders/{oid}/accept-agent", headers=admin_h)
     assert r.status_code == 200, r.text

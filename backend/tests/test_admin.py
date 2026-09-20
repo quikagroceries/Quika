@@ -20,7 +20,7 @@ async def _login(client, phone, role=None):
 
 
 async def _drive_order_to_paid(
-    client, *, admin_h, agent_h, agent_id, cust_h, market_id, goods_total="10000.00"
+    client, *, admin_h, agent_h, agent_id, cust_h, market_id, goods_total="2000.00"
 ):
     """A small order (under the deposit threshold, so no deposit step needed)
     driven all the way to PAID - the shared setup for the agents/analytics
@@ -219,7 +219,7 @@ async def test_admin_sees_forfeited_deposits_as_losses(client, db_session_factor
         "items": [{"description": "bulk rice bags"}]})
     oid = r.json()["id"]
     deposit = Decimal(r.json()["deposit_amount"])
-    assert deposit == Decimal("15600.00")
+    assert deposit == Decimal("23400.00")
 
     await client.post(f"/orders/{oid}/assign-agent", headers=admin_h, json={"agent_id": str(agent_id)})
     async with db_session_factory() as s:
@@ -247,10 +247,10 @@ async def test_admin_sees_forfeited_deposits_as_losses(client, db_session_factor
     assert r.status_code == 200, r.text
     body = r.json()
     assert body["count"] == 1
-    assert body["total_deposit_forfeited"] == "15600.00"
+    assert body["total_deposit_forfeited"] == "23400.00"
     row = body["orders"][0]
     assert row["id"] == oid
-    assert row["deposit_forfeited"] == "15600.00"
+    assert row["deposit_forfeited"] == "23400.00"
     assert row["agent_id"] == str(agent_id)
 
 
