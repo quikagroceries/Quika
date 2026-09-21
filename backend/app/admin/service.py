@@ -15,31 +15,49 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.auth.models import User
 from app.core.config import settings
 from app.core.enums import OrderStatus, UserRole, UserStatus
-from app.core.phone import normalize_phone
+from app.core.security import hash_password, verify_password
 from app.float.models import FloatLedger
 from app.markets.models import Agent, Market
 from app.orders.models import Order
 
 
-async def bootstrap_admin(db: AsyncSession, phone: str | None) -> None:
-    if not phone:
+async def bootstrap_admin(db: AsyncSession, email: str | None, password: str | None) -> None:
+    if not email or not password:
         return
-    phone = normalize_phone(phone)
-    result = await db.execute(select(User).where(User.phone == phone))
+    email = email.strip().lower()
+    result = await db.execute(select(User).where(User.email == email))
     user = result.scalar_one_or_none()
     if user is None:
         db.add(
             User(
-                phone=phone,
+                email=email,
+                password_hash=hash_password(password),
                 role=UserRole.ADMIN,
                 status=UserStatus.ACTIVE,
-                is_phone_verified=False,
+                is_email_verified=True,
                 basket_cap_kobo=settings.default_basket_cap_kobo,
             )
         )
-    elif user.role is not UserRole.ADMIN:
+    else:
         user.role = UserRole.ADMIN
+        user.password_hash = hash_password(password)
     await db.commit()
+
+
+async def authenticate_admin(db: AsyncSession, *, email: str, password: str) -> User:
+    """Email+password login, admins only — the standard credential check,
+    never the phone/OTP flow the rest of the app uses."""
+    email = email.strip().lower()
+    result = await db.execute(select(User).where(User.email == email))
+    user = result.scalar_one_or_none()
+    invalid = HTTPException(status.HTTP_401_UNAUTHORIZED, "Invalid email or password")
+    if user is None or user.role is not UserRole.ADMIN or not user.password_hash:
+        raise invalid
+    if not verify_password(password, user.password_hash):
+        raise invalid
+    if user.status is UserStatus.LOCKED:
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "Account is locked")
+    return user
 
 
 async def _get_user(db: AsyncSession, user_id: uuid.UUID) -> User:

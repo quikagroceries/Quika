@@ -2,8 +2,12 @@ from decimal import Decimal
 
 import pytest
 
-ADMIN_PHONE = "+2348090000001"
+from app.auth.models import User
+from app.core.enums import UserRole, UserStatus
+from app.core.security import hash_password
+
 CUSTOMER_PHONE = "+2348090000002"
+_ADMIN_PASSWORD = "test-admin-password"
 
 
 async def _login(client, phone, role=None):
@@ -16,9 +20,28 @@ async def _login(client, phone, role=None):
     return r.json()["access_token"]
 
 
+async def _login_admin(client, db_session_factory, email):
+    """Admins sign in with email+password only, never phone/OTP - seed the
+    account directly, the same way bootstrap_admin would in a real deploy."""
+    async with db_session_factory() as s:
+        s.add(
+            User(
+                email=email,
+                password_hash=hash_password(_ADMIN_PASSWORD),
+                role=UserRole.ADMIN,
+                status=UserStatus.ACTIVE,
+                is_email_verified=True,
+            )
+        )
+        await s.commit()
+    r = await client.post("/admin/login", json={"email": email, "password": _ADMIN_PASSWORD})
+    assert r.status_code == 200, r.text
+    return r.json()["access_token"]
+
+
 @pytest.mark.asyncio
-async def test_admin_creates_market_and_customer_can_list_it(client):
-    admin_token = await _login(client, ADMIN_PHONE, role="admin")
+async def test_admin_creates_market_and_customer_can_list_it(client, db_session_factory):
+    admin_token = await _login_admin(client, db_session_factory, "admin_m1@qyka.com")
     customer_token = await _login(client, CUSTOMER_PHONE)
 
     r = await client.post(
@@ -47,8 +70,8 @@ async def test_admin_creates_market_and_customer_can_list_it(client):
 
 
 @pytest.mark.asyncio
-async def test_admin_updates_market(client):
-    admin_token = await _login(client, ADMIN_PHONE, role="admin")
+async def test_admin_updates_market(client, db_session_factory):
+    admin_token = await _login_admin(client, db_session_factory, "admin_m2@qyka.com")
     admin_h = {"Authorization": f"Bearer {admin_token}"}
 
     r = await client.post("/markets", headers=admin_h, json={
@@ -79,8 +102,8 @@ async def test_admin_updates_market(client):
 
 
 @pytest.mark.asyncio
-async def test_customer_cannot_update_market(client):
-    admin_token = await _login(client, ADMIN_PHONE, role="admin")
+async def test_customer_cannot_update_market(client, db_session_factory):
+    admin_token = await _login_admin(client, db_session_factory, "admin_m3@qyka.com")
     customer_token = await _login(client, "+2348090000004")
     r = await client.post(
         "/markets", headers={"Authorization": f"Bearer {admin_token}"},

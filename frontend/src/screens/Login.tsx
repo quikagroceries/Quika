@@ -27,10 +27,6 @@ const isDev = process.env.NODE_ENV !== "production";
 // it tries to do anything agent-shaped (e.g. toggling duty). Get a real
 // agent account by signing up as a customer, then applying from Settings -
 // or, for instant test accounts, POST /dev/seed on the backend.
-const DEV_ROLES = [
-  { key: "customer", label: "Customer" },
-  { key: "admin", label: "Admin" },
-];
 
 function SmsIcon({ className = "" }: { className?: string }) {
   return (
@@ -87,7 +83,6 @@ function Login({ onLoggedIn }: any) {
   const [code, setCode] = useState("");
   const [step, setStep] = useState("identifier");
   const [devOtp, setDevOtp] = useState(""); // dev-only: show the code on screen
-  const [devRole, setDevRole] = useState("customer"); // dev-only: role for a brand-new account
   const [sentChannel, setSentChannel] = useState<string>("");
   // When the current code expires (epoch ms), and a live clock reading to
   // count down against - both null until a code has actually been sent.
@@ -149,11 +144,7 @@ function Login({ onLoggedIn }: any) {
   async function verifyOtp() {
     setError(""); setBusy(true);
     try {
-      const data = await api.verifyOtp(
-        identifier,
-        code,
-        isDev && devRole !== "customer" ? devRole : undefined
-      );
+      const data = await api.verifyOtp(identifier, code);
       localStorage.setItem("qyka_token", data.access_token);
       onLoggedIn(data.access_token); // tell App we're in
     } catch {
@@ -245,35 +236,6 @@ function Login({ onLoggedIn }: any) {
               </div>
             )}
 
-            {/* Dev-only: only takes effect for an identifier that has never
-                signed up before - the backend ignores it for an existing
-                account. Lets you spin up an agent/admin test login without
-                curl or hand-editing the database. */}
-            {isDev && (
-              <div>
-                <p className="mb-1.5 text-xs font-bold uppercase tracking-wide text-faint">
-                  Dev only — role for a brand-new account
-                </p>
-                <div className="flex gap-2">
-                  {DEV_ROLES.map((r) => (
-                    <button
-                      key={r.key}
-                      type="button"
-                      onClick={() => setDevRole(r.key)}
-                      className={
-                        "flex-1 rounded-2xl px-3 py-1.5 text-sm font-bold transition " +
-                        (devRole === r.key
-                          ? "bg-brand-orange text-[#1A1A1A]"
-                          : "bg-sunken text-ink hover:bg-[#e8e4df]")
-                      }
-                    >
-                      {r.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
-
             <Button
               onClick={requestOtp}
               busy={busy}
@@ -294,12 +256,6 @@ function Login({ onLoggedIn }: any) {
             {devOtp && (
               <p className="text-sm text-muted">
                 Dev code: <b className="text-ink">{devOtp}</b>
-              </p>
-            )}
-            {isDev && devRole !== "customer" && (
-              <p className="text-sm font-semibold text-brand-orange">
-                Signing in as: {DEV_ROLES.find((r) => r.key === devRole)?.label}
-                {" "}(only applies if this account is brand new)
               </p>
             )}
             {remainingMs != null && (

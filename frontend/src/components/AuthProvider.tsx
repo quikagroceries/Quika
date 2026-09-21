@@ -32,6 +32,11 @@ export function AuthProvider({ children }: any) {
     if (pathname === "/shop" || pathname === "/") {
       return;
     }
+    // Admin routes get their own email+password login, not the shared one.
+    if (pathname.startsWith("/admin")) {
+      if (pathname !== "/admin-login") router.replace("/admin-login");
+      return;
+    }
     if (pathname !== "/login") {
       router.replace("/login");
     }

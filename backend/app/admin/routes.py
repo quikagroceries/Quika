@@ -12,15 +12,26 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.admin import service as admin_service
+from app.admin.schemas import AdminLoginIn
 from app.auth.models import User
+from app.auth.schemas import TokenOut
 from app.core.database import get_db
 from app.core.enums import OrderStatus, UserRole, UserStatus
-from app.core.security import require_role
+from app.core.security import create_access_token, require_role
 from app.float import service as float_service
 from app.float.models import FloatLedger
 from app.orders.models import Order
 
 router = APIRouter()
+
+
+@router.post("/login", response_model=TokenOut)
+async def admin_login(body: AdminLoginIn, db: AsyncSession = Depends(get_db)) -> TokenOut:
+    """Admin sign-in — email+password only, never phone/OTP like every other
+    role (see admin.service.authenticate_admin)."""
+    user = await admin_service.authenticate_admin(db, email=body.email, password=body.password)
+    token = create_access_token(user.id, user.role)
+    return TokenOut(access_token=token)
 
 # Statuses that mean an order is still "in flight" (not finished/dead).
 _ACTIVE = [

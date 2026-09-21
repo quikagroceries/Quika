@@ -60,6 +60,10 @@ export const api = {
   // step — returns { access_token }.
   googleAuth: (credential: string) =>
     request("/auth/google", { method: "POST", body: { credential } }),
+  // Admins only — standard email+password login, never phone/OTP. See
+  // backend/app/admin/routes.py::admin_login.
+  adminLogin: (email: string, password: string) =>
+    request("/admin/login", { method: "POST", body: { email, password } }),
   myOrders: () => request("/orders/mine"),
 
   me: () => request("/auth/me"),

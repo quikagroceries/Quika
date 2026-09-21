@@ -21,6 +21,10 @@ class User(Base):
     # both being set on one row is normal, not a sign of two accounts merging.
     phone: Mapped[str | None] = mapped_column(String(20), unique=True, index=True, nullable=True)
     email: Mapped[str | None] = mapped_column(String(255), unique=True, nullable=True)
+    # Only ever set for admins — every other role signs in via phone/email OTP
+    # or Google. bcrypt hash, never the raw password (see core/security.py's
+    # hash_password/verify_password).
+    password_hash: Mapped[str | None] = mapped_column(String(255), nullable=True)
     full_name: Mapped[str | None] = mapped_column(String(120), nullable=True)
     # Profile photo: an https URL to an already-uploaded image (the browser
     # uploads straight to Cloudinary, same as chat photos - no bytes ever touch

@@ -11,6 +11,7 @@ from datetime import datetime, timedelta, timezone
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from jose import JWTError, jwt
+from passlib.context import CryptContext
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -24,6 +25,16 @@ from app.core.enums import UserRole
 # auto_error=False so a missing header surfaces as our own 401 below, not
 # HTTPBearer's default 403 (which would break the "missing token" contract).
 bearer_scheme = HTTPBearer(auto_error=False)
+
+_pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+
+
+def hash_password(password: str) -> str:
+    return _pwd_context.hash(password)
+
+
+def verify_password(password: str, password_hash: str) -> bool:
+    return _pwd_context.verify(password, password_hash)
 
 
 def create_access_token(user_id: uuid.UUID, role: UserRole) -> str:

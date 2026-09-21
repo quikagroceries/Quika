@@ -3,10 +3,13 @@ import uuid
 import pytest
 from sqlalchemy import select
 
+from app.auth.models import User
+from app.core.enums import UserRole, UserStatus
+from app.core.security import hash_password
 from app.markets.models import Agent, Market
 
-ADMIN_PHONE = "+2348030000001"
 TARGET_PHONE = "+2348040000002"
+_ADMIN_PASSWORD = "test-admin-password"
 
 
 async def _login(client, phone, role=None):
@@ -16,6 +19,25 @@ async def _login(client, phone, role=None):
     if role:
         body["role"] = role
     r = await client.post("/auth/verify-otp", json=body)
+    return r.json()["access_token"]
+
+
+async def _login_admin(client, db_session_factory, email):
+    """Admins sign in with email+password only, never phone/OTP - seed the
+    account directly, the same way bootstrap_admin would in a real deploy."""
+    async with db_session_factory() as s:
+        s.add(
+            User(
+                email=email,
+                password_hash=hash_password(_ADMIN_PASSWORD),
+                role=UserRole.ADMIN,
+                status=UserStatus.ACTIVE,
+                is_email_verified=True,
+            )
+        )
+        await s.commit()
+    r = await client.post("/admin/login", json={"email": email, "password": _ADMIN_PASSWORD})
+    assert r.status_code == 200, r.text
     return r.json()["access_token"]
 
 
@@ -50,7 +72,7 @@ async def _drive_order_to_paid(
 
 @pytest.mark.asyncio
 async def test_customer_applies_and_admin_approves(client, db_session_factory):
-    admin_token = await _login(client, ADMIN_PHONE, role="admin")
+    admin_token = await _login_admin(client, db_session_factory, "admin1@qyka.com")
     target_token = await _login(client, TARGET_PHONE)
     admin_h = {"Authorization": f"Bearer {admin_token}"}
     target_h = {"Authorization": f"Bearer {target_token}"}
@@ -110,7 +132,7 @@ async def test_customer_applies_and_admin_approves(client, db_session_factory):
 
 @pytest.mark.asyncio
 async def test_admin_can_reject_application(client, db_session_factory):
-    admin_token = await _login(client, "+2348030000009", role="admin")
+    admin_token = await _login_admin(client, db_session_factory, "admin2@qyka.com")
     applicant_token = await _login(client, "+2348040000009")
     admin_h = {"Authorization": f"Bearer {admin_token}"}
     applicant_h = {"Authorization": f"Bearer {applicant_token}"}
@@ -138,8 +160,8 @@ async def test_admin_can_reject_application(client, db_session_factory):
 
 
 @pytest.mark.asyncio
-async def test_non_customer_cannot_apply(client):
-    admin_token = await _login(client, "+2348030000005", role="admin")
+async def test_non_customer_cannot_apply(client, db_session_factory):
+    admin_token = await _login_admin(client, db_session_factory, "admin3@qyka.com")
 
     r = await client.post(
         "/agent-applications",
@@ -189,7 +211,7 @@ async def test_admin_sees_forfeited_deposits_as_losses(client, db_session_factor
     from app.orders.models import Order
     from app.payments import service as payments_service
 
-    admin_token = await _login(client, "+2348070000001", role="admin")
+    admin_token = await _login_admin(client, db_session_factory, "admin4@qyka.com")
     cust_token = await _login(client, "+2348070000002")
     agent_token = await _login(client, "+2348070000003")
     admin_h = {"Authorization": f"Bearer {admin_token}"}
@@ -261,7 +283,7 @@ async def test_admin_lists_agents_with_earnings(client, db_session_factory):
     from app.core.enums import LedgerDirection, UserRole
     from app.float import service as float_service
 
-    admin_token = await _login(client, "+2348080000001", role="admin")
+    admin_token = await _login_admin(client, db_session_factory, "admin5@qyka.com")
     cust_token = await _login(client, "+2348080000002")
     agent_token = await _login(client, "+2348080000003")
     admin_h = {"Authorization": f"Bearer {admin_token}"}
@@ -317,7 +339,7 @@ async def test_admin_clears_user_flag(client, db_session_factory):
     from app.auth.models import User
     from app.core.enums import UserStatus
 
-    admin_token = await _login(client, "+2348080000005", role="admin")
+    admin_token = await _login_admin(client, db_session_factory, "admin6@qyka.com")
     cust_token = await _login(client, "+2348080000006")
     admin_h = {"Authorization": f"Bearer {admin_token}"}
 
@@ -358,7 +380,7 @@ async def test_admin_analytics_reflects_recorded_data(client, db_session_factory
     from app.core.enums import LedgerDirection, UserRole
     from app.float import service as float_service
 
-    admin_token = await _login(client, "+2348080000007", role="admin")
+    admin_token = await _login_admin(client, db_session_factory, "admin7@qyka.com")
     cust_token = await _login(client, "+2348080000008")
     agent_token = await _login(client, "+2348080000009")
     admin_h = {"Authorization": f"Bearer {admin_token}"}

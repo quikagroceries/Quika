@@ -16,7 +16,7 @@ from app.auth.schemas import (
 )
 from app.core.config import settings
 from app.core.database import get_db
-from app.core.enums import UserStatus
+from app.core.enums import UserRole, UserStatus
 from app.core.security import create_access_token, get_current_user
 
 router = APIRouter()
@@ -72,9 +72,15 @@ async def verify_otp(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Invalid or expired OTP",
         )
-    # role selection is a dev/test convenience only — never let it through
-    # in production, or anyone could self-assign admin.
-    requested_role = body.role if settings.environment != "production" else None
+    # role selection is a dev/test convenience only — never let it through in
+    # production, or anyone could self-assign a role. ADMIN is excluded even
+    # in dev: admins are strictly email+password via POST /admin/login (see
+    # admin.service.authenticate_admin/bootstrap_admin), never phone/OTP.
+    requested_role = (
+        body.role
+        if settings.environment != "production" and body.role is not UserRole.ADMIN
+        else None
+    )
     user = await service.get_or_create_user(
         db, identifier, id_type, body.full_name, role=requested_role
     )

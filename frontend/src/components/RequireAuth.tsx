@@ -28,11 +28,14 @@ export default function RequireAuth({ children, roles, agentMode }: any) {
 
   const allowed = Array.isArray(roles) ? roles : roles ? [roles] : null;
   const role = (user?.role || "").toUpperCase();
+  // Admin-only routes bounce to the dedicated email+password login, never
+  // the shared phone/OTP one (see backend/app/admin/routes.py::admin_login).
+  const loginPath = allowed && allowed.length === 1 && allowed[0] === "ADMIN" ? "/admin-login" : "/login";
 
   useEffect(() => {
     if (loading) return;
     if (!token || !user) {
-      router.replace("/login");
+      router.replace(loginPath);
       return;
     }
     if ((role === "CUSTOMER" || role === "AGENT") && !user.full_name && pathname !== "/setup") {
@@ -52,7 +55,7 @@ export default function RequireAuth({ children, roles, agentMode }: any) {
       if (wantAgent && !onDuty) router.replace("/shop");
       if (!wantAgent && onDuty) router.replace("/agent");
     }
-  }, [loading, token, user, role, allowed, agentMode, onDuty, pathname, router, homePath]);
+  }, [loading, token, user, role, allowed, agentMode, onDuty, pathname, router, homePath, loginPath]);
 
   if (loading || !token || !user) return <LoadingScreen />;
   if ((role === "CUSTOMER" || role === "AGENT") && !user.full_name && pathname !== "/setup") {

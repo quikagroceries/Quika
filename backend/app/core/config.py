@@ -20,8 +20,12 @@ class Settings(BaseSettings):
     jwt_algorithm: str = "HS256"
     access_token_expire_minutes: int = 60 * 24
 
-    # One-time admin bootstrap — this phone gets role=admin on every startup.
-    bootstrap_admin_phone: str | None = None
+    # Admin bootstrap — on every startup, ensures a single admin account
+    # exists with this email/password (role=admin). Leave both unset if you
+    # don't need an auto-provisioned admin account. Admins sign in with
+    # email+password only (POST /admin/login), never phone/OTP.
+    bootstrap_admin_email: str | None = None
+    bootstrap_admin_password: str | None = None
 
     # CORS — comma-separated origins allowed to call this API. Defaults to
     # the local Vite dev server; a real deployment must set this to the

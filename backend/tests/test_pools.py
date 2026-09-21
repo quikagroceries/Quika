@@ -5,10 +5,12 @@ from decimal import Decimal
 
 import pytest
 
-from app.core.enums import LedgerDirection
+from app.auth.models import User
+from app.core.enums import LedgerDirection, UserRole, UserStatus
+from app.core.security import hash_password
 
-ADMIN_PHONE = "+2348090000001"
 CUST_PHONE = "+2348090000002"
+_ADMIN_PASSWORD = "test-admin-password"
 
 
 async def _login(client, phone, role=None):
@@ -18,6 +20,25 @@ async def _login(client, phone, role=None):
     if role:
         body["role"] = role
     r = await client.post("/auth/verify-otp", json=body)
+    return r.json()["access_token"]
+
+
+async def _login_admin(client, db_session_factory, email):
+    """Admins sign in with email+password only, never phone/OTP - seed the
+    account directly, the same way bootstrap_admin would in a real deploy."""
+    async with db_session_factory() as s:
+        s.add(
+            User(
+                email=email,
+                password_hash=hash_password(_ADMIN_PASSWORD),
+                role=UserRole.ADMIN,
+                status=UserStatus.ACTIVE,
+                is_email_verified=True,
+            )
+        )
+        await s.commit()
+    r = await client.post("/admin/login", json={"email": email, "password": _ADMIN_PASSWORD})
+    assert r.status_code == 200, r.text
     return r.json()["access_token"]
 
 
@@ -79,7 +100,7 @@ async def test_transfer_between_pools(client, db_session_factory):
 @pytest.mark.asyncio
 async def test_transfer_route_moves_money_exactly_once(client, db_session_factory):
     from app.float import service as float_service
-    admin_token = await _login(client, ADMIN_PHONE, role="admin")
+    admin_token = await _login_admin(client, db_session_factory, "admin_p1@qyka.com")
     admin_h = {"Authorization": f"Bearer {admin_token}"}
     m_quiet, m_busy = uuid.uuid4(), uuid.uuid4()
 
@@ -122,7 +143,7 @@ async def test_transfer_route_moves_money_exactly_once(client, db_session_factor
 @pytest.mark.asyncio
 async def test_transfer_route_rejects_overdraw(client, db_session_factory):
     from app.float import service as float_service
-    admin_token = await _login(client, ADMIN_PHONE, role="admin")
+    admin_token = await _login_admin(client, db_session_factory, "admin_p2@qyka.com")
     admin_h = {"Authorization": f"Bearer {admin_token}"}
     m_from, m_to = uuid.uuid4(), uuid.uuid4()
 
@@ -163,7 +184,7 @@ async def test_transfer_route_is_admin_only(client):
 @pytest.mark.asyncio
 async def test_top_up_route_credits_specific_market_pool(client, db_session_factory):
     from app.float import service as float_service
-    admin_token = await _login(client, ADMIN_PHONE, role="admin")
+    admin_token = await _login_admin(client, db_session_factory, "admin_p3@qyka.com")
     admin_h = {"Authorization": f"Bearer {admin_token}"}
     m = uuid.uuid4()
 

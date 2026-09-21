@@ -27,7 +27,9 @@ from app.wallet.routes import router as wallet_router
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     async with AsyncSessionLocal() as session:
-        await admin_service.bootstrap_admin(session, settings.bootstrap_admin_phone)
+        await admin_service.bootstrap_admin(
+            session, settings.bootstrap_admin_email, settings.bootstrap_admin_password
+        )
     yield
 
 
