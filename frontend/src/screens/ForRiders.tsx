@@ -3,16 +3,17 @@
 import EarnPage, { type EarnConfig } from "@/components/marketing/EarnPage";
 import riderBike from "@/assets/illustrations/rider-bicycle.png";
 import scooter from "@/assets/illustrations/rider-scooter-basket-1.png";
-import scooter2 from "@/assets/illustrations/rider-scooter-basket-2.png";
 import route from "@/assets/illustrations/delivery-map-route.png";
 import handoff from "@/assets/illustrations/order-handoff-vendor-customer.png";
 import phone from "@/assets/illustrations/customer-checking-phone.png";
 import netBag from "@/assets/illustrations/net-bag.png";
 import basket from "@/assets/illustrations/grocery-basket.png";
-import crate from "@/assets/illustrations/produce-crate.png";
 import badgeExpress from "@/assets/illustrations/badge-express-delivery.png";
 import badgeHuman from "@/assets/illustrations/badge-human-first-shopping.png";
 import badgeFresh from "@/assets/illustrations/badge-fresh-guarantee.png";
+import earnRiderBikes from "@/assets/illustrations/earn-rider-bikes.webp";
+import earnKekeCar from "@/assets/illustrations/earn-keke-car.webp";
+import earnPayoutMoment from "@/assets/illustrations/earn-payout-moment.webp";
 import agentScene from "@/assets/illustrations/scene-agent-laptop-delivery.png";
 
 const CFG: EarnConfig = {
@@ -22,8 +23,8 @@ const CFG: EarnConfig = {
   lede: "Pick up packed orders at the market gate and ride them to the door. Paid for every completed delivery.",
   cta: "Apply as a rider",
   hero: {
-    main: scooter2,
-    alt: "A rider on a scooter with a basket of market goods",
+    main: earnRiderBikes,
+    alt: "A Qyka rider with a scooter, an e-bike and a car",
     extras: [
       { src: riderBike, cls: "bottom-[6%] left-[2%] w-[30%]" },
       { src: netBag, cls: "right-[4%] top-[10%] w-[15%] rotate-12" },
@@ -39,7 +40,7 @@ const CFG: EarnConfig = {
   day: [
     { title: "Accept a delivery", body: "A packed order needs a ride from a market gate to a customer's door.", art: route },
     { title: "Pick up at the gate", body: "Collect the sealed order from the agent, already packed and photographed.", art: handoff },
-    { title: "Ride it home", body: "Straight to the address. Drop-off details and the customer's contact are in the app.", art: scooter },
+    { title: "Ride it home", body: "Bike, keke or car - whatever fits your route.", art: earnKekeCar },
     { title: "Confirm and earn", body: "The customer confirms receipt, the run closes, and your earnings land.", art: phone },
   ],
   fit: [
@@ -68,7 +69,7 @@ const CFG: EarnConfig = {
       { key: "area", label: "Area or market you'd cover" },
       { key: "vehicle", label: "Vehicle (bike, keke, car…)" },
     ],
-    art: crate,
+    art: earnPayoutMoment,
   },
   other: {
     label: "Know the market? Shop for others",

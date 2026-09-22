@@ -1,7 +1,8 @@
 "use client";
 
 import EarnPage, { type EarnConfig } from "@/components/marketing/EarnPage";
-import agentScene from "@/assets/illustrations/scene-agent-laptop-delivery.png";
+import earnAgentEarning from "@/assets/illustrations/earn-agent-earning.webp";
+import earnPayoutMoment from "@/assets/illustrations/earn-payout-moment.webp";
 import conversation from "@/assets/illustrations/agent-customer-conversation.png";
 import scale from "@/assets/illustrations/vendor-weighing-scale.png";
 import phoneList from "@/assets/illustrations/phone-shopping-list.png";
@@ -21,8 +22,8 @@ const CFG: EarnConfig = {
   lede: "Customers send lists. You bargain the stalls, pay by transfer, pack with proof, and get paid when the run is done.",
   cta: "Apply as an agent",
   hero: {
-    main: agentScene,
-    alt: "An agent shopping the market from a laptop",
+    main: earnAgentEarning,
+    alt: "An agent checking her Qyka earnings on her phone",
     extras: [
       { src: tomatoes, cls: "left-[2%] top-[26%] w-[15%] -rotate-12" },
       { src: garlic, cls: "right-[3%] top-[10%] w-[13%] rotate-12" },
@@ -66,7 +67,7 @@ const CFG: EarnConfig = {
       { key: "phone", label: "Phone", required: true },
       { key: "market", label: "Market you know best" },
     ],
-    art: conversation,
+    art: earnPayoutMoment,
   },
   estimator: { perUnit: 3500, unit: "Orders", min: 5, max: 30, start: 15 },
   other: {

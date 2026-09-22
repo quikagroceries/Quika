@@ -8,20 +8,29 @@ import Link from "next/link";
 export default function Brand({
   href = "/",
   size = "md",
+  dark = false,
   className = "",
 }: {
   href?: string | null;
   size?: "md" | "lg";
+  /** The mark is a solid black silhouette - on a dark background it needs
+   * inverting to white, and the wordmark needs light text, or both
+   * disappear entirely rather than just looking a bit off. */
+  dark?: boolean;
   className?: string;
 }) {
   const lg = size === "lg";
   const mark = (
     <span className={"flex items-center gap-2 " + className}>
       {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img src="/logo.png" alt="" className={(lg ? "h-11 w-11" : "h-9 w-9") + " shrink-0 object-contain"} />
+      <img
+        src="/logo.png"
+        alt=""
+        className={(lg ? "h-11 w-11" : "h-9 w-9") + " shrink-0 object-contain " + (dark ? "invert" : "")}
+      />
       <span className="leading-none">
-        <span className={"block font-logo leading-none text-ink " + (lg ? "text-3xl" : "text-2xl")}>Qyka</span>
-        <span className={"block font-logo leading-none tracking-wide text-muted " + (lg ? "text-sm" : "text-xs")}>Groceries</span>
+        <span className={"block font-logo leading-none " + (dark ? "text-white" : "text-ink") + " " + (lg ? "text-3xl" : "text-2xl")}>Qyka</span>
+        <span className={"block font-logo leading-none tracking-wide " + (dark ? "text-white/60" : "text-muted") + " " + (lg ? "text-sm" : "text-xs")}>Groceries</span>
       </span>
     </span>
   );

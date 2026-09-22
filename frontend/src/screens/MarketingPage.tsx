@@ -18,9 +18,7 @@ import {
   ADD_ITEM_EVENT,
   ChatDemo,
   DeliveryLine,
-  DriveIn,
   DrawUnderline,
-  DropIn,
   Float,
   FlyLayer,
   PopIn,
@@ -28,9 +26,6 @@ import {
   useTypedPlaceholder,
 } from "@/components/marketing/anim";
 
-import marketStall from "@/assets/illustrations/market-stall-produce.png";
-import scooter from "@/assets/illustrations/rider-scooter-basket-1.png";
-import produceCrate from "@/assets/illustrations/produce-crate.png";
 import tomatoes from "@/assets/illustrations/tomatoes.png";
 import garlic from "@/assets/illustrations/garlic.png";
 import bananas from "@/assets/illustrations/bananas-1.png";
@@ -48,20 +43,20 @@ import carrot from "@/assets/illustrations/carrot.png";
 import personList from "@/assets/illustrations/person-shopping-list.png";
 import conversation from "@/assets/illustrations/agent-customer-conversation.png";
 import delivery from "@/assets/illustrations/delivery-map-route.png";
-import handoff from "@/assets/illustrations/order-handoff-vendor-customer.png";
-import agentScene from "@/assets/illustrations/scene-agent-laptop-delivery.png";
-import riderBike from "@/assets/illustrations/rider-bicycle.png";
+import trustChatTomato from "@/assets/illustrations/trust-chat-tomato.webp";
+import finalCtaKitchen from "@/assets/illustrations/final-cta-kitchen.webp";
+import earnAgentPose from "@/assets/illustrations/char-agent-phone-black.webp";
+import earnRiderPose from "@/assets/illustrations/char-rider-scooter.webp";
 import stallProduce from "@/assets/illustrations/market-stall-produce.png";
 import stallFish from "@/assets/illustrations/vendor-stall-fish.png";
 import stallDairy from "@/assets/illustrations/vendor-stall-dairy.png";
 import stallPantry from "@/assets/illustrations/vendor-stall-pantry-jars.png";
 import stallScale from "@/assets/illustrations/vendor-weighing-scale.png";
 import cartVendor from "@/assets/illustrations/market-cart-vendor.png";
-import badgeFresh from "@/assets/illustrations/badge-fresh-guarantee.png";
-import badgeLive from "@/assets/illustrations/badge-real-time-updates.png";
-import badgeHuman from "@/assets/illustrations/badge-human-first-shopping.png";
-import badgeSupport from "@/assets/illustrations/badge-24-7-support.png";
-import squiggle1 from "@/assets/illustrations/decorative-squiggle-1.png";
+import badgeFresh from "@/assets/illustrations/spot-secure-payment.webp";
+import badgeLive from "@/assets/illustrations/spot-on-time-delivery.webp";
+import badgeHuman from "@/assets/illustrations/spot-reliable-agents.webp";
+import badgeSupport from "@/assets/illustrations/spot-verified-goods.webp";
 import squiggle2 from "@/assets/illustrations/decorative-squiggle-2.png";
 import basket from "@/assets/illustrations/grocery-basket.png";
 
@@ -268,62 +263,14 @@ function QuickPicks({ onPick }: { onPick: (line: string) => void }) {
   );
 }
 
+// Cleared at the user's request (2026-09-22) - was a full hero scene built
+// from the layered market illustrations; they want to build this themselves
+// with no scaffolding in the way. The slot is kept (so the section grid
+// doesn't collapse to one column on desktop) but intentionally holds nothing.
 function HeroArt() {
-  const t = useT();
   return (
-    <div className="relative mx-auto aspect-square w-full max-w-[34rem]">
-      <motion.div
-        className="absolute inset-[6%] rounded-[3rem] bg-brand-orange/30"
-        initial={{ rotate: -4, scale: 0.92, opacity: 0 }}
-        animate={{ rotate: 3, scale: 1, opacity: 1 }}
-        transition={{ duration: 0.9, ease: [0.22, 1, 0.36, 1] }}
-      />
-      <motion.div
-        className="absolute inset-[12%] rounded-[3rem] bg-surface shadow-sm"
-        initial={{ rotate: 4, scale: 0.94, opacity: 0 }}
-        animate={{ rotate: -3, scale: 1, opacity: 1 }}
-        transition={{ duration: 0.9, delay: 0.1, ease: [0.22, 1, 0.36, 1] }}
-      />
-      <Image src={squiggle1} alt="" aria-hidden className="absolute -left-2 top-[8%] w-14 -rotate-12 opacity-40" />
-      <Image src={squiggle2} alt="" aria-hidden className="absolute -right-2 bottom-[30%] w-14 rotate-12 opacity-40" />
-
-      <PopIn className="absolute left-[16%] top-[14%] w-[68%]" delay={0.25} from={{ scale: 0.85, y: 24 }}>
-        <Float amp={5} dur={5}>
-          <Image src={marketStall} alt="A market stall stacked with fresh produce" priority className="w-full" />
-        </Float>
-      </PopIn>
-      <PopIn className="absolute bottom-[14%] right-[4%] w-[30%]" delay={0.6}>
-        <Float amp={4} dur={4.4} delay={0.4}>
-          <Image src={produceCrate} alt="" aria-hidden className="w-full rotate-6" />
-        </Float>
-      </PopIn>
-      <DriveIn className="absolute bottom-[4%] left-[2%] w-[42%]" delay={0.5}>
-        <Float amp={3} dur={2.6}>
-          <Image src={scooter} alt="" aria-hidden className="w-full" />
-        </Float>
-      </DriveIn>
-      <PopIn className="absolute left-[2%] top-[30%] w-[15%]" delay={0.75}>
-        <Float amp={7} dur={3.6}><Image src={tomatoes} alt="" aria-hidden className="w-full -rotate-12" /></Float>
-      </PopIn>
-      <PopIn className="absolute right-[2%] top-[10%] w-[13%]" delay={0.85}>
-        <Float amp={6} dur={4.2} delay={0.3}><Image src={garlic} alt="" aria-hidden className="w-full rotate-12" /></Float>
-      </PopIn>
-      <PopIn className="absolute right-[10%] top-[52%] w-[16%]" delay={0.95}>
-        <Float amp={6} dur={3.9} delay={0.7}><Image src={bananas} alt="" aria-hidden className="w-full -rotate-6" /></Float>
-      </PopIn>
-
-      <PopIn className="absolute left-[4%] top-[6%]" delay={1.1} from={{ scale: 0.6, y: -10 }}>
-        <div className="flex items-center gap-2 rounded-full border border-line bg-surface px-3 py-1.5 shadow-md">
-          <Image src={badgeFresh} alt="" aria-hidden className="h-6 w-6 object-contain" />
-          <span className="text-xs font-bold text-ink">{t.hero.pickedFresh}</span>
-        </div>
-      </PopIn>
-      <PopIn className="absolute bottom-[26%] right-0" delay={1.3} from={{ scale: 0.6, y: 10 }}>
-        <div className="flex items-center gap-2 rounded-full border border-line bg-surface px-3 py-1.5 shadow-md">
-          <Image src={badgeLive} alt="" aria-hidden className="h-6 w-6 object-contain" />
-          <span className="text-xs font-bold text-ink">{t.hero.liveUpdates}</span>
-        </div>
-      </PopIn>
+    <div className="relative -ml-16 mx-auto -mt-24 flex aspect-[1376/768] w-full min-w-[50vw] items-center justify-center rounded-[2rem] border-2 border-dashed border-brand-orange/40 bg-brand-orange/10 sm:-ml-24 sm:-mt-16">
+      <p className="font-display text-xl font-extrabold text-brand-orange-dark sm:text-2xl">Coming soon</p>
     </div>
   );
 }
@@ -343,7 +290,6 @@ export default function MarketingPage() {
         <DeliveryLine targetRef={mainRef} />
         {/* HERO */}
         <section className="relative overflow-hidden">
-          <div className="pointer-events-none absolute -right-24 -top-24 h-96 w-96 rounded-full bg-brand-orange/15 blur-3xl" />
           <div className="mx-auto grid max-w-6xl items-center gap-10 px-4 pb-14 pt-8 sm:px-6 sm:pt-12 lg:grid-cols-2 lg:gap-12 lg:pb-20 lg:pt-16">
             <div>
               <span className="inline-flex items-center gap-2 rounded-full border border-brand-orange/30 bg-brand-orange/15 px-3 py-1 text-xs font-bold text-brand-orange-dark">
@@ -530,8 +476,8 @@ export default function MarketingPage() {
                 <div className="absolute inset-4 rotate-2 rounded-[2rem] bg-brand-orange/25" />
                 <Float amp={5} dur={5}>
                   <Image
-                    src={handoff}
-                    alt="An agent handing groceries over to a customer"
+                    src={trustChatTomato}
+                    alt="An agent sending a photo of fresh tomatoes before buying them"
                     className="relative mx-auto w-full max-w-md object-contain"
                   />
                 </Float>
@@ -557,7 +503,7 @@ export default function MarketingPage() {
                 {t.earn.agent.cta}
               </Link>
               <div className="mt-6 rounded-3xl bg-surface p-3">
-                <Float amp={4} dur={3.8}><Image src={agentScene} alt="" aria-hidden className="h-44 w-full object-contain" /></Float>
+                <Float amp={4} dur={3.8}><Image src={earnAgentPose} alt="" aria-hidden className="mx-auto h-44 object-contain" /></Float>
               </div>
             </div>
             </Reveal>
@@ -573,7 +519,7 @@ export default function MarketingPage() {
               >
                 {t.earn.rider.cta}
               </Link>
-              <Float amp={4} dur={3.2}><Image src={riderBike} alt="" aria-hidden className="mt-6 h-52 w-full object-contain object-bottom" /></Float>
+              <Float amp={4} dur={3.2}><Image src={earnRiderPose} alt="" aria-hidden className="mx-auto mt-6 h-52 object-contain" /></Float>
             </div>
             </Reveal>
           </div>
@@ -596,22 +542,13 @@ export default function MarketingPage() {
           </div>
         </section>
 
-        {/* FINAL CTA */}
+        {/* FINAL CTA - the payoff scene: groceries already unpacked on the
+            customer's own counter, "order completed" on the phone. Real
+            illustration now, replacing the old scattered basket/produce
+            sprites (that piece already shows a basket, tomatoes and
+            peppers, so those separate floating pieces were redundant). */}
         <section className="mx-auto max-w-6xl px-4 py-16 sm:px-6 sm:py-24">
-          <div className="relative overflow-hidden rounded-[2rem] bg-[#FBE7D5] p-7 sm:p-12">
-            <Image src={squiggle1} alt="" aria-hidden className="absolute -left-3 top-6 w-16 -rotate-12 opacity-40" />
-            <PopIn inView className="absolute -bottom-6 right-4 hidden w-56 md:block" from={{ scale: 0.8, y: 30 }}>
-              <Image src={basket} alt="" aria-hidden className="w-full rotate-6" />
-            </PopIn>
-            <DropIn className="absolute bottom-[6.5rem] right-[9.5rem] hidden w-14 md:block" delay={0.5}>
-              <Image src={tomatoes} alt="" aria-hidden className="w-full -rotate-12" />
-            </DropIn>
-            <DropIn className="absolute bottom-[8rem] right-[5rem] hidden w-12 md:block" delay={0.75}>
-              <Image src={garlic} alt="" aria-hidden className="w-full rotate-12" />
-            </DropIn>
-            <DropIn className="absolute bottom-[5.5rem] right-[12rem] hidden w-12 md:block" delay={1}>
-              <Image src={pepper} alt="" aria-hidden className="w-full -rotate-6" />
-            </DropIn>
+          <div className="relative grid items-center gap-8 overflow-hidden rounded-[2rem] bg-[#FBE7D5] p-7 sm:p-12 lg:grid-cols-2">
             <Reveal className="relative max-w-xl">
               <h2 className="font-display text-[clamp(2rem,5vw,3.5rem)] font-extrabold leading-tight tracking-tight text-ink">
                 {t.cta.title}
@@ -627,6 +564,15 @@ export default function MarketingPage() {
                 </svg>
               </Link>
             </Reveal>
+            <PopIn inView from={{ scale: 0.9, y: 24 }}>
+              <Float amp={4} dur={5}>
+                <Image
+                  src={finalCtaKitchen}
+                  alt="Fresh groceries unpacked on a kitchen counter, order completed"
+                  className="w-full"
+                />
+              </Float>
+            </PopIn>
           </div>
         </section>
       </main>
