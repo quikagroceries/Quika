@@ -71,7 +71,7 @@ export default function HelpClient() {
         <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
           {searchQuery && filteredGroups.length === 0 && (
             <div className="text-center py-12 text-muted">
-              No results found for "{searchQuery}". Please try another search or contact support.
+              No results found for &quot;{searchQuery}&quot;. Please try another search or contact support.
             </div>
           )}
           

@@ -212,9 +212,9 @@ export default function TrustAndSafety() {
       <section className="bg-canvas-deep/60 px-4 py-16 sm:px-6 sm:py-20">
         <div className="mx-auto max-w-5xl">
           <Reveal y={24} className="max-w-xl">
-            <p className="text-sm font-semibold uppercase tracking-wide text-brand-orange">In case something's wrong</p>
+            <p className="text-sm font-semibold uppercase tracking-wide text-brand-orange">In case something&apos;s wrong</p>
             <h2 className="mt-2 font-display text-3xl font-extrabold tracking-tight sm:text-4xl">
-              What happens when a run doesn't go to plan.
+              What happens when a run doesn&apos;t go to plan.
             </h2>
           </Reveal>
 

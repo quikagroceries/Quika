@@ -53,7 +53,7 @@ export default function PricingPage() {
                     <div className="font-bold text-lg min-w-[60px]">0%</div>
                     <div>
                       <h3 className="font-bold">Groceries at cost</h3>
-                      <p className="text-sm text-muted">We don't mark up items. You pay what the vendor charges.</p>
+                      <p className="text-sm text-muted">We don&apos;t mark up items. You pay what the vendor charges.</p>
                     </div>
                   </li>
                   <li className="flex gap-4 p-4 bg-surface rounded-2xl border border-line shadow-sm">
@@ -121,7 +121,7 @@ export default function PricingPage() {
           <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="grid sm:grid-cols-2 gap-8">
               <div>
-                <h3 className="font-display text-xl font-bold mb-4">What's included</h3>
+                <h3 className="font-display text-xl font-bold mb-4">What&apos;s included</h3>
                 <ul className="space-y-3">
                   {LANDING.pricing.included.map((item, i) => (
                     <li key={i} className="flex gap-3 text-muted items-start">
@@ -134,7 +134,7 @@ export default function PricingPage() {
                 </ul>
               </div>
               <div>
-                <h3 className="font-display text-xl font-bold mb-4">What's NOT included</h3>
+                <h3 className="font-display text-xl font-bold mb-4">What&apos;s NOT included</h3>
                 <ul className="space-y-3">
                   {LANDING.pricing.notIncluded.map((item, i) => (
                     <li key={i} className="flex gap-3 text-muted items-start">

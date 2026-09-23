@@ -452,7 +452,7 @@ function Shopping({ orderId, onBack }: any) {
           <div className="mb-4 rounded-xl border-2 border-red-400 bg-red-50 p-4">
             <p className="font-bold text-red-700">Balance not paid in time</p>
             <p className="mt-1 text-sm text-red-600">
-              The customer didn't pay the remaining balance within the window, so this order is cancelled and the deposit is forfeited. Please return any goods you already bought.
+              The customer didn&apos;t pay the remaining balance within the window, so this order is cancelled and the deposit is forfeited. Please return any goods you already bought.
             </p>
           </div>
         )}
@@ -606,7 +606,7 @@ function Shopping({ orderId, onBack }: any) {
                         <div className="text-sm font-semibold text-faint">Dropped by customer</div>
                       )}
                       {waitingOnCustomer && (
-                        <div className="text-sm font-semibold text-amber-700">Waiting for customer's decision</div>
+                        <div className="text-sm font-semibold text-amber-700">Waiting for customer&apos;s decision</div>
                       )}
                       {overagePending && (
                         <div className="text-sm font-semibold text-amber-700">

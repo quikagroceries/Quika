@@ -208,7 +208,7 @@ function AdminFloat() {
 
         {fromMarketId && (
           <p className="mt-2 text-sm text-muted">
-            {marketName(fromMarketId)}'s current balance: <span className="font-semibold text-ink">₦{fromBalance?.toFixed(2)}</span>
+            {marketName(fromMarketId)}&apos;s current balance: <span className="font-semibold text-ink">₦{fromBalance?.toFixed(2)}</span>
           </p>
         )}
 
@@ -226,7 +226,7 @@ function AdminFloat() {
         />
 
         {insufficientSource && (
-          <p className="mt-2 text-sm text-red-600">This exceeds {marketName(fromMarketId)}'s current balance.</p>
+          <p className="mt-2 text-sm text-red-600">This exceeds {marketName(fromMarketId)}&apos;s current balance.</p>
         )}
         {transferError && <p className="mt-2 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{transferError}</p>}
 

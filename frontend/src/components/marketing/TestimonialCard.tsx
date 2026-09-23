@@ -72,7 +72,7 @@ export function TestimonialCard({
       
       <blockquote className="flex-grow mb-6">
         <p className="font-serif italic text-lg text-ink leading-relaxed">
-          "{quote}"
+          &quot;{quote}&quot;
         </p>
       </blockquote>
       

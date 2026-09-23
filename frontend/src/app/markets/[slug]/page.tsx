@@ -119,7 +119,7 @@ export default async function MarketPage({ params }: PageProps) {
                     Shop this market now
                   </Link>
                 ) : (
-                  <form className="max-w-sm w-full flex flex-col gap-3" onSubmit={() => {}}>
+                  <form className="max-w-sm w-full flex flex-col gap-3">
                     <label className="text-sm font-semibold text-ink">Join the waitlist for {market.name}</label>
                     <div className="flex gap-2">
                       <input

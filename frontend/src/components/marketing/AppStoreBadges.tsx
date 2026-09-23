@@ -88,7 +88,7 @@ export function AppStoreBadges({ appStoreUrl, playStoreUrl, className = "" }: Ap
           <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-brand-orange text-xs font-bold text-ink">
             3
           </span>
-          <span className="text-sm text-muted">Select "Add to Home Screen"</span>
+          <span className="text-sm text-muted">Select &quot;Add to Home Screen&quot;</span>
         </div>
       </div>
     </div>

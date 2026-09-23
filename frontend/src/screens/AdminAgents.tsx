@@ -83,7 +83,7 @@ function AdminAgents() {
               <div className="min-w-0">
                 <div className="font-semibold text-ink">Applicant {a.user_id.slice(0, 8)}…</div>
                 <div className="text-sm text-muted">{marketName(a.market_id)}</div>
-                {a.note && <div className="mt-1 text-sm text-muted">"{a.note}"</div>}
+                {a.note && <div className="mt-1 text-sm text-muted">&quot;{a.note}&quot;</div>}
               </div>
               <div className="flex shrink-0 gap-2">
                 <Button

@@ -307,8 +307,8 @@ function ShoppingFeed({ items, purchases, onDecide, busy, status, onAddItem }: a
 
       <Modal open={addOpen} onClose={addBusy ? undefined : closeAdd} title="Add an item">
         <p className="mb-3 text-sm text-muted">
-          Your agent will pick this up while they're still at the market. A flat ₦{ADD_ITEM_FEE} fee
-          applies, charged from your wallet now - additions only, items already on your list can't be
+          Your agent will pick this up while they&apos;re still at the market. A flat ₦{ADD_ITEM_FEE} fee
+          applies, charged from your wallet now - additions only, items already on your list can&apos;t be
           removed this way.
         </p>
         <div className="space-y-3">

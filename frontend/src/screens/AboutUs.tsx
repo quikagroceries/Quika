@@ -105,13 +105,13 @@ export default function AboutUs() {
             </HeroIn>
             <Stagger className="mt-8 flex flex-wrap gap-3" stagger={0.1} delay={0.28} immediate>
               <StaggerItem y={14} scale={0.96}>
-                <a
+                <Link
                   href="/#customers"
                   onClick={goHomeHash}
                   className="inline-flex min-h-[48px] items-center rounded-full bg-brand-orange px-6 text-sm font-bold text-[#1A1A1A] transition hover:bg-brand-orange-dark focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gold"
                 >
                   Join the waitlist
-                </a>
+                </Link>
               </StaggerItem>
               <StaggerItem y={14} scale={0.96}>
                 <Link
@@ -149,7 +149,7 @@ export default function AboutUs() {
             <span className="text-brand-orange">without faking the market</span>.
           </SplitReveal>
           <p className="mx-auto mt-5 max-w-2xl text-base leading-relaxed text-ink/60 sm:text-lg">
-            No pretend catalogue where one doesn't belong. No unauthorized cash. Just people who
+            No pretend catalogue where one doesn&apos;t belong. No unauthorized cash. Just people who
             know the stalls and the shelves, money that leaves a trail, and groceries that arrive
             the way you asked for them.
           </p>
@@ -271,13 +271,13 @@ export default function AboutUs() {
                 if you already have access.
               </p>
               <div className="mt-8 flex flex-wrap gap-3">
-                <a
+                <Link
                   href="/#customers"
                   onClick={goHomeHash}
                   className="inline-flex min-h-[48px] items-center rounded-full bg-brand-orange px-6 text-sm font-bold text-[#1A1A1A] transition hover:bg-brand-orange-dark focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gold"
                 >
                   Join the waitlist
-                </a>
+                </Link>
                 <Link
                   href="/for-agents"
                   className="inline-flex min-h-[48px] items-center rounded-full border-2 border-ink/15 px-6 text-sm font-bold text-ink transition hover:bg-ink/5"
