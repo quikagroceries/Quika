@@ -1,5 +1,6 @@
 "use client";
 
+import { CONTACT_EMAIL } from "@/lib/contact";
 import { useEffect, useId, useMemo, useRef, useState, type FormEvent, type KeyboardEvent } from "react";
 import { useRouter } from "next/navigation";
 import {
@@ -115,7 +116,7 @@ export default function MarketShopPicker({
     const body = encodeURIComponent(
       `Please notify me when Qyka opens at ${notifyMarket.name} (${notifyMarket.city}).\n\nEmail: ${notifyEmail.trim()}\n`
     );
-    window.location.href = `mailto:hello@quika.ng?subject=${subject}&body=${body}`;
+    window.location.href = `mailto:${CONTACT_EMAIL}?subject=${subject}&body=${body}`;
     setNotifySent(true);
   }
 

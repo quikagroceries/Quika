@@ -1,3 +1,5 @@
+import { mailto } from "@/lib/contact";
+
 /** Shared between the homepage FAQ/Help sections and the floating HelpWidget
  * so there's one place to update an answer instead of two. */
 
@@ -63,6 +65,6 @@ export const HELP_TOPICS = [
   {
     title: "Something else",
     body: "Can't find it here — write to us and a real person will reply.",
-    href: "mailto:hello@quika.ng?subject=Qyka%20help",
+    href: mailto("Qyka help"),
   },
 ] as const;

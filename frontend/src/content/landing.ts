@@ -1,3 +1,5 @@
+import { mailto } from "@/lib/contact";
+
 export const LAUNCH_MODE = "pre-launch" as const; // toggle to "live" when real data exists
 
 export const LANDING = {
@@ -326,9 +328,9 @@ export const LANDING = {
         links: [
           { label: "About", href: "/about" },
           { label: "Trust & Safety", href: "/trust-and-safety" },
-          { label: "Careers", href: "mailto:careers@quika.ng" },
-          { label: "Press", href: "mailto:press@quika.ng" },
-          { label: "Contact", href: "mailto:hello@quika.ng" },
+          { label: "Careers", href: mailto("Careers") },
+          { label: "Press", href: mailto("Press") },
+          { label: "Contact", href: mailto("Contact") },
         ],
       },
       help: {
@@ -336,7 +338,7 @@ export const LANDING = {
         links: [
           { label: "FAQ", href: "/#faq" },
           { label: "WhatsApp support", href: "https://wa.me/2348000000000" },
-          { label: "Report a problem", href: "mailto:support@quika.ng" },
+          { label: "Report a problem", href: mailto("Report a problem") },
         ],
       },
     },

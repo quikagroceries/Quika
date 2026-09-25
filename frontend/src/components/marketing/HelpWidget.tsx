@@ -1,5 +1,6 @@
 "use client";
 
+import { CONTACT_EMAIL, mailto } from "@/lib/contact";
 import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import gsap from "gsap";
@@ -132,10 +133,10 @@ export default function HelpWidget() {
                 <div className="py-2 text-center">
                   <p className="text-sm text-ink/50">No match yet — try a real person instead.</p>
                   <a
-                    href="mailto:hello@quika.ng?subject=Qyka%20question"
+                    href={mailto("Qyka question")}
                     className="mt-2 inline-flex text-sm font-bold text-brand-orange hover:underline"
                   >
-                    Email hello@quika.ng →
+                    Email {CONTACT_EMAIL} →
                   </a>
                 </div>
               )
