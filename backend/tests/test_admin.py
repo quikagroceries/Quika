@@ -438,3 +438,84 @@ async def test_admin_analytics_is_admin_only(client):
     assert r.status_code == 403
 
     print("Admin losses endpoint correctly surfaces the forfeited deposit.")
+
+
+@pytest.mark.asyncio
+async def test_admin_adds_admin_who_must_change_temporary_password(client, db_session_factory):
+    admin_h = {"Authorization": f"Bearer {await _login_admin(client, db_session_factory, 'owner@qyka.com')}"}
+
+    r = await client.post("/admin/admins", headers=admin_h, json={
+        "email": " Ops@Qyka.com ", "full_name": "Ops Lead", "temporary_password": "temp-pass-123",
+    })
+    assert r.status_code == 201, r.text
+    assert r.json()["email"] == "ops@qyka.com"
+    assert r.json()["must_change_password"] is True
+
+    r = await client.post("/admin/admins", headers=admin_h, json={
+        "email": "ops@qyka.com", "temporary_password": "another-pass-1",
+    })
+    assert r.status_code == 409
+
+    r = await client.post("/admin/login", json={"email": "ops@qyka.com", "password": "temp-pass-123"})
+    assert r.status_code == 200, r.text
+    new_h = {"Authorization": f"Bearer {r.json()['access_token']}"}
+
+    # Signed in, but locked out of every admin endpoint until the password changes.
+    r = await client.get("/auth/me", headers=new_h)
+    assert r.json()["must_change_password"] is True
+    r = await client.get("/admin/admins", headers=new_h)
+    assert r.status_code == 403
+
+    r = await client.post("/admin/me/password", headers=new_h, json={
+        "current_password": "wrong", "new_password": "my-own-pass-456",
+    })
+    assert r.status_code == 400
+    r = await client.post("/admin/me/password", headers=new_h, json={
+        "current_password": "temp-pass-123", "new_password": "my-own-pass-456",
+    })
+    assert r.status_code == 204, r.text
+
+    r = await client.get("/admin/admins", headers=new_h)
+    assert r.status_code == 200
+    assert {a["email"] for a in r.json()} == {"owner@qyka.com", "ops@qyka.com"}
+
+    r = await client.post("/admin/login", json={"email": "ops@qyka.com", "password": "temp-pass-123"})
+    assert r.status_code == 401
+    r = await client.post("/admin/login", json={"email": "ops@qyka.com", "password": "my-own-pass-456"})
+    assert r.status_code == 200
+
+
+@pytest.mark.asyncio
+async def test_admin_removes_admin_but_not_self_or_bootstrap_owner(client, db_session_factory, monkeypatch):
+    from app.core.config import settings
+
+    monkeypatch.setattr(settings, "bootstrap_admin_email", "owner@qyka.com")
+    owner_h = {"Authorization": f"Bearer {await _login_admin(client, db_session_factory, 'owner@qyka.com')}"}
+    other_h = {"Authorization": f"Bearer {await _login_admin(client, db_session_factory, 'second@qyka.com')}"}
+
+    admins = (await client.get("/admin/admins", headers=owner_h)).json()
+    ids = {a["email"]: a["id"] for a in admins}
+    assert next(a for a in admins if a["email"] == "owner@qyka.com")["is_bootstrap"] is True
+
+    r = await client.delete(f"/admin/admins/{ids['owner@qyka.com']}", headers=owner_h)
+    assert r.status_code == 400  # self
+    r = await client.delete(f"/admin/admins/{ids['owner@qyka.com']}", headers=other_h)
+    assert r.status_code == 400  # bootstrap owner
+
+    r = await client.delete(f"/admin/admins/{ids['second@qyka.com']}", headers=owner_h)
+    assert r.status_code == 204, r.text
+    r = await client.post("/admin/login", json={"email": "second@qyka.com", "password": _ADMIN_PASSWORD})
+    assert r.status_code == 401
+    r = await client.get("/admin/admins", headers=other_h)
+    assert r.status_code == 403
+
+
+@pytest.mark.asyncio
+async def test_existing_admin_cannot_sign_in_with_otp(client, db_session_factory):
+    async with db_session_factory() as s:
+        s.add(User(phone="+2348040000099", role=UserRole.ADMIN, status=UserStatus.ACTIVE))
+        await s.commit()
+    r = await client.post("/auth/request-otp", json={"identifier": "+2348040000099"})
+    r = await client.post("/auth/verify-otp", json={"identifier": "+2348040000099", "code": r.json()["dev_otp"]})
+    assert r.status_code == 403
+    assert "access_token" not in r.json()

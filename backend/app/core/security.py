@@ -94,6 +94,18 @@ async def get_current_user_optional(
     return result.scalar_one_or_none()
 
 
+async def get_customer_user(user: User = Depends(get_current_user)) -> User:
+    """get_current_user, for the customer-side entry points (placing an
+    order, funding the wallet): refuses an agent-only account that hasn't
+    registered as a customer (see auth.models.User.has_customer_side)."""
+    if not user.has_customer_side:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Register as a customer to shop",
+        )
+    return user
+
+
 def require_role(*roles: UserRole):
     """Dependency factory: gate an endpoint to specific roles."""
 
@@ -102,6 +114,14 @@ def require_role(*roles: UserRole):
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="Insufficient permissions",
+            )
+        # An admin on a temporary password can sign in, but can't use a
+        # single admin endpoint until they set their own (POST
+        # /admin/me/password, which depends on get_current_user instead).
+        if user.must_change_password:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Password change required",
             )
         return user
 

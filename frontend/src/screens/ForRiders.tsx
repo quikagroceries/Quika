@@ -60,13 +60,12 @@ const CFG: EarnConfig = {
     { q: "What if I can't find the address?", a: "Drop-off details and the customer's contact are in the app. Chat with them directly if plans change." },
   ],
   form: {
-    mailTo: "riders@quika.ng",
-    subject: "Qyka rider application",
+    kind: "rider",
     heading: "Apply as a rider",
     fields: [
-      { key: "name", label: "Full name", required: true },
-      { key: "phone", label: "Phone", required: true },
-      { key: "area", label: "Area or market you'd cover" },
+      { key: "full_name", label: "Full name", required: true },
+      { key: "phone", label: "Phone", required: true, type: "tel" },
+      { key: "area", label: "Area you'd cover", required: true },
       { key: "vehicle", label: "Vehicle (bike, keke, car…)" },
     ],
     art: earnPayoutMoment,

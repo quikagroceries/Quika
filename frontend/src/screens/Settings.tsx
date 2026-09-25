@@ -76,7 +76,8 @@ function Settings({ user, onUserUpdated, onLogout, extra, roleSwitch }: any) {
     notifications: "notifications order updates agent messages payment reminders offers promos",
     appearance: "appearance reduce motion animation transitions",
     agent: "become an agent apply market shop earn",
-    system: "system status api health",
+    // `extra` cards: admin system status / password, agent "shop as a customer".
+    system: "system status api health password shop customer register",
     mode: "view mode switch agent customer role",
   };
   const matches = (key: keyof typeof KEYWORDS) => !q || KEYWORDS[key].includes(q);
@@ -182,7 +183,7 @@ function Settings({ user, onUserUpdated, onLogout, extra, roleSwitch }: any) {
         title={user.full_name || "Your account"}
         body={
           <span className="inline-flex flex-wrap items-center gap-2">
-            {user.phone}
+            {user.phone || user.email}
             <span className={"rounded-full px-2.5 py-0.5 text-xs font-bold " + (STATUS_TONE[user.status] || "bg-sunken text-muted")}>
               {STATUS_LABEL[user.status] || user.status}
             </span>
@@ -242,10 +243,20 @@ function Settings({ user, onUserUpdated, onLogout, extra, roleSwitch }: any) {
           <Card className={hide("account")}>
             <SectionHeader icon="phone" title="Account" className="mb-4" />
             <div className="grid grid-cols-1 gap-3">
-              <label className="block">
-                <span className="mb-1 block text-sm font-semibold text-ink/80">Phone</span>
-                <Input value={user.phone} disabled className="bg-sunken-2 text-muted" />
-              </label>
+              {/* Either may be missing: admins have only an email, OTP sign-ups
+                  often only a phone. */}
+              {user.phone && (
+                <label className="block">
+                  <span className="mb-1 block text-sm font-semibold text-ink/80">Phone</span>
+                  <Input value={user.phone} disabled className="bg-sunken-2 text-muted" />
+                </label>
+              )}
+              {user.email && (
+                <label className="block">
+                  <span className="mb-1 block text-sm font-semibold text-ink/80">Email</span>
+                  <Input value={user.email} disabled className="bg-sunken-2 text-muted" />
+                </label>
+              )}
               <label className="block">
                 <span className="mb-1 block text-sm font-semibold text-ink/80">Role</span>
                 <Input

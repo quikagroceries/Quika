@@ -5,6 +5,7 @@ import Settings from "@/screens/Settings";
 import Card from "@/components/Card";
 import Icon from "@/components/Icon";
 import SectionHeader from "@/components/SectionHeader";
+import ChangePasswordForm from "@/components/admin/ChangePasswordForm";
 import { api } from "@/lib/api";
 import { useAuth } from "@/components/AuthProvider";
 
@@ -65,7 +66,23 @@ function SystemStatusCard() {
   );
 }
 
+function PasswordCard() {
+  return (
+    <Card>
+      <SectionHeader icon="shield" title="Password" subtitle="Used with your email at the admin sign-in page." className="mb-4" />
+      <ChangePasswordForm />
+    </Card>
+  );
+}
+
 export default function Page() {
   const { user, setUser, handleLogout } = useAuth();
-  return <Settings user={user} onUserUpdated={setUser} onLogout={handleLogout} extra={<SystemStatusCard />} />;
+  return (
+    <Settings
+      user={user}
+      onUserUpdated={setUser}
+      onLogout={handleLogout}
+      extra={<><PasswordCard /><SystemStatusCard /></>}
+    />
+  );
 }

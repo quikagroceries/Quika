@@ -1,5 +1,6 @@
 "use client";
 
+import { CONTACT_EMAIL, mailto } from "@/lib/contact";
 import { useState } from "react";
 import Link from "next/link";
 import { HELP_TOPICS } from "@/lib/helpContent";
@@ -117,7 +118,7 @@ export default function HelpClient() {
               </Card>
             </a>
             
-            <a href="mailto:hello@quika.ng" target="_blank" rel="noopener noreferrer">
+            <a href={mailto()} target="_blank" rel="noopener noreferrer">
               <Card className="text-center hover:border-brand-orange/50 transition-colors h-full">
                 <div className="w-12 h-12 bg-brand-orange/10 text-brand-orange-dark rounded-full flex items-center justify-center mx-auto mb-4">
                   <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -125,11 +126,11 @@ export default function HelpClient() {
                   </svg>
                 </div>
                 <h3 className="font-bold mb-1">Email</h3>
-                <p className="text-sm text-muted">hello@quika.ng</p>
+                <p className="text-sm text-muted">{CONTACT_EMAIL}</p>
               </Card>
             </a>
             
-            <a href="mailto:support@quika.ng?subject=Incident%20Report" target="_blank" rel="noopener noreferrer">
+            <a href={mailto("Incident Report")} target="_blank" rel="noopener noreferrer">
               <Card className="text-center hover:border-red-500/50 transition-colors h-full">
                 <div className="w-12 h-12 bg-red-100 text-red-600 rounded-full flex items-center justify-center mx-auto mb-4">
                   <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">

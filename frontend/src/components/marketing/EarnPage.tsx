@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
+import { api } from "@/lib/api";
 import Link from "next/link";
 import Image, { type StaticImageData } from "next/image";
 import MarketingHeader from "@/components/marketing/MarketingHeader";
@@ -22,7 +23,15 @@ export type EarnConfig = {
   fit: { title: string; body: string }[];
   requirements: string[];
   faq: { q: string; a: string }[];
-  form: { mailTo: string; subject: string; heading: string; fields: { key: string; label: string; required?: boolean }[]; art: StaticImageData };
+  // Submitted straight to the backend (POST /agent-applications/public) and
+  // shown to admins under Agents / Riders - no account or email needed.
+  // `type: "market"` renders the live market list; "tel" a phone keyboard.
+  form: {
+    kind: "agent" | "rider";
+    heading: string;
+    fields: { key: "full_name" | "phone" | "market_id" | "area" | "vehicle"; label: string; required?: boolean; type?: "text" | "tel" | "market" }[];
+    art: StaticImageData;
+  };
   estimator?: { perUnit: number; unit: string; min: number; max: number; start: number };
   other: { label: string; href: string; art: StaticImageData; blurb: string };
 };
@@ -66,21 +75,55 @@ function Estimator({ cfg }: { cfg: NonNullable<EarnConfig["estimator"]> }) {
   );
 }
 
+// "409: {"detail":"..."}" -> the backend's own sentence, when it has one.
+function errorText(err: any) {
+  const m = /^\d{3}: ([\s\S]*)$/.exec(err?.message || "");
+  try {
+    const detail = m && JSON.parse(m[1]).detail;
+    if (typeof detail === "string") return detail;
+    if (Array.isArray(detail)) return "Please check the details and try again.";
+  } catch {}
+  return "Couldn't send your application. Check your connection and try again.";
+}
+
+const inputClass =
+  "min-h-[48px] w-full rounded-2xl border border-line-strong bg-canvas px-4 text-base text-ink placeholder:text-faint focus:border-brand-orange focus:outline-none focus:ring-2 focus:ring-brand-orange";
+
 function ApplyForm({ cfg }: { cfg: EarnConfig["form"] }) {
   const [vals, setVals] = useState<Record<string, string>>({});
+  const [markets, setMarkets] = useState<any[]>([]);
   const [sent, setSent] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+  const needsMarkets = cfg.fields.some((f) => f.type === "market");
 
-  function submit(e: FormEvent) {
+  useEffect(() => {
+    if (!needsMarkets) return;
+    api.getMarkets().then(setMarkets).catch(() => setMarkets([]));
+  }, [needsMarkets]);
+
+  async function submit(e: FormEvent) {
     e.preventDefault();
-    const body = cfg.fields.map((f) => `${f.label}: ${vals[f.key] || "(not specified)"}`).join("\n") + "\n";
-    window.location.href = `mailto:${cfg.mailTo}?subject=${encodeURIComponent(cfg.subject)}&body=${encodeURIComponent(body)}`;
-    setSent(true);
+    setError(""); setBusy(true);
+    try {
+      const body: any = { kind: cfg.kind };
+      for (const f of cfg.fields) {
+        const v = (vals[f.key] || "").trim();
+        if (v) body[f.key] = v;
+      }
+      await api.submitApplication(body);
+      setSent(true);
+    } catch (err) {
+      setError(errorText(err));
+    } finally {
+      setBusy(false);
+    }
   }
 
   if (sent) {
     return (
       <p className="rounded-2xl bg-brand-green/10 px-4 py-3 text-sm font-semibold text-brand-green">
-        Opening your mail app… send the email and we&apos;ll be in touch.
+        Application received. We&apos;ll call you on the number you gave to take it from there.
       </p>
     );
   }
@@ -91,20 +134,40 @@ function ApplyForm({ cfg }: { cfg: EarnConfig["form"] }) {
           <label htmlFor={`f-${f.key}`} className="mb-1 block text-sm font-semibold text-ink">
             {f.label}
           </label>
-          <input
-            id={`f-${f.key}`}
-            required={f.required}
-            value={vals[f.key] || ""}
-            onChange={(e) => setVals((v) => ({ ...v, [f.key]: e.target.value }))}
-            className="min-h-[48px] w-full rounded-2xl border border-line-strong bg-canvas px-4 text-base text-ink placeholder:text-faint focus:border-brand-orange focus:outline-none focus:ring-2 focus:ring-brand-orange"
-          />
+          {f.type === "market" ? (
+            <select
+              id={`f-${f.key}`}
+              required={f.required}
+              value={vals[f.key] || ""}
+              onChange={(e) => setVals((v) => ({ ...v, [f.key]: e.target.value }))}
+              className={inputClass}
+            >
+              <option value="">{f.required ? "Choose a market" : "No particular market"}</option>
+              {markets.map((m) => (
+                <option key={m.id} value={m.id}>{m.name}{m.city ? ` — ${m.city}` : ""}</option>
+              ))}
+            </select>
+          ) : (
+            <input
+              id={`f-${f.key}`}
+              type={f.type === "tel" ? "tel" : "text"}
+              inputMode={f.type === "tel" ? "tel" : undefined}
+              autoComplete={f.key === "full_name" ? "name" : f.type === "tel" ? "tel" : undefined}
+              required={f.required}
+              value={vals[f.key] || ""}
+              onChange={(e) => setVals((v) => ({ ...v, [f.key]: e.target.value }))}
+              className={inputClass}
+            />
+          )}
         </div>
       ))}
+      {error && <p role="alert" className="rounded-2xl bg-red-50 px-4 py-3 text-sm text-red-600">{error}</p>}
       <button
         type="submit"
-        className="mt-1 inline-flex min-h-[52px] w-full items-center justify-center rounded-2xl bg-brand-orange px-6 font-display text-lg font-bold text-[#1A1A1A] shadow-sm transition hover:bg-brand-orange-dark active:scale-[0.98]"
+        disabled={busy}
+        className="mt-1 inline-flex min-h-[52px] w-full items-center justify-center rounded-2xl bg-brand-orange px-6 font-display text-lg font-bold text-[#1A1A1A] shadow-sm transition hover:bg-brand-orange-dark active:scale-[0.98] disabled:opacity-60"
       >
-        {cfg.heading} →
+        {busy ? "Sending…" : `${cfg.heading} →`}
       </button>
     </form>
   );

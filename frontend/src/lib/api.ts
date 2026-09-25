@@ -72,6 +72,10 @@ export const api = {
   // Attaches a verified email to the signed-in account. Caller must have
   // already sent the code via requestOtp(email) - this just confirms it,
   // the same way sign-in/sign-up verification works.
+  // Agent-only accounts (approved from the public For Agents page) opting
+  // into the customer side - see backend auth/routes.py::register_customer.
+  registerAsCustomer: (body: { full_name?: string; default_delivery_address?: string }) =>
+    request("/auth/me/register-customer", { method: "POST", body }),
   linkEmail: (email: string, code: string) =>
     request("/auth/link-email", { method: "POST", body: { email, code } }),
 
@@ -200,8 +204,27 @@ export const api = {
   listAgents: () => request("/admin/agents"),
   getAnalytics: (days) =>
     request(`/admin/analytics${days ? `?days=${days}` : ""}`),
-  getAgentApplications: (statusFilter) =>
-    request(`/agent-applications${statusFilter ? `?status=${statusFilter}` : ""}`),
+  listAdmins: () => request("/admin/admins"),
+  addAdmin: (body: { email: string; full_name?: string; temporary_password: string }) =>
+    request("/admin/admins", { method: "POST", body }),
+  removeAdmin: (userId) => request(`/admin/admins/${userId}`, { method: "DELETE" }),
+  changeAdminPassword: (current_password: string, new_password: string) =>
+    request("/admin/me/password", { method: "POST", body: { current_password, new_password } }),
+  getAgentApplications: (statusFilter?: string, kind?: "agent" | "rider") => {
+    const q = new URLSearchParams();
+    if (statusFilter) q.set("status", statusFilter);
+    if (kind) q.set("kind", kind);
+    const qs = q.toString();
+    return request(`/agent-applications${qs ? `?${qs}` : ""}`);
+  },
+  // Public - the For Agents / For Riders pages, no sign-in.
+  submitApplication: (body: {
+    kind: "agent" | "rider"; full_name: string; phone: string;
+    market_id?: string; area?: string; vehicle?: string; note?: string;
+  }) => request("/agent-applications/public", { method: "POST", body }),
+  listRiders: () => request("/admin/riders"),
+  setRiderStatus: (riderId, status: "active" | "suspended") =>
+    request(`/admin/riders/${riderId}`, { method: "PATCH", body: { status } }),
   approveAgentApplication: (id) =>
     request(`/agent-applications/${id}/approve`, { method: "POST" }),
   rejectAgentApplication: (id) =>

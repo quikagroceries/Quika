@@ -100,7 +100,13 @@ export function AuthProvider({ children }: any) {
   }, [router]);
 
   const role = (user?.role || "").toUpperCase();
-  const roleSwitch = role === "AGENT"
+  // An agent approved straight from the public For Agents page is
+  // agent-only until they register as a customer (Agent Settings) - no
+  // switch, no shopping side, always in agent mode. Backend enforces the
+  // same (core/security.py::get_customer_user, markets.service.set_duty).
+  const agentOnly = role === "AGENT" && user?.has_customer_side === false;
+  const effectiveOnDuty = agentOnly ? true : onDuty;
+  const roleSwitch = role === "AGENT" && !agentOnly
     ? {
         mode: onDuty ? "agent" : "customer",
         onToggle: handleToggleDuty,
@@ -114,10 +120,10 @@ export function AuthProvider({ children }: any) {
     const r = (user.role || "").toUpperCase();
     if ((r === "CUSTOMER" || r === "AGENT") && !user.full_name) return "/setup";
     if (r === "ADMIN") return "/admin";
-    if (r === "AGENT" && onDuty) return "/agent";
+    if (r === "AGENT" && effectiveOnDuty) return "/agent";
     if (r === "CUSTOMER" || r === "AGENT") return "/shop";
     return "/shop";
-  }, [user, onDuty]);
+  }, [user, effectiveOnDuty]);
 
   const value = {
     token,
@@ -125,7 +131,7 @@ export function AuthProvider({ children }: any) {
     setUser,
     loading: !hydrated || loading,
     hydrated,
-    onDuty,
+    onDuty: effectiveOnDuty,
     roleSwitch,
     homePath,
     handleLoggedIn,

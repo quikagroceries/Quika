@@ -6,8 +6,7 @@ import { usePageSearch } from "@/components/PageSearchContext";
 import AdminPageHeader from "@/components/admin/AdminPageHeader";
 import { useEffect, useState } from "react";
 import { api } from "@/lib/api";
-import Button from "@/components/Button";
-import Card from "@/components/Card";
+import ApplicationCard from "@/components/admin/ApplicationCard";
 import EmptyState from "@/components/EmptyState";
 import { CardSkeleton } from "@/components/Skeleton";
 
@@ -24,7 +23,7 @@ function AdminAgents() {
   async function refresh() {
     try {
       const [apps, agentList, marketList] = await Promise.all([
-        api.getAgentApplications("pending"),
+        api.getAgentApplications("pending", "agent"),
         api.listAgents(),
         api.getAllMarkets(),
       ]);
@@ -71,38 +70,17 @@ function AdminAgents() {
 
       {error && <p className="mb-4 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p>}
 
-      <SectionHeader icon="flag" title="Pending applications" subtitle="Approve or reject new agents." className="mb-3" />
+      <SectionHeader icon="flag" title="Pending applications" subtitle="From the website and from customers in the app. Approving makes their phone number an agent account." className="mb-3" />
       {applications === null ? (
         <div className="mb-8 space-y-2">{[0, 1].map((i) => <CardSkeleton key={i} />)}</div>
       ) : applications.length === 0 ? (
-        <EmptyState icon="user" title="Nothing pending" subtitle="New agent applications will show up here." />
+        <div className="mb-8">
+          <EmptyState icon="user" title="Nothing pending" subtitle="New agent applications will show up here." />
+        </div>
       ) : (
         <div className="mb-8 space-y-2">
           {applications.map((a) => (
-            <Card key={a.id} className="flex flex-wrap items-center justify-between gap-3">
-              <div className="min-w-0">
-                <div className="font-semibold text-ink">Applicant {a.user_id.slice(0, 8)}…</div>
-                <div className="text-sm text-muted">{marketName(a.market_id)}</div>
-                {a.note && <div className="mt-1 text-sm text-muted">&quot;{a.note}&quot;</div>}
-              </div>
-              <div className="flex shrink-0 gap-2">
-                <Button
-                  variant="neutral"
-                  onClick={() => handleDecide(a.id, "reject")}
-                  busy={busyId === a.id}
-                  className="text-sm"
-                >
-                  Reject
-                </Button>
-                <Button
-                  onClick={() => handleDecide(a.id, "approve")}
-                  busy={busyId === a.id}
-                  className="text-sm"
-                >
-                  Approve
-                </Button>
-              </div>
-            </Card>
+            <ApplicationCard key={a.id} app={a} place={marketName(a.market_id)} busy={busyId === a.id} onDecide={handleDecide} />
           ))}
         </div>
       )}

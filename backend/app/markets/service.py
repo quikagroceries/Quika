@@ -4,6 +4,7 @@ from fastapi import HTTPException, status
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.auth.models import User
 from app.core.enums import VenueType
 from app.jit.models import Seller
 from app.markets.models import Agent, Market
@@ -185,6 +186,12 @@ async def set_duty(db: AsyncSession, *, user_id: uuid.UUID, on_duty: bool) -> Ag
     """
     agent = await _get_agent(db, user_id)
     if not on_duty:
+        user = (await db.execute(select(User).where(User.id == user_id))).scalar_one()
+        if not user.has_customer_side:
+            raise HTTPException(
+                status.HTTP_403_FORBIDDEN,
+                "Register as a customer in Settings to switch to customer mode",
+            )
         from app.core.enums import OrderStatus
         from app.orders.models import Order
         result = await db.execute(

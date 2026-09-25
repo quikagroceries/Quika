@@ -84,6 +84,22 @@ const ICONS = {
       <path d="M15.5 11 20 8v8l-4.5-3Z" />
     </>
   ),
+  bike: (
+    <>
+      <circle cx="5.5" cy="16.5" r="3.5" />
+      <circle cx="18.5" cy="16.5" r="3.5" />
+      <polyline points="5.5 16.5 9.5 9 15 9 18.5 16.5" />
+      <polyline points="9.5 9 12 16.5 15 9" />
+      <line x1="8" y1="6" x2="11" y2="6" />
+      <line x1="15" y1="9" x2="14" y2="5.5" />
+    </>
+  ),
+  shield: (
+    <>
+      <path d="M12 3l7 3v5c0 4.5-3 8-7 10-4-2-7-5.5-7-10V6z" />
+      <polyline points="9 12 11 14 15 10" />
+    </>
+  ),
   settings: (
     <>
       <line x1="4" y1="7" x2="20" y2="7" />

@@ -7,7 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.auth.models import User
 from app.core.database import get_db
 from app.core.enums import UserRole
-from app.core.security import get_current_user, require_role
+from app.core.security import get_current_user, get_customer_user, require_role
 from app.orders import service
 from app.orders.schemas import (
     AddItemIn,
@@ -29,7 +29,7 @@ router = APIRouter()
 async def create_order(
     body: CreateOrderIn,
     db: AsyncSession = Depends(get_db),
-    user: User = Depends(get_current_user),
+    user: User = Depends(get_customer_user),
 ) -> OrderOut:
     order = await service.create_order(
         db,

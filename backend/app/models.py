@@ -14,3 +14,4 @@ from app.jit.models import (  # noqa: F401
 )
 from app.ratings.models import AgentRating  # noqa: F401
 from app.locations.models import LocationSearch  # noqa: F401
+from app.riders.models import Rider  # noqa: F401

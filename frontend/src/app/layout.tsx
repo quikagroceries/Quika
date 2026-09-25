@@ -2,6 +2,7 @@ import "./globals.css";
 import { Bagel_Fat_One, Bricolage_Grotesque, DM_Sans, Fraunces } from "next/font/google";
 import { AuthProvider } from "@/components/AuthProvider";
 import LocaleSync from "@/components/marketing/LocaleSync";
+import { CONTACT_EMAIL } from "@/lib/contact";
 
 // Logo wordmark only ("Qyka" / "Groceries" beside the mark in the expanded
 // sidebar) - a decorative display face, never used for real UI text.
@@ -95,7 +96,7 @@ const ORGANIZATION_JSON_LD = {
   contactPoint: {
     "@type": "ContactPoint",
     contactType: "Customer Support",
-    email: "hello@quika.ng",
+    email: CONTACT_EMAIL,
     availableLanguage: ["English", "Yoruba", "Pidgin"],
   },
 };
@@ -135,7 +136,10 @@ export default function RootLayout({ children }: any) {
           dangerouslySetInnerHTML={{ __html: JSON.stringify(WEBSITE_JSON_LD) }}
         />
       </head>
-      <body className={`${dmSans.variable} ${bricolage.variable} ${fraunces.variable} ${bagelFatOne.variable} font-sans antialiased`}>
+      <body
+        className={`${dmSans.variable} ${bricolage.variable} ${fraunces.variable} ${bagelFatOne.variable} font-sans antialiased`}
+        suppressHydrationWarning
+      >
         <LocaleSync />
         <AuthProvider>{children}</AuthProvider>
       </body>

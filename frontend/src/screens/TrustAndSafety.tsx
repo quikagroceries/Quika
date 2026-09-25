@@ -1,5 +1,6 @@
 "use client";
 
+import { mailto } from "@/lib/contact";
 import Link from "next/link";
 import { motion, useReducedMotion } from "framer-motion";
 import AnnouncementBar from "@/components/marketing/AnnouncementBar";
@@ -109,7 +110,7 @@ export default function TrustAndSafety() {
               </StaggerItem>
               <StaggerItem y={14} scale={0.96}>
                 <a
-                  href="mailto:hello@quika.ng?subject=Trust%20%26%20Safety"
+                  href={mailto("Trust & Safety")}
                   className="inline-flex min-h-[48px] items-center rounded-full border-2 border-ink px-6 text-sm font-bold text-ink transition hover:bg-ink hover:text-white"
                 >
                   Contact support
@@ -289,7 +290,7 @@ export default function TrustAndSafety() {
                 Open Qyka
               </Link>
               <a
-                href="mailto:hello@quika.ng?subject=Trust%20%26%20Safety"
+                href={mailto("Trust & Safety")}
                 className="inline-flex min-h-[48px] items-center rounded-full border-2 border-[#1A1A1A]/30 px-6 text-sm font-bold text-[#1A1A1A] transition hover:bg-[#1A1A1A]/5"
               >
                 Contact support
