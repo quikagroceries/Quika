@@ -5,7 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth.models import User
 from app.core.database import get_db
-from app.core.security import get_current_user
+from app.core.security import get_current_user, get_customer_user
 from app.wallet import service
 from app.wallet.schemas import FundWalletIn, LedgerEntryOut, WalletOut
 
@@ -34,7 +34,7 @@ async def my_wallet_transactions(
 async def fund_wallet(
     body: FundWalletIn,
     db: AsyncSession = Depends(get_db),
-    user: User = Depends(get_current_user),
+    user: User = Depends(get_customer_user),
 ) -> WalletOut:
     """Top up the wallet.
 

@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime
 
-from sqlalchemy import Boolean, DateTime, Enum, Integer, String, Text, func
+from sqlalchemy import Boolean, DateTime, Enum, Integer, String, Text, false, func, true
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -25,6 +25,10 @@ class User(Base):
     # or Google. bcrypt hash, never the raw password (see core/security.py's
     # hash_password/verify_password).
     password_hash: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    # True while an admin is still on the temporary password another admin
+    # set for them - every admin-gated endpoint refuses them until they pick
+    # their own (see core/security.py::require_role).
+    must_change_password: Mapped[bool] = mapped_column(Boolean, default=False, server_default=false())
     full_name: Mapped[str | None] = mapped_column(String(120), nullable=True)
     # Profile photo: an https URL to an already-uploaded image (the browser
     # uploads straight to Cloudinary, same as chat photos - no bytes ever touch
@@ -53,6 +57,14 @@ class User(Base):
     # Set when a payment window lapses; cleared after they successfully prepay
     # and complete an order.
     must_prepay: Mapped[bool] = mapped_column(Boolean, default=False)
+
+    # Whether this person registered as a customer. Every normal sign-up
+    # does (so True by default), but an agent approved straight from the
+    # public For Agents page gets an agent-only account (False): no shopping
+    # side and no agent/customer switch until they register as a customer
+    # themselves (POST /auth/me/register-customer). See
+    # core/security.py::get_customer_user.
+    has_customer_side: Mapped[bool] = mapped_column(Boolean, default=True, server_default=true())
 
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()

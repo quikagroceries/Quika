@@ -59,13 +59,12 @@ const CFG: EarnConfig = {
     { q: "Can I pick which runs I take?", a: "Yes. You only see and accept orders for the market(s) you've registered for." },
   ],
   form: {
-    mailTo: "agents@quika.ng",
-    subject: "Qyka agent application",
+    kind: "agent",
     heading: "Apply as an agent",
     fields: [
-      { key: "name", label: "Full name", required: true },
-      { key: "phone", label: "Phone", required: true },
-      { key: "market", label: "Market you know best" },
+      { key: "full_name", label: "Full name", required: true },
+      { key: "phone", label: "Phone", required: true, type: "tel" },
+      { key: "market_id", label: "Market you know best", required: true, type: "market" },
     ],
     art: earnPayoutMoment,
   },

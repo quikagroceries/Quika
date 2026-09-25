@@ -1,6 +1,7 @@
 "use client";
 
-import { usePathname } from "next/navigation";
+import { useEffect } from "react";
+import { usePathname, useRouter } from "next/navigation";
 import RequireAuth from "@/components/RequireAuth";
 import AppShell from "@/components/AppShell";
 import Notifications from "@/screens/Notifications";
@@ -53,11 +54,20 @@ function LoadingScreen() {
 export default function CustomerLayout({ children }: any) {
   const { user, token, hydrated, handleLogout, roleSwitch } = useAuth();
   const pathname = usePathname();
+  const router = useRouter();
   const isShop = pathname === "/shop" || pathname.startsWith("/shop/");
   const authed = !!token && !!user;
+  // Agent-only account (approved from the For Agents page, never registered
+  // as a customer): no customer side at all - not even the guest-capable
+  // Shop, which RequireAuth doesn't cover. Back to the agent app.
+  const agentOnly = authed && (user.role || "").toUpperCase() === "AGENT" && user.has_customer_side === false;
+
+  useEffect(() => {
+    if (agentOnly) router.replace("/agent");
+  }, [agentOnly, router]);
 
   // First load only: don't paint a shell before we know who the user is.
-  if (!hydrated) return <LoadingScreen />;
+  if (!hydrated || agentOnly) return <LoadingScreen />;
 
   // Signed out on a page that needs an account: no shell, just the redirect.
   if (!isShop && !authed) {

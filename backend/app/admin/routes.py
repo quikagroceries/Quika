@@ -12,12 +12,12 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.admin import service as admin_service
-from app.admin.schemas import AdminLoginIn
+from app.admin.schemas import AdminCreateIn, AdminLoginIn, AdminPasswordChangeIn, RiderStatusIn
 from app.auth.models import User
 from app.auth.schemas import TokenOut
 from app.core.database import get_db
 from app.core.enums import OrderStatus, UserRole, UserStatus
-from app.core.security import create_access_token, require_role
+from app.core.security import create_access_token, get_current_user, require_role
 from app.float import service as float_service
 from app.float.models import FloatLedger
 from app.orders.models import Order
@@ -32,6 +32,49 @@ async def admin_login(body: AdminLoginIn, db: AsyncSession = Depends(get_db)) ->
     user = await admin_service.authenticate_admin(db, email=body.email, password=body.password)
     token = create_access_token(user.id, user.role)
     return TokenOut(access_token=token)
+
+
+@router.post("/me/password", status_code=204)
+async def change_my_password(
+    body: AdminPasswordChangeIn,
+    db: AsyncSession = Depends(get_db),
+    user: User = Depends(get_current_user),
+) -> None:
+    """Set your own password. get_current_user, not require_role: this is
+    the one admin endpoint an admin still on a temporary password can use."""
+    await admin_service.change_admin_password(
+        db, user=user, current_password=body.current_password, new_password=body.new_password
+    )
+
+
+@router.get("/admins")
+async def list_admins(
+    db: AsyncSession = Depends(get_db),
+    admin: User = Depends(require_role(UserRole.ADMIN)),
+) -> list[dict]:
+    return await admin_service.list_admins(db)
+
+
+@router.post("/admins", status_code=201)
+async def create_admin(
+    body: AdminCreateIn,
+    db: AsyncSession = Depends(get_db),
+    admin: User = Depends(require_role(UserRole.ADMIN)),
+) -> dict:
+    """Add an admin on a temporary password - share it with them privately;
+    they must replace it at first sign-in."""
+    return await admin_service.create_admin(
+        db, email=body.email, full_name=body.full_name, temporary_password=body.temporary_password
+    )
+
+
+@router.delete("/admins/{user_id}", status_code=204)
+async def remove_admin(
+    user_id: uuid.UUID,
+    db: AsyncSession = Depends(get_db),
+    admin: User = Depends(require_role(UserRole.ADMIN)),
+) -> None:
+    await admin_service.remove_admin(db, user_id=user_id, actor=admin)
 
 # Statuses that mean an order is still "in flight" (not finished/dead).
 _ACTIVE = [
@@ -189,6 +232,27 @@ async def list_agents(
     """Every agent, market + availability + lifetime earnings - the roster
     behind the Agents admin screen."""
     return await admin_service.list_agents(db)
+
+
+@router.get("/riders")
+async def list_riders(
+    db: AsyncSession = Depends(get_db),
+    admin: User = Depends(require_role(UserRole.ADMIN)),
+) -> list[dict]:
+    """Approved riders - area, vehicle, status - behind the Riders screen.
+    Pending rider applications come from GET /agent-applications?kind=rider."""
+    return await admin_service.list_riders(db)
+
+
+@router.patch("/riders/{rider_id}")
+async def set_rider_status(
+    rider_id: uuid.UUID,
+    body: RiderStatusIn,
+    db: AsyncSession = Depends(get_db),
+    admin: User = Depends(require_role(UserRole.ADMIN)),
+) -> dict:
+    """Suspend or reactivate a rider."""
+    return await admin_service.set_rider_status(db, rider_id=rider_id, status_=body.status)
 
 
 @router.get("/analytics")

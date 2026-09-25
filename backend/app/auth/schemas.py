@@ -79,6 +79,14 @@ class UpdateProfileIn(BaseModel):
         return v
 
 
+class RegisterCustomerIn(BaseModel):
+    """An agent-only account registering as a customer (see
+    auth.models.User.has_customer_side)."""
+
+    full_name: str | None = Field(default=None, min_length=1, max_length=120)
+    default_delivery_address: str | None = Field(default=None, max_length=500, examples=["12 Allen Avenue, Ikeja"])
+
+
 class LinkEmailIn(BaseModel):
     # The caller must have already requested a code for this exact email via
     # POST /auth/request-otp (identifier=email) before calling this.
@@ -107,3 +115,9 @@ class UserOut(BaseModel):
     # frontend can explain that up front rather than showing a flat percentage
     # that's wrong for a flagged customer.
     must_prepay: bool
+    # Admins only: still on a temporary password - the admin dashboard shows
+    # nothing but the change-password form until this clears.
+    must_change_password: bool = False
+    # False only for agent-only accounts (see auth.models.User) - the
+    # frontend hides the shopping side and the mode switch until it's True.
+    has_customer_side: bool = True

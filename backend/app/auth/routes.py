@@ -7,6 +7,7 @@ from app.auth.schemas import (
     GoogleAuthIn,
     GoogleAuthOut,
     LinkEmailIn,
+    RegisterCustomerIn,
     RequestOtpIn,
     RequestOtpOut,
     TokenOut,
@@ -20,6 +21,15 @@ from app.core.enums import UserRole, UserStatus
 from app.core.security import create_access_token, get_current_user
 
 router = APIRouter()
+
+
+# Admins sign in with email+password only (POST /admin/login) - every
+# passwordless route here refuses an admin account outright.
+def _admin_use_admin_login() -> HTTPException:
+    return HTTPException(
+        status_code=status.HTTP_403_FORBIDDEN,
+        detail="Admin accounts sign in at the admin login page",
+    )
 
 
 @router.post("/request-otp", response_model=RequestOtpOut)
@@ -89,6 +99,11 @@ async def verify_otp(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Account is locked",
         )
+    # Blocking ADMIN as a *requested* role above isn't enough - an account
+    # that already is an admin would otherwise get an admin token here with
+    # no password at all.
+    if user.role is UserRole.ADMIN:
+        raise _admin_use_admin_login()
     token = create_access_token(user.id, user.role)
     return TokenOut(access_token=token)
 
@@ -102,6 +117,9 @@ async def google_auth(
     service.login_or_create_with_google) — never a separate phone/OTP step."""
     claims = await service.verify_google_id_token(body.credential)
     user = await service.login_or_create_with_google(db, claims)
+    # A Google account on an admin's email would otherwise skip the password.
+    if user.role is UserRole.ADMIN:
+        raise _admin_use_admin_login()
     token = create_access_token(user.id, user.role)
     return GoogleAuthOut(access_token=token)
 
@@ -125,6 +143,26 @@ async def update_me(
         avatar_url=body.avatar_url,
         clear_avatar="avatar_url" in body.model_fields_set and body.avatar_url is None,
     )
+
+
+@router.post("/me/register-customer", response_model=UserOut)
+async def register_customer(
+    body: RegisterCustomerIn,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> User:
+    """An agent-only account (approved from the public For Agents page)
+    registering as a customer on the same number - unlocks the shopping
+    side and the agent/customer switch. Everyone else already has one."""
+    if current_user.has_customer_side:
+        raise HTTPException(status.HTTP_409_CONFLICT, "You're already registered as a customer")
+    if body.full_name and body.full_name.strip():
+        current_user.full_name = body.full_name.strip()
+    if body.default_delivery_address and body.default_delivery_address.strip():
+        current_user.default_delivery_address = body.default_delivery_address.strip()
+    current_user.has_customer_side = True
+    await db.flush()
+    return current_user
 
 
 @router.post("/link-email", response_model=UserOut)

@@ -23,6 +23,7 @@ const NAV_HREF = {
   orders: "/admin/orders",
   users: "/admin/users",
   agents: "/admin/agents",
+  riders: "/admin/riders",
 };
 
 // The operational heartbeat - the screen an admin actually watches. Float
@@ -81,7 +82,7 @@ function AdminDashboard() {
           <StatTile label="Orders in flight" value={inFlight ? inFlight.orders.length : "—"} />
           <StatTile label="Stuck orders" value={inFlight ? inFlight.stuck : "—"} />
           <StatTile label="Flagged customers" value={flagged?.users ? flagged.users.length : "—"} />
-          <StatTile label="Pending agents" value={pendingApps ? pendingApps.length : "—"} />
+          <StatTile label="Pending applications" value={pendingApps ? pendingApps.length : "—"} />
         </div>
       </AdminPageHeader>
 
@@ -165,7 +166,7 @@ function AdminDashboard() {
             </>
           )}
 
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
             <Card interactive onClick={() => onNavigate("orders")}>
               <div className="mb-1 flex items-center gap-2 text-muted">
                 <Icon name="basket" className="h-4 w-4" /> In-flight orders
@@ -190,14 +191,19 @@ function AdminDashboard() {
               </div>
             </Card>
 
-            <Card interactive onClick={() => onNavigate("agents")}>
-              <div className="mb-1 flex items-center gap-2 text-muted">
-                <Icon name="user" className="h-4 w-4" /> Pending agent applications
-              </div>
-              <div className={"text-3xl font-extrabold " + (pendingApps.length > 0 ? "text-brand-orange" : "text-ink")}>
-                {pendingApps.length}
-              </div>
-            </Card>
+            {([["agents", "agent", "user", "Pending agent applications"], ["riders", "rider", "bike", "Pending rider applications"]] as const).map(([nav, kind, icon, label]) => {
+              const count = pendingApps.filter((a) => a.kind === kind).length;
+              return (
+                <Card key={kind} interactive onClick={() => onNavigate(nav)}>
+                  <div className="mb-1 flex items-center gap-2 text-muted">
+                    <Icon name={icon} className="h-4 w-4" /> {label}
+                  </div>
+                  <div className={"text-3xl font-extrabold " + (count > 0 ? "text-brand-orange" : "text-ink")}>
+                    {count}
+                  </div>
+                </Card>
+              );
+            })}
           </div>
         </>
       )}

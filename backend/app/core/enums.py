@@ -20,6 +20,16 @@ class ApplicationStatus(str, enum.Enum):
     REJECTED = "rejected"
 
 
+class ApplicationKind(str, enum.Enum):
+    AGENT = "agent"
+    RIDER = "rider"
+
+
+class RiderStatus(str, enum.Enum):
+    ACTIVE = "active"
+    SUSPENDED = "suspended"
+
+
 class OrderStatus(str, enum.Enum):
     # Happy path
     DRAFT = "draft"

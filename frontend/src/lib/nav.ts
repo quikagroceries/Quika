@@ -36,8 +36,10 @@ export const ADMIN_NAV = [
   { key: "orders", label: "Orders", icon: "basket", href: "/admin/orders" },
   { key: "markets", label: "Markets", icon: "store", href: "/admin/markets" },
   { key: "agents", label: "Agents", icon: "user", href: "/admin/agents" },
+  { key: "riders", label: "Riders", icon: "bike", href: "/admin/riders" },
   { key: "users", label: "Users", icon: "flag", href: "/admin/users" },
   { key: "float", label: "Float", icon: "wallet", href: "/admin/float" },
   { key: "analytics", label: "Analytics", icon: "trending", href: "/admin/analytics" },
+  { key: "admins", label: "Admins", icon: "shield", href: "/admin/admins" },
   { key: "settings", label: "Settings", icon: "settings", href: "/admin/settings" },
 ];

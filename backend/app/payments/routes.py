@@ -10,7 +10,7 @@ from app.auth.models import User
 from app.core.config import settings
 from app.core.database import get_db
 from app.core.enums import UserRole
-from app.core.security import get_current_user, require_role
+from app.core.security import get_current_user, get_customer_user, require_role
 from app.payments import service
 from app.payments.schemas import CheckoutOut
 
@@ -102,7 +102,7 @@ async def pay_from_wallet(
 async def init_wallet_funding(
     body: dict,
     db: AsyncSession = Depends(get_db),
-    customer: User = Depends(get_current_user),
+    customer: User = Depends(get_customer_user),
 ) -> dict:
     """Start a Paystack top-up. Wallet credited only when the webhook confirms."""
     from decimal import Decimal

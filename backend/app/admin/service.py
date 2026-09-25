@@ -14,11 +14,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth.models import User
 from app.core.config import settings
-from app.core.enums import OrderStatus, UserRole, UserStatus
+from app.core.enums import OrderStatus, RiderStatus, UserRole, UserStatus
 from app.core.security import hash_password, verify_password
 from app.float.models import FloatLedger
 from app.markets.models import Agent, Market
 from app.orders.models import Order
+from app.riders.models import Rider
 
 
 async def bootstrap_admin(db: AsyncSession, email: str | None, password: str | None) -> None:
@@ -41,7 +42,103 @@ async def bootstrap_admin(db: AsyncSession, email: str | None, password: str | N
     else:
         user.role = UserRole.ADMIN
         user.password_hash = hash_password(password)
+        user.must_change_password = False
     await db.commit()
+
+
+def _is_bootstrap_admin(user: User) -> bool:
+    email = (settings.bootstrap_admin_email or "").strip().lower()
+    return bool(email) and user.email == email
+
+
+def _admin_out(user: User) -> dict:
+    return {
+        "id": str(user.id),
+        "email": user.email,
+        "phone": user.phone,
+        "full_name": user.full_name,
+        "status": user.status.value,
+        "must_change_password": user.must_change_password,
+        # Can sign in at POST /admin/login at all (legacy phone-only admins can't).
+        "has_password": user.password_hash is not None,
+        "is_bootstrap": _is_bootstrap_admin(user),
+        "created_at": user.created_at.isoformat() if user.created_at else None,
+    }
+
+
+async def list_admins(db: AsyncSession) -> list[dict]:
+    result = await db.execute(
+        select(User).where(User.role == UserRole.ADMIN).order_by(User.created_at)
+    )
+    return [_admin_out(u) for u in result.scalars().all()]
+
+
+async def create_admin(
+    db: AsyncSession, *, email: str, full_name: str | None, temporary_password: str
+) -> dict:
+    """A brand-new admin account on a temporary password they must replace
+    at first sign-in. Never promotes an existing customer/agent account -
+    admin access shouldn't quietly inherit someone's orders and wallet."""
+    email = email.strip().lower()
+    if "@" not in email:
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, "Enter a valid email")
+    result = await db.execute(select(User).where(User.email == email))
+    existing = result.scalar_one_or_none()
+    if existing is not None:
+        detail = (
+            "That email is already an admin"
+            if existing.role is UserRole.ADMIN
+            else "That email already belongs to a non-admin account"
+        )
+        raise HTTPException(status.HTTP_409_CONFLICT, detail)
+    user = User(
+        email=email,
+        full_name=(full_name or "").strip() or None,
+        password_hash=hash_password(temporary_password),
+        must_change_password=True,
+        role=UserRole.ADMIN,
+        status=UserStatus.ACTIVE,
+        is_email_verified=True,
+        basket_cap_kobo=settings.default_basket_cap_kobo,
+    )
+    db.add(user)
+    await db.flush()
+    await db.refresh(user)
+    return _admin_out(user)
+
+
+async def remove_admin(db: AsyncSession, *, user_id: uuid.UUID, actor: User) -> None:
+    """Revoke admin access: back to a plain customer with no password, so
+    POST /admin/login stops working for them immediately."""
+    user = await _get_user(db, user_id)
+    if user.role is not UserRole.ADMIN:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Admin not found")
+    if user.id == actor.id:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "You can't remove your own admin access")
+    if _is_bootstrap_admin(user):
+        # bootstrap_admin would just recreate it on the next restart.
+        raise HTTPException(
+            status.HTTP_400_BAD_REQUEST,
+            "This is the owner account from the server's BOOTSTRAP_ADMIN_EMAIL - change it there instead",
+        )
+    user.role = UserRole.CUSTOMER
+    user.password_hash = None
+    user.must_change_password = False
+    await db.flush()
+
+
+async def change_admin_password(
+    db: AsyncSession, *, user: User, current_password: str, new_password: str
+) -> None:
+    if user.role is not UserRole.ADMIN or not user.password_hash:
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "Insufficient permissions")
+    if not verify_password(current_password, user.password_hash):
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "Current password is incorrect")
+    if new_password == current_password:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "Pick a password different from the current one")
+    user.password_hash = hash_password(new_password)
+    user.must_change_password = False
+    await db.flush()
 
 
 async def authenticate_admin(db: AsyncSession, *, email: str, password: str) -> User:
@@ -126,6 +223,35 @@ async def list_agents(db: AsyncSession) -> list[dict]:
         }
         for agent, user in rows
     ]
+
+
+def _rider_out(rider: Rider) -> dict:
+    return {
+        "id": str(rider.id),
+        "full_name": rider.full_name,
+        "phone": rider.phone,
+        "area": rider.area,
+        "vehicle": rider.vehicle,
+        "market_id": str(rider.market_id) if rider.market_id else None,
+        "status": rider.status.value,
+        "created_at": rider.created_at.isoformat() if rider.created_at else None,
+    }
+
+
+async def list_riders(db: AsyncSession) -> list[dict]:
+    """The approved-rider roster behind the Riders admin screen."""
+    result = await db.execute(select(Rider).order_by(Rider.created_at.desc()))
+    return [_rider_out(r) for r in result.scalars().all()]
+
+
+async def set_rider_status(db: AsyncSession, *, rider_id: uuid.UUID, status_: RiderStatus) -> dict:
+    result = await db.execute(select(Rider).where(Rider.id == rider_id))
+    rider = result.scalar_one_or_none()
+    if rider is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Rider not found")
+    rider.status = status_
+    await db.flush()
+    return _rider_out(rider)
 
 
 async def clear_user_flag(db: AsyncSession, *, user_id: uuid.UUID) -> User:
