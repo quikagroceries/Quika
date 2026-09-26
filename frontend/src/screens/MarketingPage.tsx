@@ -17,7 +17,6 @@ import { Reveal, Stagger, StaggerItem } from "@/components/marketing/motion";
 import {
   ADD_ITEM_EVENT,
   ChatDemo,
-  DeliveryLine,
   DrawUnderline,
   Float,
   FlyLayer,
@@ -25,6 +24,8 @@ import {
   WordReveal,
   useTypedPlaceholder,
 } from "@/components/marketing/anim";
+import { Blob } from "@/components/marketing/Blob";
+import { SectionRider, type RiderArt } from "@/components/marketing/SectionRider";
 
 import tomatoes from "@/assets/illustrations/tomatoes.png";
 import garlic from "@/assets/illustrations/garlic.png";
@@ -45,6 +46,13 @@ import conversation from "@/assets/illustrations/agent-customer-conversation.png
 import delivery from "@/assets/illustrations/delivery-map-route.png";
 import trustChatTomato from "@/assets/illustrations/trust-chat-tomato.webp";
 import finalCtaKitchen from "@/assets/illustrations/final-cta-kitchen.webp";
+import heroScene from "@/assets/illustrations/main-hero.png";
+import riderHero from "@/assets/illustrations/rider-narrator.webp";
+import riderCart from "@/assets/illustrations/shopping-cart.png";
+import riderScooterAgent from "@/assets/illustrations/rider-scooter-basket-2.png";
+import riderBicycle from "@/assets/illustrations/rider-bicycle.png";
+import riderScooterBasket from "@/assets/illustrations/rider-scooter-basket-1.png";
+import momoHandoff from "@/assets/illustrations/momo-handoff.webp";
 import earnAgentPose from "@/assets/illustrations/char-agent-phone-black.webp";
 import earnRiderPose from "@/assets/illustrations/char-rider-scooter.webp";
 import stallProduce from "@/assets/illustrations/market-stall-produce.png";
@@ -263,20 +271,56 @@ function QuickPicks({ onPick }: { onPick: (line: string) => void }) {
   );
 }
 
-// Cleared at the user's request (2026-09-22) - was a full hero scene built
-// from the layered market illustrations; they want to build this themselves
-// with no scaffolding in the way. The slot is kept (so the section grid
-// doesn't collapse to one column on desktop) but intentionally holds nothing.
+// Eased (smoothstep) fade ramp so the edge dissolves gradually instead of
+// showing a visible band where a plain linear gradient starts.
+const ramp = (dir: string, len: number) => {
+  const stops = [0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1].map((t) => {
+    const a = t * t * (3 - 2 * t);
+    return `rgba(0,0,0,${a.toFixed(3)}) ${(t * len).toFixed(1)}%`;
+  });
+  return `linear-gradient(${dir}, ${stops.join(", ")}, #000 ${len}%)`;
+};
+
+const HERO_FADE = [
+  ramp("to right", 34),
+  ramp("to left", 55),
+  ramp("to bottom", 30),
+  ramp("to top", 22),
+].join(", ");
+
+// One narrator per section, chosen to match what that section is saying.
+// Art with lettering on it (QYKA boxes) only ever rides left to right so it
+// never mirrors.
+const RIDER_ART: Record<string, RiderArt> = {
+  hero: { src: riderHero, size: "w-24 sm:w-32 lg:w-36", bump: true },
+  tap: { src: riderCart, size: "w-14 sm:w-20 lg:w-24" },
+  agent: { src: riderScooterAgent, size: "w-20 sm:w-28 lg:w-32", bump: true },
+  markets: { src: riderBicycle, size: "w-20 sm:w-28 lg:w-32", bump: true },
+  earn: { src: riderScooterBasket, size: "w-20 sm:w-28 lg:w-32", bump: true },
+  faq: { src: conversation, size: "w-24 sm:w-32 lg:w-40" },
+  delivered: { src: momoHandoff, size: "w-28 sm:w-40 lg:w-48" },
+};
+
 function HeroArt() {
   return (
-    <div className="relative -ml-16 mx-auto -mt-24 flex aspect-[1376/768] w-full min-w-[50vw] items-center justify-center rounded-[2rem] border-2 border-dashed border-brand-orange/40 bg-brand-orange/10 sm:-ml-24 sm:-mt-16">
-      <p className="font-display text-xl font-extrabold text-brand-orange-dark sm:text-2xl">Coming soon</p>
+    <div className="pointer-events-none relative -mx-[6%] w-[112%] lg:-ml-[24%] lg:mr-0 lg:w-[175%]">
+      <Image
+        src={heroScene}
+        alt="A Qyka agent at a market stall, checking a customer's shopping list on the phone"
+        className="h-auto w-full"
+        style={{
+          maskImage: HERO_FADE,
+          WebkitMaskImage: HERO_FADE,
+          maskComposite: "intersect",
+          WebkitMaskComposite: "source-in",
+        }}
+        priority
+      />
     </div>
   );
 }
 
 export default function MarketingPage() {
-  const mainRef = useRef<HTMLElement>(null);
   const t = useT();
   const openCount = DIRECTORY_MARKETS.filter((m) => m.status === "pilot").length;
 
@@ -286,12 +330,12 @@ export default function MarketingPage() {
       <MarketingHeader />
       <FlyLayer targetId="hero-list" />
 
-      <main ref={mainRef} className="relative">
-        <DeliveryLine targetRef={mainRef} />
+      <main className="relative">
         {/* HERO */}
         <section className="relative overflow-hidden">
-          <div className="mx-auto grid max-w-6xl items-center gap-10 px-4 pb-14 pt-8 sm:px-6 sm:pt-12 lg:grid-cols-2 lg:gap-12 lg:pb-20 lg:pt-16">
-            <div>
+          <SectionRider caption={t.rider[0]} art={RIDER_ART.hero} first />
+          <div className="relative z-10 mx-auto grid max-w-6xl items-center gap-10 px-4 pb-14 pt-8 sm:px-6 sm:pt-12 lg:grid-cols-2 lg:gap-12 lg:pb-20 lg:pt-16">
+            <div className="relative z-10">
               <span className="inline-flex items-center gap-2 rounded-full border border-brand-orange/30 bg-brand-orange/15 px-3 py-1 text-xs font-bold text-brand-orange-dark">
                 <span className="h-2 w-2 animate-pulse rounded-full bg-brand-orange" />
                 {t.hero.badge}
@@ -330,7 +374,8 @@ export default function MarketingPage() {
         </section>
 
         {/* SHOP BY ITEM - Chowdeck-style scroller */}
-        <section className="border-y border-line bg-surface">
+        <section className="relative border-y border-line bg-surface">
+          <SectionRider caption={t.rider[1]} art={RIDER_ART.tap} mode="pulse" at={82} />
           <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6">
             <Reveal y={14}><h2 className="mb-4 font-display text-xl font-extrabold text-ink sm:text-2xl">{t.strip.title}</h2></Reveal>
             <div className="[scrollbar-width:none] [&::-webkit-scrollbar]:hidden -mx-4 flex snap-x gap-3 overflow-x-auto px-4 pb-1 sm:mx-0 sm:px-0">
@@ -360,7 +405,8 @@ export default function MarketingPage() {
         </section>
 
         {/* HOW IT WORKS */}
-        <section id="how-it-works" className="scroll-mt-24 mx-auto max-w-6xl px-4 py-16 sm:px-6 sm:py-24">
+        <section id="how-it-works" className="relative scroll-mt-24 mx-auto max-w-6xl px-4 py-16 sm:px-6 sm:py-24">
+          <SectionRider caption={t.rider[2]} art={RIDER_ART.agent} dir="rtl" />
           <Reveal className="max-w-xl">
             <p className="font-display text-sm font-bold uppercase tracking-[0.12em] text-brand-orange-dark">{t.how.eyebrow}</p>
             <h2 className="mt-2 font-display text-[clamp(2rem,4.5vw,3.25rem)] font-extrabold leading-tight tracking-tight">
@@ -386,7 +432,8 @@ export default function MarketingPage() {
         </section>
 
         {/* MARKETS */}
-        <section id="markets" className="scroll-mt-24 border-y border-line bg-surface">
+        <section id="markets" className="relative scroll-mt-24 border-y border-line bg-surface">
+          <SectionRider caption={t.rider[3]} art={RIDER_ART.markets} />
           <div className="mx-auto max-w-6xl px-4 py-16 sm:px-6 sm:py-24">
             <div className="flex flex-wrap items-end justify-between gap-4">
               <Reveal className="max-w-xl">
@@ -449,7 +496,7 @@ export default function MarketingPage() {
         </section>
 
         {/* TRUST */}
-        <section className="mx-auto max-w-6xl px-4 py-16 sm:px-6 sm:py-24">
+        <section className="relative mx-auto max-w-6xl px-4 py-16 sm:px-6 sm:py-24">
           <div className="relative overflow-hidden rounded-[2rem] border border-line bg-surface p-6 shadow-sm sm:p-10 lg:p-12">
             <div className="pointer-events-none absolute -right-20 -top-20 h-72 w-72 rounded-full bg-brand-orange/10 blur-3xl" />
             <div className="relative grid items-center gap-10 lg:grid-cols-2">
@@ -488,7 +535,8 @@ export default function MarketingPage() {
         </section>
 
         {/* EARN */}
-        <section className="mx-auto max-w-6xl px-4 pb-16 sm:px-6 sm:pb-24">
+        <section className="relative mx-auto max-w-6xl px-4 pb-16 sm:px-6 sm:pb-24">
+          <SectionRider caption={t.rider[4]} art={RIDER_ART.earn} dir="rtl" />
           <div className="grid gap-5 md:grid-cols-2">
             <Reveal x={-36} y={0} className="h-full">
             <div className="relative flex h-full flex-col overflow-hidden rounded-[2rem] bg-brand-orange p-7 sm:p-9">
@@ -526,7 +574,8 @@ export default function MarketingPage() {
         </section>
 
         {/* FAQ */}
-        <section id="faq" className="scroll-mt-24 border-t border-line bg-surface">
+        <section id="faq" className="relative scroll-mt-24 border-t border-line bg-surface">
+          <SectionRider caption={t.rider[5]} art={RIDER_ART.faq} mode="still" at={6} />
           <div className="mx-auto grid max-w-6xl gap-10 px-4 py-16 sm:px-6 sm:py-24 lg:grid-cols-[1fr_1.6fr]">
             <div>
               <p className="font-display text-sm font-bold uppercase tracking-[0.12em] text-brand-orange-dark">{t.faq.eyebrow}</p>
@@ -547,7 +596,8 @@ export default function MarketingPage() {
             illustration now, replacing the old scattered basket/produce
             sprites (that piece already shows a basket, tomatoes and
             peppers, so those separate floating pieces were redundant). */}
-        <section className="mx-auto max-w-6xl px-4 py-16 sm:px-6 sm:py-24">
+        <section className="relative mx-auto max-w-6xl px-4 py-16 sm:px-6 sm:py-24">
+          <SectionRider caption={t.rider[6]} art={RIDER_ART.delivered} mode="still" at={6} />
           <div className="relative grid items-center gap-8 overflow-hidden rounded-[2rem] bg-[#FBE7D5] p-7 sm:p-12 lg:grid-cols-2">
             <Reveal className="relative max-w-xl">
               <h2 className="font-display text-[clamp(2rem,5vw,3.5rem)] font-extrabold leading-tight tracking-tight text-ink">
@@ -566,11 +616,13 @@ export default function MarketingPage() {
             </Reveal>
             <PopIn inView from={{ scale: 0.9, y: 24 }}>
               <Float amp={4} dur={5}>
-                <Image
-                  src={finalCtaKitchen}
-                  alt="Fresh groceries unpacked on a kitchen counter, order completed"
-                  className="w-full"
-                />
+                <Blob className="aspect-square w-full">
+                  <Image
+                    src={finalCtaKitchen}
+                    alt="Fresh groceries unpacked on a kitchen counter, order completed"
+                    className="h-full w-full object-contain"
+                  />
+                </Blob>
               </Float>
             </PopIn>
           </div>

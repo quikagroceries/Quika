@@ -83,6 +83,15 @@ export const en = {
     ],
   },
   cta: { title: "Your list. Their legwork.", body: "Start with what you need today. We'll find you an agent.", button: "Start your list" },
+  rider: [
+    "Write your list.",
+    "Or just tap what you need.",
+    "An agent shops it for you.",
+    "In real markets near you.",
+    "Want to earn? Join us.",
+    "Got questions? Ask away.",
+    "Delivered. Unpack and relax.",
+  ],
   footer: {
     tagline: "A real person shops your list at the market and brings it to your door. Pay only for what's bought.",
     cols: { qyka: "Qyka", earn: "Earn with us", company: "Company" },
@@ -164,6 +173,15 @@ export const pcm: Dict = {
     ],
   },
   cta: { title: "Your list. Dem go do the running.", body: "Start with wetin you need today. We go find agent for you.", button: "Start your list" },
+  rider: [
+    "Write your list.",
+    "Or just tap wetin you need.",
+    "Agent go shop am for you.",
+    "For real market near you.",
+    "You wan collect money? Join us.",
+    "You get question? Ask.",
+    "E don reach. Unpack, relax.",
+  ],
   footer: {
     tagline: "Person go shop your list for market and bring am reach your door. Pay only for wetin dem buy.",
     cols: { qyka: "Qyka", earn: "Make money with us", company: "Company" },
