@@ -113,3 +113,48 @@ async def test_provider_failure_in_dev_still_lets_you_log_in(client, monkeypatch
     monkeypatch.setattr(otp_delivery, "_transport", httpx.MockTransport(lambda r: httpx.Response(500)))
     r = await client.post("/auth/request-otp", json={"identifier": PHONE})
     assert r.status_code == 200 and r.json()["dev_otp"]
+
+
+@pytest.fixture
+def email_provider(monkeypatch):
+    """A configured Resend whose HTTP calls are captured, never sent."""
+    calls: list[tuple[str, dict, dict]] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        calls.append((str(request.url), json.loads(request.content), dict(request.headers)))
+        return httpx.Response(200, json={"id": "email_1"})
+
+    monkeypatch.setattr(settings, "email_api_key", "re_test_key")
+    monkeypatch.setattr(otp_delivery, "_transport", httpx.MockTransport(handler))
+    return calls
+
+
+@pytest.mark.asyncio
+async def test_email_code_is_sent_through_resend(client, email_provider):
+    r = await client.post("/auth/request-otp", json={"identifier": "Ada@Example.com"})
+    assert r.status_code == 200 and r.json()["channel"] == "email"
+    (url, body, headers), = email_provider
+    assert url == "https://api.resend.com/emails"
+    assert headers["authorization"] == "Bearer re_test_key"
+    assert body["to"] == ["ada@example.com"]
+    assert body["from"] == settings.email_from
+    code = r.json()["dev_otp"]
+    assert code in body["subject"] and code in body["text"] and code in body["html"]
+
+
+@pytest.mark.asyncio
+async def test_email_with_no_key_sends_nothing(client, monkeypatch):
+    called = []
+    monkeypatch.setattr(otp_delivery, "_transport", httpx.MockTransport(lambda r: called.append(r) or httpx.Response(200)))
+    r = await client.post("/auth/request-otp", json={"identifier": "ada@example.com"})
+    assert r.status_code == 200 and r.json()["dev_otp"] and called == []
+
+
+@pytest.mark.asyncio
+async def test_email_failure_in_production_is_a_502_and_leaves_no_code(client, monkeypatch):
+    monkeypatch.setattr(settings, "email_api_key", "re_test_key")
+    monkeypatch.setattr(settings, "environment", "production")
+    monkeypatch.setattr(otp_delivery, "_transport", httpx.MockTransport(lambda r: httpx.Response(403, json={"message": "domain not verified"})))
+    r = await client.post("/auth/request-otp", json={"identifier": "ada@example.com"})
+    assert r.status_code == 502
+    assert "email" in r.json()["detail"].lower()

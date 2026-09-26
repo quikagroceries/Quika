@@ -44,20 +44,24 @@ async def request_otp(
         channel = "email"
     code = await service.create_otp(db, identifier, channel)
 
-    # Phone codes go out over the chosen channel. Email has no provider wired
-    # yet and stays dev-only (see service.create_otp).
-    if id_type == "phone":
-        try:
+    # Phone codes go out over the chosen channel; email codes through Resend.
+    # With no provider configured (dev/tests) nothing is sent and the code
+    # comes back as dev_otp instead.
+    try:
+        if id_type == "phone":
             await otp_delivery.deliver_otp(identifier, code, channel)
-        except otp_delivery.OtpDeliveryError:
-            # Raising rolls the just-created code back (get_db), so a failed
-            # send leaves nothing behind. The message steers the user to the
-            # other routes, which is exactly what the UI offers next.
-            if settings.environment == "production":
-                raise HTTPException(
-                    status.HTTP_502_BAD_GATEWAY,
-                    "We couldn't send that code. Try receiving it another way - WhatsApp or a call.",
-                )
+        else:
+            await otp_delivery.deliver_email_otp(identifier, code)
+    except otp_delivery.OtpDeliveryError:
+        # Raising rolls the just-created code back (get_db), so a failed
+        # send leaves nothing behind.
+        if settings.environment == "production":
+            raise HTTPException(
+                status.HTTP_502_BAD_GATEWAY,
+                "We couldn't send that code. Try receiving it another way - WhatsApp or a call."
+                if id_type == "phone"
+                else "We couldn't email that code. Check the address or try again in a moment.",
+            )
 
     # Expose the code only outside production so the flow is testable.
     dev_otp = code if settings.environment != "production" else None

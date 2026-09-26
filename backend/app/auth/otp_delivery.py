@@ -34,6 +34,10 @@ def provider_configured() -> bool:
     return bool(settings.sms_api_key)
 
 
+def email_configured() -> bool:
+    return bool(settings.email_api_key)
+
+
 def _digits(phone: str) -> str:
     # Termii wants international format without the "+": 2348012345678.
     return "".join(ch for ch in phone if ch.isdigit())
@@ -89,4 +93,49 @@ async def deliver_otp(phone: str, code: str, channel: str) -> bool:
     if response.status_code >= 400:
         logger.warning("OTP provider rejected %s delivery: %s %s", channel, response.status_code, response.text[:200])
         raise OtpDeliveryError(f"the {channel} provider rejected the request")
+    return True
+
+
+async def deliver_email_otp(email: str, code: str) -> bool:
+    """Email `code` to `email` through Resend.
+
+    Returns True if Resend accepted it, False if no email key is configured
+    (dev). Raises OtpDeliveryError if Resend failed.
+    """
+    if not email_configured():
+        return False
+
+    minutes = settings.otp_expire_minutes
+    expiry = f"{minutes} minute{'s' if minutes != 1 else ''}"
+    payload = {
+        "from": settings.email_from,
+        "to": [email],
+        "subject": f"Your Qyka verification code is {code}",
+        "text": (
+            f"Your Qyka verification code is {code}. It expires in {expiry}. "
+            "Never share this code with anyone."
+        ),
+        "html": (
+            '<div style="font-family:Arial,sans-serif;max-width:420px;margin:0 auto;padding:24px;color:#1A1A1A">'
+            '<p style="font-size:16px;margin:0 0 16px">Your Qyka verification code is:</p>'
+            f'<p style="font-size:34px;font-weight:700;letter-spacing:6px;margin:0 0 16px">{code}</p>'
+            f'<p style="font-size:14px;color:#555;margin:0">It expires in {expiry}. '
+            "Never share this code with anyone. If you didn't ask for it, you can ignore this email.</p>"
+            "</div>"
+        ),
+    }
+    headers = {"Authorization": f"Bearer {settings.email_api_key}"}
+
+    try:
+        async with httpx.AsyncClient(timeout=10.0, transport=_transport) as client:
+            response = await client.post(
+                f"{settings.email_base_url.rstrip('/')}/emails", json=payload, headers=headers
+            )
+    except httpx.HTTPError as exc:
+        logger.warning("OTP email delivery failed: %s", exc)
+        raise OtpDeliveryError("could not reach the email provider") from exc
+
+    if response.status_code >= 400:
+        logger.warning("Email provider rejected delivery: %s %s", response.status_code, response.text[:200])
+        raise OtpDeliveryError("the email provider rejected the request")
     return True

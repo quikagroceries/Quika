@@ -82,10 +82,14 @@ class Settings(BaseSettings):
     otp_resend_cooldown_seconds: int = 30
     # WhatsApp Business API provider (e.g. 360dialog, Twilio) — add later.
     whatsapp_api_key: str = ""
-    # Transactional email provider (e.g. Resend, Postmark, SES) — add later.
-    # Until set, email OTPs behave like SMS today: shown as dev_otp outside
-    # production, never actually sent (see auth/service.py::create_otp).
+    # Transactional email through Resend (resend.com). Leave the key empty in
+    # dev/tests: email codes are then returned as `dev_otp` instead of being
+    # sent (see auth/otp_delivery.py). `email_from` must be on a domain verified
+    # in Resend; until then only "onboarding@resend.dev" works, and only to the
+    # Resend account owner's own address.
     email_api_key: str = ""
+    email_from: str = "Qyka <onboarding@resend.dev>"
+    email_base_url: str = "https://api.resend.com"
 
     # Google Sign-In — the OAuth Client ID from Google Cloud Console
     # (Credentials → OAuth client ID → Web application). Verifies ID tokens

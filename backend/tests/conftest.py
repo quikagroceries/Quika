@@ -13,12 +13,13 @@ from app.main import app
 def _no_otp_resend_cooldown(monkeypatch):
     """Most tests log in repeatedly as the same number within a second; the
     real resend cooldown (which the OTP-delivery tests set explicitly) would
-    turn that into 429s. Also guarantees no test ever talks to a real SMS
-    provider, whatever the developer's .env holds."""
+    turn that into 429s. Also guarantees no test ever talks to a real SMS or
+    email provider, whatever the developer's .env holds."""
     from app.core.config import settings
 
     monkeypatch.setattr(settings, "otp_resend_cooldown_seconds", 0)
     monkeypatch.setattr(settings, "sms_api_key", "")
+    monkeypatch.setattr(settings, "email_api_key", "")
 
 
 @pytest_asyncio.fixture

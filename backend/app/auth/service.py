@@ -97,8 +97,7 @@ async def create_otp(db: AsyncSession, identifier: str, channel: str) -> str:
     )
     db.add(OtpCode(identifier=identifier, channel=channel, code=code, expires_at=expires))
     await db.flush()
-    # In production: dispatch `code` via the real channel here (SMS/WhatsApp
-    # provider, or an email sender) instead of returning it.
+    # Delivery happens in the route (auth/otp_delivery.py), after this commits.
     return code
 
 
