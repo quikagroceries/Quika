@@ -293,7 +293,7 @@ const HERO_FADE = [
 // never mirrors.
 const RIDER_ART: Record<string, RiderArt> = {
   hero: { src: riderHero, size: "w-24 sm:w-32 lg:w-36", bump: true },
-  tap: { src: riderCart, size: "w-14 sm:w-20 lg:w-24" },
+  tap: { src: riderCart, size: "w-10 sm:w-14 lg:w-16" },
   agent: { src: riderScooterAgent, size: "w-20 sm:w-28 lg:w-32", bump: true },
   markets: { src: riderBicycle, size: "w-20 sm:w-28 lg:w-32", bump: true },
   earn: { src: riderScooterBasket, size: "w-20 sm:w-28 lg:w-32", bump: true },
@@ -375,7 +375,7 @@ export default function MarketingPage() {
 
         {/* SHOP BY ITEM - Chowdeck-style scroller */}
         <section className="relative border-y border-line bg-surface">
-          <SectionRider caption={t.rider[1]} art={RIDER_ART.tap} mode="pulse" at={82} />
+          <SectionRider caption={t.rider[1]} art={RIDER_ART.tap} mode="pulse" corner />
           <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6">
             <Reveal y={14}><h2 className="mb-4 font-display text-xl font-extrabold text-ink sm:text-2xl">{t.strip.title}</h2></Reveal>
             <div className="[scrollbar-width:none] [&::-webkit-scrollbar]:hidden -mx-4 flex snap-x gap-3 overflow-x-auto px-4 pb-1 sm:mx-0 sm:px-0">
