@@ -17,6 +17,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth.models import User
 from app.core.config import settings
+from app.core.enums import UserStatus
 from app.core.database import get_db
 from app.core.enums import UserRole
 
@@ -73,6 +74,11 @@ async def get_current_user(
     user = result.scalar_one_or_none()
     if user is None:
         raise cred_exc
+    if user.status is UserStatus.SUSPENDED:
+        # Unlike LOCKED (checked only at login), this must also cut off a
+        # token issued before the suspension - an admin soft-delete has to
+        # take effect immediately, not just block the next sign-in.
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "This account has been suspended")
     return user
 
 

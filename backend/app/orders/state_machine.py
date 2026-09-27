@@ -31,15 +31,19 @@ ALLOWED_TRANSITIONS: dict[OrderStatus, set[OrderStatus]] = {
     OrderStatus.AWAITING_PAYMENT: {
         OrderStatus.PAID,             # only via confirmed Paystack webhook
         OrderStatus.CANCELLED_UNPAID,  # payment window lapsed
+        OrderStatus.CANCELLED,         # admin override, see orders/service.py::admin_cancel_order
     },
     OrderStatus.PAID: {
         OrderStatus.PACKED,
+        OrderStatus.CANCELLED,  # admin override
     },
     OrderStatus.PACKED: {
         OrderStatus.OUT_FOR_DELIVERY,
+        OrderStatus.CANCELLED,  # admin override
     },
     OrderStatus.OUT_FOR_DELIVERY: {
         OrderStatus.DELIVERED,
+        OrderStatus.CANCELLED,  # admin override - the last point before a rider is out with the goods
     },
     OrderStatus.DELIVERED: {
         OrderStatus.CLOSED,

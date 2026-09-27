@@ -1,4 +1,5 @@
 import uuid
+from decimal import Decimal
 
 import pytest
 from sqlalchemy import select
@@ -562,3 +563,229 @@ async def test_admin_tokens_are_short_lived_but_customer_tokens_are_not(client, 
 
     assert 55 < minutes_left(admin_token) <= 60          # one hour
     assert minutes_left(cust_token) > 60 * 23            # a day
+
+
+@pytest.mark.asyncio
+async def test_admin_can_view_suspend_and_reactivate_a_user(client, db_session_factory):
+    admin_h = {"Authorization": f"Bearer {await _login_admin(client, db_session_factory, 'admin-suspend@qyka.com')}"}
+    target_token = await _login(client, "+2348070000001")
+    target_h = {"Authorization": f"Bearer {target_token}"}
+
+    r = await client.get("/auth/me", headers=target_h)
+    target_id = r.json()["id"]
+
+    # detail view works before anything's happened to the account
+    r = await client.get(f"/admin/users/{target_id}", headers=admin_h)
+    assert r.status_code == 200
+    assert r.json()["status"] == "active" and r.json()["orders"] == []
+
+    r = await client.post(f"/admin/users/{target_id}/suspend", headers=admin_h)
+    assert r.status_code == 200 and r.json()["status"] == "suspended"
+
+    # suspended: refused immediately, even with the token already issued
+    r = await client.get("/auth/me", headers=target_h)
+    assert r.status_code == 403
+
+    # and can't sign back in either
+    r = await client.post("/auth/request-otp", json={"identifier": "+2348070000001"})
+    code = r.json()["dev_otp"]
+    r = await client.post("/auth/verify-otp", json={"identifier": "+2348070000001", "code": code})
+    assert r.status_code == 403
+
+    # reactivate: the same, already-issued token works again immediately -
+    # proving the block is lifted, not just that a brand new token would work
+    r = await client.post(f"/admin/users/{target_id}/reactivate", headers=admin_h)
+    assert r.status_code == 200 and r.json()["status"] == "active"
+    r = await client.get("/auth/me", headers=target_h)
+    assert r.status_code == 200
+
+    # an admin can't suspend themselves or another admin
+    async with db_session_factory() as s:
+        admin_row = (await s.execute(select(User).where(User.email == "admin-suspend@qyka.com"))).scalar_one()
+        admin_id = admin_row.id
+    r = await client.post(f"/admin/users/{admin_id}/suspend", headers=admin_h)
+    assert r.status_code == 400
+
+
+@pytest.mark.asyncio
+async def test_admin_can_manually_adjust_a_users_wallet(client, db_session_factory):
+    admin_h = {"Authorization": f"Bearer {await _login_admin(client, db_session_factory, 'admin-wallet@qyka.com')}"}
+    target_h = {"Authorization": f"Bearer {await _login(client, '+2348070000002')}"}
+    target_id = (await client.get("/auth/me", headers=target_h)).json()["id"]
+
+    r = await client.post(
+        f"/admin/users/{target_id}/wallet/adjust", headers=admin_h,
+        json={"direction": "credit", "amount": "1500.00", "note": "goodwill credit - late delivery"},
+    )
+    assert r.status_code == 200 and r.json()["balance"] == "1500.00"
+
+    r = await client.get("/wallet", headers=target_h)
+    assert r.status_code == 200 and r.json()["balance"] == "1500.00"
+
+    # a note is mandatory
+    r = await client.post(
+        f"/admin/users/{target_id}/wallet/adjust", headers=admin_h,
+        json={"direction": "debit", "amount": "500.00", "note": ""},
+    )
+    assert r.status_code == 400 or r.status_code == 422
+
+    r = await client.post(
+        f"/admin/users/{target_id}/wallet/adjust", headers=admin_h,
+        json={"direction": "debit", "amount": "500.00", "note": "correcting a duplicate credit"},
+    )
+    assert r.status_code == 200 and r.json()["balance"] == "1000.00"
+
+    # shows up in that user's own detail view
+    r = await client.get(f"/admin/users/{target_id}", headers=admin_h)
+    notes = [l["note"] for l in r.json()["wallet_ledger"]]
+    assert any("Admin adjustment" in n for n in notes)
+
+
+@pytest.mark.asyncio
+async def test_admin_sees_failed_vendor_transfers_and_can_acknowledge_one(client, db_session_factory, monkeypatch):
+    from app.core.enums import LedgerDirection, UserRole
+    from app.float import service as float_service
+    from app.markets.models import Agent, Market
+
+    async def fake_send_fails(*, account_number, bank_code, amount_naira, reference, reason="x"):
+        raise RuntimeError("rail unreachable")
+    monkeypatch.setattr("app.payments.transfers.send_transfer", fake_send_fails)
+
+    admin_h = {"Authorization": f"Bearer {await _login_admin(client, db_session_factory, 'admin-vt@qyka.com')}"}
+    agent_h = {"Authorization": f"Bearer {await _login(client, '+2348070000003')}"}
+    async with db_session_factory() as s:
+        agent_u = (await s.execute(select(User).where(User.phone == "+2348070000003"))).scalar_one()
+        agent_u.role = UserRole.AGENT
+        market = Market(name="VT Market", city="Lagos", state="Lagos")
+        s.add(market); await s.flush()
+        s.add(Agent(user_id=agent_u.id, assigned_market_id=market.id, is_available=True))
+        await float_service.record_movement(
+            s, direction=LedgerDirection.CREDIT, amount=Decimal("100000"),
+            market_id=market.id, note="seed")
+        await s.commit()
+        market_id = market.id
+
+    r = await client.post("/orders", headers=admin_h, json={
+        "market_id": str(market_id), "listed_items_total": "2000.00",
+        "items": [{"description": "rice"}],
+    })
+    oid = r.json()["id"]
+    r = await client.post(f"/orders/{oid}/accept-agent", headers=admin_h)
+    assert r.status_code == 200, r.text
+    r = await client.post(f"/orders/{oid}/start-shopping", headers=agent_h)
+    item_id = r.json()["items"][0]["id"]
+
+    r = await client.post(f"/jit/orders/{oid}/pay-vendor", headers=agent_h, json={
+        "account_number": "9012345678", "bank_code": "999992", "photo_ref": "https://example.com/receipt.jpg",
+        "items": [{"item_id": item_id, "price": "2000.00"}],
+    })
+    assert r.status_code == 502  # money never left, per pay_vendor's own contract
+
+    r = await client.get("/admin/vendor-transfers", headers=admin_h, params={"only_failed": "true"})
+    assert r.status_code == 200
+    failed = r.json()["transfers"]
+    assert len(failed) == 1 and failed[0]["status"] == "failed" and failed[0]["order_id"] == oid
+
+    r = await client.post(
+        f"/admin/vendor-transfers/{failed[0]['id']}/acknowledge", headers=admin_h,
+        json={"note": "agent re-sent it manually, ref vt_retry_1"},
+    )
+    assert r.status_code == 200 and r.json()["status"] == "failed"  # acknowledging never moves money
+
+    # can't acknowledge twice
+    r = await client.post(
+        f"/admin/vendor-transfers/{failed[0]['id']}/acknowledge", headers=admin_h,
+        json={"note": "again"},
+    )
+    assert r.status_code == 200  # still FAILED, so still allowed - only a SUCCESS transfer would 409
+
+
+@pytest.mark.asyncio
+async def test_admin_can_raise_a_customers_spending_cap(client, db_session_factory, monkeypatch):
+    from app.core.enums import LedgerDirection, UserRole
+    from app.float import service as float_service
+    from app.jit.models import SpendingAuthorization
+    from app.markets.models import Agent, Market
+
+    admin_h = {"Authorization": f"Bearer {await _login_admin(client, db_session_factory, 'admin-cap@qyka.com')}"}
+    cust_h = {"Authorization": f"Bearer {await _login(client, '+2348070000004')}"}
+    agent_h = {"Authorization": f"Bearer {await _login(client, '+2348070000007')}"}
+
+    async with db_session_factory() as s:
+        agent_u = (await s.execute(select(User).where(User.phone == "+2348070000007"))).scalar_one()
+        agent_u.role = UserRole.AGENT
+        market = Market(name="Cap Market", city="Lagos", state="Lagos")
+        s.add(market); await s.flush()
+        s.add(Agent(user_id=agent_u.id, assigned_market_id=market.id, is_available=True))
+        await float_service.record_movement(
+            s, direction=LedgerDirection.CREDIT, amount=Decimal("100000.00"),
+            market_id=market.id, note="seed")
+        await s.commit()
+        market_id = market.id
+
+    r = await client.post("/orders", headers=cust_h, json={
+        "market_id": str(market_id), "listed_items_total": "2000.00",
+        "items": [{"description": "rice"}],
+    })
+    oid = r.json()["id"]
+    # accept-agent then start-shopping is what actually creates the
+    # SpendingAuthorization row (get_or_create_authorization, called from
+    # pay_vendor) - admin_raise_cap mirrors the customer endpoint exactly and
+    # needs one to already exist.
+    r = await client.post(f"/orders/{oid}/accept-agent", headers=cust_h)
+    assert r.status_code == 200, r.text
+    r = await client.post(f"/orders/{oid}/start-shopping", headers=agent_h)
+    assert r.status_code == 200, r.text
+
+    r = await client.post(f"/admin/orders/{oid}/authorization/raise", headers=admin_h, json={"extra": "500.00"})
+    assert r.status_code == 200
+    async with db_session_factory() as s:
+        auth = (await s.execute(select(SpendingAuthorization).where(SpendingAuthorization.order_id == uuid.UUID(oid)))).scalar_one()
+        before = auth.cap
+    assert Decimal(r.json()["cap"]) == before
+
+
+@pytest.mark.asyncio
+async def test_admin_can_cancel_a_paid_order_and_refund_the_wallet(client, db_session_factory):
+    admin_token = await _login_admin(client, db_session_factory, "admin-cancel@qyka.com")
+    admin_h = {"Authorization": f"Bearer {admin_token}"}
+    agent_h = {"Authorization": f"Bearer {await _login(client, '+2348070000005')}"}
+    cust_h = {"Authorization": f"Bearer {await _login(client, '+2348070000006')}"}
+
+    from app.core.enums import LedgerDirection
+    from app.float import service as float_service
+
+    async with db_session_factory() as s:
+        agent_u = (await s.execute(select(User).where(User.phone == "+2348070000005"))).scalar_one()
+        agent_u.role = UserRole.AGENT
+        market = Market(name="Cancel Market", city="Lagos", state="Lagos")
+        s.add(market); await s.flush()
+        s.add(Agent(user_id=agent_u.id, assigned_market_id=market.id, is_available=True))
+        await float_service.record_movement(
+            s, direction=LedgerDirection.CREDIT, amount=Decimal("100000.00"),
+            market_id=market.id, note="seed")
+        await s.commit()
+        market_id, agent_id = market.id, agent_u.id
+
+    oid = await _drive_order_to_paid(
+        client, admin_h=admin_h, agent_h=agent_h, agent_id=agent_id, cust_h=cust_h, market_id=market_id,
+    )
+
+    r = await client.get(f"/orders/{oid}", headers=cust_h)
+    assert r.json()["status"] == "paid"
+
+    r = await client.post(
+        f"/admin/orders/{oid}/cancel", headers=admin_h,
+        json={"refund_amount": "2000.00", "note": "customer reported the order never arrived"},
+    )
+    assert r.status_code == 200 and r.json()["status"] == "cancelled"
+
+    r = await client.get("/wallet", headers=cust_h)
+    assert Decimal(r.json()["balance"]) >= Decimal("2000.00")
+
+    # cancelling an already-cancelled order is refused
+    r = await client.post(
+        f"/admin/orders/{oid}/cancel", headers=admin_h,
+        json={"refund_amount": "0.00", "note": "again"},
+    )
+    assert r.status_code == 409

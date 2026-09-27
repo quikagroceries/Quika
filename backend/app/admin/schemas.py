@@ -1,3 +1,5 @@
+from decimal import Decimal
+
 from pydantic import BaseModel, Field
 
 from app.core.enums import RiderStatus
@@ -25,3 +27,22 @@ class AdminPasswordChangeIn(BaseModel):
 
 class RiderStatusIn(BaseModel):
     status: RiderStatus
+
+
+class WalletAdjustIn(BaseModel):
+    direction: str = Field(..., pattern="^(credit|debit)$")
+    amount: Decimal = Field(..., gt=0)
+    note: str = Field(..., min_length=1, max_length=300)
+
+
+class VendorTransferAckIn(BaseModel):
+    note: str = Field(..., min_length=1, max_length=300)
+
+
+class RaiseCapIn(BaseModel):
+    extra: Decimal = Field(..., gt=0)
+
+
+class AdminCancelOrderIn(BaseModel):
+    refund_amount: Decimal = Field(..., ge=0)
+    note: str = Field(..., min_length=1, max_length=300)

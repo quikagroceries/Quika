@@ -194,6 +194,8 @@ async def login_or_create_with_google(db: AsyncSession, claims: dict) -> User:
     if user is not None:
         if user.status is UserStatus.LOCKED:
             raise HTTPException(status.HTTP_403_FORBIDDEN, "Account is locked")
+        if user.status is UserStatus.SUSPENDED:
+            raise HTTPException(status.HTTP_403_FORBIDDEN, "This account has been suspended")
         return user
 
     if not email:

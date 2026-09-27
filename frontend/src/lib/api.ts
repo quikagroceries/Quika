@@ -203,6 +203,19 @@ export const api = {
   getFlaggedUsers: () => request("/admin/users/flagged"),
   clearUserFlag: (userId) =>
     request(`/admin/users/${userId}/clear-flag`, { method: "POST" }),
+  getUserDetail: (userId) => request(`/admin/users/${userId}`),
+  suspendUser: (userId) => request(`/admin/users/${userId}/suspend`, { method: "POST" }),
+  reactivateUser: (userId) => request(`/admin/users/${userId}/reactivate`, { method: "POST" }),
+  adjustWallet: (userId, body: { direction: "credit" | "debit"; amount: string; note: string }) =>
+    request(`/admin/users/${userId}/wallet/adjust`, { method: "POST", body }),
+  getVendorTransfers: (onlyFailed?: boolean) =>
+    request(`/admin/vendor-transfers${onlyFailed ? "?only_failed=true" : ""}`),
+  acknowledgeVendorTransfer: (transferId, note: string) =>
+    request(`/admin/vendor-transfers/${transferId}/acknowledge`, { method: "POST", body: { note } }),
+  adminRaiseCap: (orderId, extra: string) =>
+    request(`/admin/orders/${orderId}/authorization/raise`, { method: "POST", body: { extra } }),
+  adminCancelOrder: (orderId, body: { refund_amount: string; note: string }) =>
+    request(`/admin/orders/${orderId}/cancel`, { method: "POST", body }),
   listAgents: () => request("/admin/agents"),
   getAnalytics: (days) =>
     request(`/admin/analytics${days ? `?days=${days}` : ""}`),

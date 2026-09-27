@@ -284,7 +284,13 @@ async def pay_vendor(
         )
     except Exception:
         transfer.status = TransactionStatus.FAILED
-        await db.flush()
+        # A flush() alone is not enough here: get_db rolls back the session on
+        # ANY exception leaving the request, including the deliberate 502
+        # below - and rollback undoes flushed-but-uncommitted work right along
+        # with it (same gotcha as the spending-cap 402 above). Only a commit
+        # makes the FAILED row - and the admin visibility/retry it enables -
+        # survive past this raise.
+        await db.commit()
         raise HTTPException(
             status.HTTP_502_BAD_GATEWAY,
             "Transfer failed - money did not leave. You can retry.",

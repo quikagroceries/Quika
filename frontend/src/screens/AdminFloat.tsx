@@ -41,6 +41,15 @@ function AdminFloat() {
   const [historyMarketId, setHistoryMarketId] = useState("");
   const [history, setHistory] = useState<any>(null);
 
+  // Failed JIT vendor payouts - money that never left, per pay_vendor's own
+  // contract - visible here instead of only findable with a database query.
+  const [onlyFailedTransfers, setOnlyFailedTransfers] = useState(true);
+  const [transfers, setTransfers] = useState<any>(null);
+  const [ackingId, setAckingId] = useState<any>(null);
+  const [ackNote, setAckNote] = useState("");
+  const [ackBusy, setAckBusy] = useState(false);
+  const [ackError, setAckError] = useState("");
+
   // Transfer between pools - money-critical, so it's a deliberate two-step
   // action with a clear before/after preview, not a single tap.
   const [fromMarketId, setFromMarketId] = useState("");
@@ -78,6 +87,29 @@ function AdminFloat() {
     if (!historyMarketId) return;
     api.getAdminFloat(historyMarketId).then(setHistory).catch(() => setHistory(null));
   }, [historyMarketId]);
+
+  function loadTransfers(onlyFailed = onlyFailedTransfers) {
+    api.getVendorTransfers(onlyFailed).then((d) => setTransfers(d.transfers)).catch(() => setTransfers([]));
+  }
+
+  useEffect(() => {
+    loadTransfers();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [onlyFailedTransfers]);
+
+  async function handleAcknowledge(transferId) {
+    if (!ackNote.trim()) return;
+    setAckBusy(true); setAckError("");
+    try {
+      await api.acknowledgeVendorTransfer(transferId, ackNote.trim());
+      setAckingId(null); setAckNote("");
+      loadTransfers();
+    } catch (e) {
+      setAckError("Could not save: " + e.message);
+    } finally {
+      setAckBusy(false);
+    }
+  }
 
   async function handleTopUp(marketId, amount, note) {
     setFormError(""); setBusy(true);
@@ -270,6 +302,72 @@ function AdminFloat() {
             Moved ₦{transferResult.amount} — {marketName(transferResult.from_market_id)} now ₦{transferResult.from_balance}, {marketName(transferResult.to_market_id)} now ₦{transferResult.to_balance}.
           </p>
         )}
+      </Card>
+
+      {/* Vendor payouts - the money an agent tries to send a market vendor */}
+      <Card className="mb-8">
+        <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+          <p className="font-bold text-ink">Vendor payments</p>
+          <label className="flex items-center gap-2 text-sm text-muted">
+            <input
+              type="checkbox"
+              checked={onlyFailedTransfers}
+              onChange={(e) => setOnlyFailedTransfers(e.target.checked)}
+            />
+            Failed only
+          </label>
+        </div>
+        {transfers === null ? (
+          <p className="text-sm text-faint">Loading…</p>
+        ) : transfers.length === 0 ? (
+          <p className="text-sm text-faint">{onlyFailedTransfers ? "No failed payouts — nothing to look into." : "No vendor payments recorded yet."}</p>
+        ) : (
+          <div className="space-y-3">
+            {transfers.map((t) => (
+              <div key={t.id} className="border-b border-line pb-3 text-sm last:border-0">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <span className={"mr-2 rounded-full px-2 py-0.5 text-xs font-bold capitalize " + (t.status === "success" ? "bg-brand-green/10 text-brand-green" : t.status === "failed" ? "bg-red-50 text-red-600" : "bg-amber-50 text-amber-700")}>
+                      {t.status}
+                    </span>
+                    <span className="font-semibold text-ink">₦{t.amount}</span>
+                    <span className="ml-2 text-muted">to {t.account_number} · order {t.order_id.slice(0, 8)}…</span>
+                    {t.photo_ref?.includes("[admin-acknowledged:") && (
+                      <p className="mt-1 text-xs text-muted">{t.photo_ref}</p>
+                    )}
+                  </div>
+                  <div className="shrink-0 text-right text-xs text-faint">
+                    {t.created_at ? new Date(t.created_at).toLocaleString() : ""}
+                  </div>
+                </div>
+                {t.status === "failed" && !t.photo_ref?.includes("[admin-acknowledged:") && (
+                  ackingId === t.id ? (
+                    <div className="mt-2 flex flex-wrap items-center gap-2">
+                      <Input
+                        placeholder="How was this resolved? (required)"
+                        value={ackNote}
+                        onChange={(e) => setAckNote(e.target.value)}
+                        className="min-w-[220px] flex-1"
+                      />
+                      <Button variant="neutral" className="text-sm" onClick={() => { setAckingId(null); setAckNote(""); }} disabled={ackBusy}>Cancel</Button>
+                      <Button className="text-sm" onClick={() => handleAcknowledge(t.id)} busy={ackBusy} disabled={!ackNote.trim()}>Save</Button>
+                    </div>
+                  ) : (
+                    <Button variant="neutral" className="mt-2 text-sm" onClick={() => setAckingId(t.id)}>
+                      Mark resolved
+                    </Button>
+                  )
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+        {ackError && <p className="mt-2 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{ackError}</p>}
+        <p className="mt-3 text-xs text-faint">
+          A failed payout can&apos;t be safely re-sent from here — nothing records which order items it
+          covered until after it succeeds, so resending blind risks paying twice. The agent re-sends it
+          from their side; use &quot;Mark resolved&quot; to record how it was handled.
+        </p>
       </Card>
 
       {/* Movement history for a selected market */}

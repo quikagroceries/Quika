@@ -276,6 +276,40 @@ async def cancel_order(
     return order
 
 
+_ADMIN_CANCELLABLE = {
+    OrderStatus.DRAFT, OrderStatus.PROPOSED, OrderStatus.AGENT_ASSIGNED,
+    OrderStatus.SHOPPING, OrderStatus.AWAITING_PAYMENT, OrderStatus.PAID,
+    OrderStatus.PACKED, OrderStatus.OUT_FOR_DELIVERY,
+}
+
+
+async def admin_cancel_order(
+    db: AsyncSession, *, order_id: uuid.UUID, refund_amount: Decimal, note: str
+) -> Order:
+    """Admin override: cancel from any state up to (not including) DELIVERED -
+    a rider already out with the goods is past the point of a clean cancel -
+    and refund a specific amount to the customer's wallet.
+
+    Unlike the customer's own cancel_order (pre-shopping only, refunds
+    exactly deposit_amount), this covers a stuck or disputed order at any
+    later stage, and the refund figure is whatever the admin enters rather
+    than assumed - see admin/service.py::admin_cancel_order for why.
+    """
+    order = await _load(db, order_id)
+    if order.status not in _ADMIN_CANCELLABLE:
+        raise HTTPException(
+            status.HTTP_409_CONFLICT,
+            f"Can't cancel an order that's already {order.status.value}",
+        )
+    if refund_amount > 0:
+        await wallet_service.credit(
+            db, order.customer_id, refund_amount, order_id=order.id,
+            note=f"Admin cancellation refund: {note}",
+        )
+    await _transition(db, order, OrderStatus.CANCELLED)
+    return order
+
+
 async def assign_agent(
     db: AsyncSession, *, order_id: uuid.UUID, agent_id: uuid.UUID
 ) -> Order:

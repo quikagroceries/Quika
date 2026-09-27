@@ -12,7 +12,16 @@ from sqlalchemy import func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.admin import service as admin_service
-from app.admin.schemas import AdminCreateIn, AdminLoginIn, AdminPasswordChangeIn, RiderStatusIn
+from app.admin.schemas import (
+    AdminCancelOrderIn,
+    AdminCreateIn,
+    AdminLoginIn,
+    AdminPasswordChangeIn,
+    RaiseCapIn,
+    RiderStatusIn,
+    VendorTransferAckIn,
+    WalletAdjustIn,
+)
 from app.auth.models import User
 from app.auth.schemas import TokenOut
 from app.core.database import get_db
@@ -274,6 +283,113 @@ async def clear_user_flag(
         "must_prepay": user.must_prepay,
         "non_payment_count": user.non_payment_count,
     }
+
+
+@router.get("/users/{user_id}")
+async def user_detail(
+    user_id: uuid.UUID,
+    db: AsyncSession = Depends(get_db),
+    admin: User = Depends(require_role(UserRole.ADMIN)),
+) -> dict:
+    """One user's full picture for a support case: profile, wallet balance and
+    recent ledger, and recent orders (as customer or agent) - everything
+    without a database query. See admin.service.get_user_detail."""
+    return await admin_service.get_user_detail(db, user_id=user_id)
+
+
+@router.post("/users/{user_id}/suspend")
+async def suspend_user(
+    user_id: uuid.UUID,
+    db: AsyncSession = Depends(get_db),
+    admin: User = Depends(require_role(UserRole.ADMIN)),
+) -> dict:
+    """Soft-delete a user: blocks sign-in and every API call immediately, but
+    keeps their orders/wallet/payment history intact and is reversible."""
+    user = await admin_service.suspend_user(db, user_id=user_id, admin_id=admin.id)
+    return {"id": str(user.id), "status": user.status.value}
+
+
+@router.post("/users/{user_id}/reactivate")
+async def reactivate_user(
+    user_id: uuid.UUID,
+    db: AsyncSession = Depends(get_db),
+    admin: User = Depends(require_role(UserRole.ADMIN)),
+) -> dict:
+    user = await admin_service.reactivate_user(db, user_id=user_id)
+    return {"id": str(user.id), "status": user.status.value}
+
+
+@router.post("/users/{user_id}/wallet/adjust")
+async def adjust_wallet(
+    user_id: uuid.UUID,
+    body: WalletAdjustIn,
+    db: AsyncSession = Depends(get_db),
+    admin: User = Depends(require_role(UserRole.ADMIN)),
+) -> dict:
+    """Manually credit or debit a customer's wallet for a support case, with a
+    mandatory note. Writes a normal WalletLedger row, same as any other
+    credit/debit - it's never a silent balance change."""
+    wallet = await admin_service.adjust_wallet(
+        db, user_id=user_id, direction=body.direction, amount=body.amount, note=body.note
+    )
+    return {"user_id": str(user_id), "balance": str(wallet.balance)}
+
+
+@router.get("/vendor-transfers")
+async def vendor_transfers(
+    only_failed: bool = False,
+    db: AsyncSession = Depends(get_db),
+    admin: User = Depends(require_role(UserRole.ADMIN)),
+) -> dict:
+    """Every JIT vendor payout attempt, newest first (optionally failed-only) -
+    visibility that previously only existed by querying the database directly."""
+    return await admin_service.list_vendor_transfers(db, only_failed=only_failed)
+
+
+@router.post("/vendor-transfers/{transfer_id}/acknowledge")
+async def acknowledge_vendor_transfer(
+    transfer_id: uuid.UUID,
+    body: VendorTransferAckIn,
+    db: AsyncSession = Depends(get_db),
+    admin: User = Depends(require_role(UserRole.ADMIN)),
+) -> dict:
+    """Record how a failed vendor payout was resolved. See
+    admin.service.acknowledge_vendor_transfer for why this doesn't itself
+    re-send the money."""
+    transfer = await admin_service.acknowledge_vendor_transfer(
+        db, transfer_id=transfer_id, note=body.note
+    )
+    return {"id": str(transfer.id), "status": transfer.status.value}
+
+
+@router.post("/orders/{order_id}/authorization/raise")
+async def admin_raise_cap(
+    order_id: uuid.UUID,
+    body: RaiseCapIn,
+    db: AsyncSession = Depends(get_db),
+    admin: User = Depends(require_role(UserRole.ADMIN)),
+) -> dict:
+    """Admin-side mirror of the customer's own cap-raise (jit/routes.py) - for
+    when they've approved an overage by phone or chat instead of in-app."""
+    auth = await admin_service.admin_raise_cap(db, order_id=order_id, extra=body.extra)
+    return {"order_id": str(order_id), "cap": str(auth.cap), "spent": str(auth.spent)}
+
+
+@router.post("/orders/{order_id}/cancel")
+async def admin_cancel_order(
+    order_id: uuid.UUID,
+    body: AdminCancelOrderIn,
+    db: AsyncSession = Depends(get_db),
+    admin: User = Depends(require_role(UserRole.ADMIN)),
+) -> dict:
+    """Cancel a stuck or disputed order from any state up to (not including)
+    DELIVERED, refunding a specific admin-entered amount to the customer's
+    wallet. See admin.service.admin_cancel_order for why the amount isn't
+    computed automatically."""
+    order = await admin_service.admin_cancel_order(
+        db, order_id=order_id, refund_amount=body.refund_amount, note=body.note
+    )
+    return {"id": str(order.id), "status": order.status.value}
 
 
 @router.get("/agents")

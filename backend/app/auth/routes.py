@@ -103,6 +103,11 @@ async def verify_otp(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Account is locked",
         )
+    if user.status is UserStatus.SUSPENDED:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="This account has been suspended",
+        )
     # Blocking ADMIN as a *requested* role above isn't enough - an account
     # that already is an admin would otherwise get an admin token here with
     # no password at all.

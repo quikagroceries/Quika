@@ -9,6 +9,7 @@ import Button from "@/components/Button";
 import Card from "@/components/Card";
 import EmptyState from "@/components/EmptyState";
 import { CardSkeleton } from "@/components/Skeleton";
+import UserDetailModal from "@/components/admin/UserDetailModal";
 
 // Mirrors admin.routes.flagged_users' own criteria exactly, so the reason
 // shown here is never a guess about why someone's in this list.
@@ -28,6 +29,7 @@ function AdminUsers() {
   const [confirmingId, setConfirmingId] = useState<any>(null);
   const [busyId, setBusyId] = useState<any>(null);
   const [error, setError] = useState("");
+  const [detailId, setDetailId] = useState<string | null>(null);
   const search = usePageSearch("Search users…");
 
   async function refresh() {
@@ -94,7 +96,11 @@ function AdminUsers() {
             {everyone.users
               .filter((u) => !search || [u.full_name, u.email, u.phone].some((v) => String(v || "").toLowerCase().includes(search)))
               .map((u) => (
-                <Card key={u.id} className="flex flex-wrap items-center justify-between gap-3">
+                <Card
+                  key={u.id}
+                  className="flex cursor-pointer flex-wrap items-center justify-between gap-3 transition hover:border-brand-orange/40"
+                  onClick={() => setDetailId(u.id)}
+                >
                   <div className="min-w-0">
                     <div className="font-semibold text-ink">{u.full_name || u.email || u.phone}</div>
                     <div className="text-sm text-muted">{[u.email, u.phone].filter(Boolean).join(" · ")}</div>
@@ -105,7 +111,7 @@ function AdminUsers() {
                   </div>
                   <div className="flex shrink-0 items-center gap-2 text-xs font-bold">
                     <span className="rounded-full bg-sunken px-2.5 py-1 capitalize text-ink/80">{u.role}</span>
-                    <span className={"rounded-full px-2.5 py-1 capitalize " + (u.status === "active" ? "bg-brand-green/10 text-brand-green" : "bg-amber-50 text-amber-700")}>{u.status}</span>
+                    <span className={"rounded-full px-2.5 py-1 capitalize " + (u.status === "active" ? "bg-brand-green/10 text-brand-green" : u.status === "suspended" ? "bg-red-50 text-red-600" : "bg-amber-50 text-amber-700")}>{u.status}</span>
                   </div>
                 </Card>
               ))}
@@ -121,8 +127,8 @@ function AdminUsers() {
         <div className="space-y-2">
           {users.filter((u) => !search || [u.full_name, u.phone].some((v) => String(v || "").toLowerCase().includes(search))).map((u) => (
             <Card key={u.id} className="flex flex-wrap items-center justify-between gap-3">
-              <div className="min-w-0">
-                <div className="font-semibold text-ink">{u.full_name || u.phone}</div>
+              <div className="min-w-0 cursor-pointer" onClick={() => setDetailId(u.id)}>
+                <div className="font-semibold text-ink hover:underline">{u.full_name || u.phone}</div>
                 <div className="text-sm text-muted">{u.phone}</div>
                 <ul className="mt-1 list-inside list-disc text-sm text-amber-700">
                   {flagReasons(u).map((r) => <li key={r}>{r}</li>)}
@@ -151,6 +157,8 @@ function AdminUsers() {
       )}
         </>
       )}
+
+      <UserDetailModal userId={detailId} onClose={() => setDetailId(null)} onChanged={refresh} />
     </div>
   );
 }

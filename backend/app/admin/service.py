@@ -14,10 +14,15 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth.models import User
 from app.core.config import settings
-from app.core.enums import OrderStatus, RiderStatus, UserRole, UserStatus
+from app.core.enums import OrderStatus, RiderStatus, TransactionStatus, UserRole, UserStatus
 from app.core.security import hash_password, verify_password
 from app.float.models import FloatLedger
+from app.jit import service as jit_service
+from app.jit.models import SpendingAuthorization, VendorTransfer
 from app.markets.models import Agent, Market
+from app.orders import service as orders_service
+from app.wallet import service as wallet_service
+from app.wallet.models import Wallet, WalletLedger
 from app.orders.models import Order
 from app.riders.models import Rider
 
@@ -154,6 +159,8 @@ async def authenticate_admin(db: AsyncSession, *, email: str, password: str) -> 
         raise invalid
     if user.status is UserStatus.LOCKED:
         raise HTTPException(status.HTTP_403_FORBIDDEN, "Account is locked")
+    if user.status is UserStatus.SUSPENDED:
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "This account has been suspended")
     return user
 
 
@@ -367,3 +374,221 @@ async def get_analytics(db: AsyncSession, *, days: int = 30) -> dict:
         "market_activity": market_activity,
         "rates": rates,
     }
+
+
+# --- User detail, suspend/reactivate (soft delete) ---------------------------
+
+async def get_user_detail(db: AsyncSession, *, user_id: uuid.UUID) -> dict:
+    """Everything an admin needs to handle a support case for one user without
+    touching the database: profile, wallet, recent transactions, recent orders."""
+    result = await db.execute(select(User).where(User.id == user_id))
+    user = result.scalar_one_or_none()
+    if user is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "User not found")
+
+    wallet_result = await db.execute(select(Wallet).where(Wallet.user_id == user_id))
+    wallet = wallet_result.scalar_one_or_none()
+    ledger: list[WalletLedger] = []
+    if wallet is not None:
+        ledger = (
+            (
+                await db.execute(
+                    select(WalletLedger)
+                    .where(WalletLedger.wallet_id == wallet.id)
+                    .order_by(WalletLedger.seq.desc())
+                    .limit(20)
+                )
+            )
+            .scalars()
+            .all()
+        )
+
+    orders_result = await db.execute(
+        select(Order)
+        .where((Order.customer_id == user_id) | (Order.agent_id == user_id))
+        .order_by(Order.created_at.desc())
+        .limit(20)
+    )
+    orders = orders_result.scalars().all()
+
+    return {
+        "id": str(user.id),
+        "full_name": user.full_name,
+        "email": user.email,
+        "phone": user.phone,
+        "role": user.role.value,
+        "status": user.status.value,
+        "is_email_verified": user.is_email_verified,
+        "is_phone_verified": user.is_phone_verified,
+        "non_payment_count": user.non_payment_count,
+        "must_prepay": user.must_prepay,
+        "basket_cap_kobo": user.basket_cap_kobo,
+        "created_at": user.created_at.isoformat() if user.created_at else None,
+        "wallet_balance": str(wallet.balance) if wallet else "0.00",
+        "wallet_ledger": [
+            {
+                "id": str(l.id),
+                "direction": l.direction.value,
+                "amount": str(l.amount),
+                "balance_after": str(l.balance_after),
+                "note": l.note,
+                "order_id": str(l.order_id) if l.order_id else None,
+                "created_at": l.created_at.isoformat() if l.created_at else None,
+            }
+            for l in ledger
+        ],
+        "orders": [
+            {
+                "id": str(o.id),
+                "status": o.status.value,
+                "grand_total": str(o.grand_total),
+                "as_customer": o.customer_id == user_id,
+                "as_agent": o.agent_id == user_id,
+                "created_at": o.created_at.isoformat() if o.created_at else None,
+            }
+            for o in orders
+        ],
+    }
+
+
+async def suspend_user(db: AsyncSession, *, user_id: uuid.UUID, admin_id: uuid.UUID) -> User:
+    """Soft delete: sign-in and every API call are refused immediately (see
+    core/security.py::get_current_user), but the account and every order/
+    wallet/payment record it's linked to stay intact. Reversible any time."""
+    if user_id == admin_id:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "You can't suspend your own account")
+    result = await db.execute(select(User).where(User.id == user_id))
+    user = result.scalar_one_or_none()
+    if user is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "User not found")
+    if user.role is UserRole.ADMIN:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "Remove the admin instead of suspending them")
+    user.status = UserStatus.SUSPENDED
+    await db.flush()
+    return user
+
+
+async def reactivate_user(db: AsyncSession, *, user_id: uuid.UUID) -> User:
+    result = await db.execute(select(User).where(User.id == user_id))
+    user = result.scalar_one_or_none()
+    if user is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "User not found")
+    if user.status is UserStatus.SUSPENDED:
+        user.status = UserStatus.ACTIVE
+    await db.flush()
+    return user
+
+
+# --- Wallet adjustments (manual credit/refund) --------------------------------
+
+async def adjust_wallet(
+    db: AsyncSession, *, user_id: uuid.UUID, direction: str, amount: Decimal, note: str
+) -> Wallet:
+    """Support tool: credit or debit a customer's wallet directly, with a
+    mandatory note, instead of doing it with a database edit. Every call
+    writes its own WalletLedger row (see wallet/service.py) so it's always
+    visible in that customer's history, not a silent balance change."""
+    if amount <= 0:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "Amount must be positive")
+    if not note or not note.strip():
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "A note is required for a manual wallet adjustment")
+    tagged_note = f"Admin adjustment: {note.strip()}"
+    if direction == "credit":
+        return await wallet_service.credit(db, user_id, amount, note=tagged_note)
+    if direction == "debit":
+        return await wallet_service.debit(db, user_id, amount, note=tagged_note)
+    raise HTTPException(status.HTTP_400_BAD_REQUEST, "direction must be 'credit' or 'debit'")
+
+
+# --- Vendor transfer visibility (JIT payouts) ---------------------------------
+
+async def list_vendor_transfers(
+    db: AsyncSession, *, only_failed: bool = False, limit: int = 100
+) -> dict:
+    """Every vendor payout attempt, newest first - so a failed one (money that
+    never left, per jit/service.py::pay_vendor) is something an admin can see
+    and act on directly, instead of it only ever showing up in a database query."""
+    q = select(VendorTransfer).order_by(VendorTransfer.created_at.desc()).limit(limit)
+    if only_failed:
+        q = q.where(VendorTransfer.status == TransactionStatus.FAILED)
+    rows = (await db.execute(q)).scalars().all()
+    return {
+        "transfers": [
+            {
+                "id": str(t.id),
+                "order_id": str(t.order_id),
+                "account_number": t.account_number,
+                "bank_code": t.bank_code,
+                "amount": str(t.amount),
+                "fee": str(t.fee),
+                "emtl": str(t.emtl),
+                "reference": t.reference,
+                "status": t.status.value,
+                "photo_ref": t.photo_ref,
+                "created_at": t.created_at.isoformat() if t.created_at else None,
+            }
+            for t in rows
+        ]
+    }
+
+
+async def acknowledge_vendor_transfer(
+    db: AsyncSession, *, transfer_id: uuid.UUID, note: str
+) -> VendorTransfer:
+    """Records that an admin has looked into a failed payout and how it was
+    resolved (e.g. "agent re-sent it manually, ref vt_..."), without moving
+    any money itself.
+
+    A failed transfer can't be safely re-sent from here: the rail call in
+    pay_vendor is only ever retried by the agent re-submitting the same items,
+    because nothing records which order items a transfer was for until AFTER
+    it succeeds - re-sending blind from the admin side risks paying the same
+    items twice. This is the honest, safe action available today; a proper
+    "resend this transfer" tool needs the item list preserved on failure too.
+    """
+    result = await db.execute(select(VendorTransfer).where(VendorTransfer.id == transfer_id))
+    transfer = result.scalar_one_or_none()
+    if transfer is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Transfer not found")
+    if transfer.status is not TransactionStatus.FAILED:
+        raise HTTPException(status.HTTP_409_CONFLICT, "Only a failed transfer can be acknowledged")
+    if not note or not note.strip():
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "A note is required")
+    transfer.photo_ref = f"[admin-acknowledged: {note.strip()}] {transfer.photo_ref or ''}".strip()
+    await db.flush()
+    return transfer
+
+
+# --- Spending cap ---------------------------------------------------------
+
+async def admin_raise_cap(db: AsyncSession, *, order_id: uuid.UUID, extra: Decimal) -> SpendingAuthorization:
+    """Admin-side mirror of jit/routes.py::raise_cap - normally only the
+    customer can approve a higher spending ceiling for their own order; this
+    is the support override for when they've approved it by phone/chat instead."""
+    if extra <= 0:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "extra must be positive")
+    return await jit_service.raise_authorization(db, order_id, extra)
+
+
+# --- Order cancel + refund --------------------------------------------------
+
+async def admin_cancel_order(
+    db: AsyncSession, *, order_id: uuid.UUID, refund_amount: Decimal, note: str
+) -> Order:
+    """Cancel an order from any non-terminal, pre-delivery state and refund a
+    specific, admin-entered amount to the customer's wallet.
+
+    The refund amount is never computed automatically: how much was actually
+    collected can come from a wallet payment, a Paystack checkout, or a
+    deposit, and getting that wrong is real money. The admin sees the order's
+    deposit/payment fields (get_user_detail / the order detail endpoint) and
+    enters the right figure, same as any manual refund a support agent makes
+    elsewhere.
+    """
+    if not note or not note.strip():
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "A note is required to cancel an order")
+    if refund_amount < 0:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "refund_amount can't be negative")
+    return await orders_service.admin_cancel_order(
+        db, order_id=order_id, refund_amount=refund_amount, note=note.strip()
+    )

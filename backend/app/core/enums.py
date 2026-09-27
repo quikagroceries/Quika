@@ -12,6 +12,11 @@ class UserStatus(str, enum.Enum):
     ACTIVE = "active"
     FLAGGED = "flagged"
     LOCKED = "locked"
+    # An admin-initiated soft delete: sign-in and every API call are refused
+    # (see core/security.py::get_current_user), but the row and every order/
+    # wallet/payment record it's linked to stay intact. Reversible any time
+    # via admin/service.py::reactivate_user.
+    SUSPENDED = "suspended"
 
 
 class ApplicationStatus(str, enum.Enum):

@@ -12,6 +12,7 @@ import Card from "@/components/Card";
 import EmptyState from "@/components/EmptyState";
 import Icon from "@/components/Icon";
 import { CardSkeleton } from "@/components/Skeleton";
+import Input from "@/components/Input";
 import StatusBadge from "@/components/StatusBadge";
 import { formatAge, isStuckOrder } from "@/lib/adminUtils";
 import { marketTone, TONE_COVER } from "@/lib/vendorVisuals";
@@ -20,17 +21,70 @@ import { summarizeOrderStatus } from "@/lib/orderStatus";
 
 const POLL_MS = 15000;
 
+// Mirrors admin/service.py::admin_cancel_order's own guard exactly - a rider
+// already out with the goods (DELIVERED) is past the point of a clean cancel.
+const ADMIN_CANCELLABLE = new Set([
+  "draft", "proposed", "agent_assigned", "shopping",
+  "awaiting_payment", "paid", "packed", "out_for_delivery",
+]);
+
 export function OrderDetailPanel({ orderId, markets, agents, onBack, onAssigned }: any) {
   const [order, setOrder] = useState<any>(null);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
   const [pickedAgent, setPickedAgent] = useState("");
 
+  const [cancelling, setCancelling] = useState(false);
+  const [refundAmount, setRefundAmount] = useState("");
+  const [cancelNote, setCancelNote] = useState("");
+  const [cancelBusy, setCancelBusy] = useState(false);
+  const [cancelError, setCancelError] = useState("");
+  const [cancelled, setCancelled] = useState(false);
+
+  const [raisingCap, setRaisingCap] = useState(false);
+  const [capExtra, setCapExtra] = useState("");
+  const [capBusy, setCapBusy] = useState(false);
+  const [capError, setCapError] = useState("");
+  const [capResult, setCapResult] = useState<any>(null);
+
   async function refresh() {
     try {
-      setOrder(await api.getOrder(orderId));
+      const o = await api.getOrder(orderId);
+      setOrder(o);
+      const suggestion = o.paid_at ? o.grand_total : o.deposit_paid_at ? o.deposit_amount : "0.00";
+      setRefundAmount((prev) => prev || String(suggestion));
     } catch (e) {
       setError("Could not load this order. (" + e.message + ")");
+    }
+  }
+
+  async function handleCancel() {
+    if (!cancelNote.trim()) return;
+    setCancelBusy(true); setCancelError("");
+    try {
+      await api.adminCancelOrder(orderId, { refund_amount: refundAmount || "0", note: cancelNote.trim() });
+      setCancelling(false);
+      setCancelled(true);
+      await refresh();
+      onAssigned?.();
+    } catch (e) {
+      setCancelError("Could not cancel this order: " + e.message);
+    } finally {
+      setCancelBusy(false);
+    }
+  }
+
+  async function handleRaiseCap() {
+    if (!capExtra) return;
+    setCapBusy(true); setCapError("");
+    try {
+      setCapResult(await api.adminRaiseCap(orderId, capExtra));
+      setRaisingCap(false);
+      setCapExtra("");
+    } catch (e) {
+      setCapError("Could not raise the cap: " + e.message);
+    } finally {
+      setCapBusy(false);
     }
   }
 
@@ -170,6 +224,63 @@ export function OrderDetailPanel({ orderId, markets, agents, onBack, onAssigned 
                     Assign
                   </Button>
                 </>
+              )}
+            </Card>
+          )}
+
+          {order.status === "shopping" && (
+            <Card>
+              <p className="mb-2 font-bold text-ink">Spending cap</p>
+              {capResult && !raisingCap ? (
+                <p className="text-sm text-brand-green">Cap raised — now ₦{capResult.cap} (₦{capResult.spent} spent so far).</p>
+              ) : raisingCap ? (
+                <div className="space-y-2">
+                  <p className="text-sm text-muted">For when the customer approved an overage by phone/chat instead of in-app.</p>
+                  <Input placeholder="Raise by (₦)" value={capExtra} onChange={(e) => setCapExtra(e.target.value)} />
+                  {capError && <p className="text-sm text-red-600">{capError}</p>}
+                  <div className="flex gap-2">
+                    <Button variant="neutral" className="flex-1 text-sm" onClick={() => { setRaisingCap(false); setCapError(""); }} disabled={capBusy}>Cancel</Button>
+                    <Button className="flex-1 text-sm" onClick={handleRaiseCap} busy={capBusy} disabled={!capExtra}>Confirm</Button>
+                  </div>
+                </div>
+              ) : (
+                <Button variant="neutral" onClick={() => setRaisingCap(true)} fullWidth className="text-sm">
+                  Raise spending cap
+                </Button>
+              )}
+            </Card>
+          )}
+
+          {(ADMIN_CANCELLABLE.has(order.status) || cancelled) && (
+            <Card className={cancelling ? "border-2 border-red-300" : ""}>
+              <p className="mb-2 font-bold text-ink">Cancel this order</p>
+              {cancelled ? (
+                <p className="text-sm text-brand-green">Order cancelled and refund sent to the customer&apos;s wallet.</p>
+              ) : cancelling ? (
+                <div className="space-y-2">
+                  <p className="text-sm text-muted">
+                    For a stuck or disputed order. Enter what the customer actually paid — deposit and/or full payment — so it&apos;s refunded correctly.
+                  </p>
+                  <label className="block">
+                    <span className="mb-1 block text-xs font-semibold text-ink/70">Refund to wallet (₦)</span>
+                    <Input value={refundAmount} onChange={(e) => setRefundAmount(e.target.value)} />
+                  </label>
+                  <label className="block">
+                    <span className="mb-1 block text-xs font-semibold text-ink/70">Reason (required)</span>
+                    <Input placeholder="e.g. customer reported it never arrived" value={cancelNote} onChange={(e) => setCancelNote(e.target.value)} />
+                  </label>
+                  {cancelError && <p className="text-sm text-red-600">{cancelError}</p>}
+                  <div className="flex gap-2">
+                    <Button variant="neutral" className="flex-1 text-sm" onClick={() => { setCancelling(false); setCancelError(""); }} disabled={cancelBusy}>Back</Button>
+                    <Button className="flex-1 !bg-red-600 text-sm hover:!bg-red-700" onClick={handleCancel} busy={cancelBusy} disabled={!cancelNote.trim()}>
+                      Confirm cancel &amp; refund
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                <Button variant="neutral" onClick={() => setCancelling(true)} fullWidth className="text-sm !text-red-600">
+                  Cancel &amp; refund
+                </Button>
               )}
             </Card>
           )}
