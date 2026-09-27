@@ -32,9 +32,14 @@ export function AuthProvider({ children }: any) {
     if (pathname === "/shop" || pathname === "/") {
       return;
     }
-    // Admin routes get their own email+password login, not the shared one.
+    // The hidden admin sign-in page is any single 64-character alphanumeric
+    // path; never bounce someone off it (its name is deliberately not written
+    // down in the code shipped to every visitor).
+    if (/^\/[A-Za-z0-9]{64}$/.test(pathname)) return;
+    // Admin routes send signed-out visitors to the homepage, not to a login
+    // page, so /admin doesn't reveal where the real sign-in lives.
     if (pathname.startsWith("/admin")) {
-      if (pathname !== "/admin-login") router.replace("/admin-login");
+      router.replace("/");
       return;
     }
     if (pathname !== "/login") {

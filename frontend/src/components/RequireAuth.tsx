@@ -28,9 +28,9 @@ export default function RequireAuth({ children, roles, agentMode }: any) {
 
   const allowed = Array.isArray(roles) ? roles : roles ? [roles] : null;
   const role = (user?.role || "").toUpperCase();
-  // Admin-only routes bounce to the dedicated email+password login, never
-  // the shared phone/OTP one (see backend/app/admin/routes.py::admin_login).
-  const loginPath = allowed && allowed.length === 1 && allowed[0] === "ADMIN" ? "/admin-login" : "/login";
+  // Admin-only routes send signed-out visitors to the homepage: the admin
+  // sign-in page is a hidden address, and redirecting there would reveal it.
+  const loginPath = allowed && allowed.length === 1 && allowed[0] === "ADMIN" ? "/" : "/login";
 
   useEffect(() => {
     if (loading) return;
