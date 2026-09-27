@@ -8,7 +8,7 @@ import uuid
 from decimal import Decimal
 
 from fastapi import APIRouter, Depends
-from sqlalchemy import select
+from sqlalchemy import func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.admin import service as admin_service
@@ -178,6 +178,58 @@ async def order_losses(
     ]
     total_forfeited = sum((o.deposit_amount for o in orders), start=Decimal("0.00"))
     return {"count": len(rows), "total_deposit_forfeited": str(total_forfeited), "orders": rows}
+
+
+@router.get("/users")
+async def list_users(
+    q: str | None = None,
+    role: UserRole | None = None,
+    limit: int = 100,
+    offset: int = 0,
+    db: AsyncSession = Depends(get_db),
+    admin: User = Depends(require_role(UserRole.ADMIN)),
+) -> dict:
+    """Every registered account, newest first - however they signed up (phone,
+    email or Google). `q` matches name, email or phone; `role` narrows to one
+    kind of account."""
+    limit = max(1, min(limit, 200))
+    filters = []
+    if role is not None:
+        filters.append(User.role == role)
+    if q and q.strip():
+        like = f"%{q.strip().lower()}%"
+        filters.append(
+            or_(
+                func.lower(func.coalesce(User.full_name, "")).like(like),
+                func.lower(func.coalesce(User.email, "")).like(like),
+                func.lower(func.coalesce(User.phone, "")).like(like),
+            )
+        )
+    total = (await db.execute(select(func.count()).select_from(User).where(*filters))).scalar_one()
+    by_role = {
+        r.value: n
+        for r, n in (await db.execute(select(User.role, func.count()).group_by(User.role))).all()
+    }
+    result = await db.execute(
+        select(User).where(*filters).order_by(User.created_at.desc()).limit(limit).offset(offset)
+    )
+    users = [
+        {
+            "id": str(u.id),
+            "full_name": u.full_name,
+            "email": u.email,
+            "phone": u.phone,
+            "role": u.role.value,
+            "status": u.status.value,
+            "is_email_verified": u.is_email_verified,
+            "is_phone_verified": u.is_phone_verified,
+            "non_payment_count": u.non_payment_count,
+            "must_prepay": u.must_prepay,
+            "created_at": u.created_at.isoformat() if u.created_at else None,
+        }
+        for u in result.scalars().all()
+    ]
+    return {"total": total, "by_role": by_role, "users": users}
 
 
 @router.get("/users/flagged")

@@ -198,6 +198,7 @@ export const api = {
     request(`/admin/float${marketId ? `?market_id=${marketId}` : ""}`),
   getInFlightOrders: () => request("/admin/orders/in-flight"),
   getOrderLosses: () => request("/admin/orders/losses"),
+  getUsers: () => request("/admin/users?limit=200"),
   getFlaggedUsers: () => request("/admin/users/flagged"),
   clearUserFlag: (userId) =>
     request(`/admin/users/${userId}/clear-flag`, { method: "POST" }),

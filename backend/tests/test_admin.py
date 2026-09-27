@@ -519,3 +519,29 @@ async def test_existing_admin_cannot_sign_in_with_otp(client, db_session_factory
     r = await client.post("/auth/verify-otp", json={"identifier": "+2348040000099", "code": r.json()["dev_otp"]})
     assert r.status_code == 403
     assert "access_token" not in r.json()
+
+
+@pytest.mark.asyncio
+async def test_admin_can_list_every_registered_user_however_they_signed_up(client, db_session_factory):
+    admin_h = {"Authorization": f"Bearer {await _login_admin(client, db_session_factory, 'admin-users@qyka.com')}"}
+
+    # One person signs up with an email, another with a phone.
+    r = await client.post("/auth/request-otp", json={"identifier": "ada@example.com"})
+    await client.post("/auth/verify-otp", json={"identifier": "ada@example.com", "code": r.json()["dev_otp"]})
+    await _login(client, "+2348050000001")
+
+    r = await client.get("/admin/users", headers=admin_h)
+    assert r.status_code == 200
+    body = r.json()
+    assert {u["email"] for u in body["users"] if u["email"]} >= {"ada@example.com"}
+    assert any(u["phone"] == "+2348050000001" for u in body["users"])
+    assert body["by_role"]["admin"] == 1 and body["by_role"]["customer"] == 2
+
+    r = await client.get("/admin/users", headers=admin_h, params={"q": "ADA@exam"})
+    assert [u["email"] for u in r.json()["users"]] == ["ada@example.com"]
+    r = await client.get("/admin/users", headers=admin_h, params={"role": "admin"})
+    assert r.json()["total"] == 1
+
+    # Customers can't read the user list.
+    cust_h = {"Authorization": f"Bearer {await _login(client, '+2348050000002')}"}
+    assert (await client.get("/admin/users", headers=cust_h)).status_code == 403

@@ -22,19 +22,22 @@ function flagReasons(u) {
 }
 
 function AdminUsers() {
+  const [view, setView] = useState<"all" | "flagged">("all");
+  const [everyone, setEveryone] = useState<any>(null);
   const [users, setUsers] = useState<any>(null);
   const [confirmingId, setConfirmingId] = useState<any>(null);
   const [busyId, setBusyId] = useState<any>(null);
   const [error, setError] = useState("");
-  const search = usePageSearch("Search flagged users…");
+  const search = usePageSearch("Search users…");
 
   async function refresh() {
     try {
-      const data = await api.getFlaggedUsers();
-      setUsers(data.users);
+      const [all, flagged] = await Promise.all([api.getUsers(), api.getFlaggedUsers()]);
+      setEveryone(all);
+      setUsers(flagged.users);
       setError("");
     } catch (e) {
-      setError("Could not load flagged users. (" + e.message + ")");
+      setError("Could not load users. (" + e.message + ")");
     }
   }
 
@@ -57,16 +60,59 @@ function AdminUsers() {
 
   return (
     <div>
-      <AdminPageHeader icon="flag" section="People" title="Users" description="Customers flagged for non-payment history — why, and the option to pardon.">
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-          <StatTile label="Flagged customers" value={users?.length ?? "—"} />
-          <StatTile label="Must prepay" value={users ? users.filter((u) => u.must_prepay).length : "—"} />
-          <StatTile label="Locked" value={users ? users.filter((u) => u.status === "locked").length : "—"} />
+      <AdminPageHeader icon="user" section="People" title="Users" description="Everyone who has signed up, and customers flagged for non-payment history.">
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+          <StatTile label="Registered" value={everyone?.total ?? "—"} />
+          <StatTile label="Customers" value={everyone ? everyone.by_role?.customer ?? 0 : "—"} />
+          <StatTile label="Agents" value={everyone ? everyone.by_role?.agent ?? 0 : "—"} />
+          <StatTile label="Flagged" value={users?.length ?? "—"} />
         </div>
       </AdminPageHeader>
 
+      <div className="mb-4 inline-flex rounded-full border border-line bg-surface p-1 text-sm font-semibold">
+        {([["all", "All users"], ["flagged", "Flagged"]] as const).map(([key, label]) => (
+          <button
+            key={key}
+            type="button"
+            onClick={() => setView(key)}
+            className={"rounded-full px-4 py-1.5 transition " + (view === key ? "bg-brand-orange text-[#1A1A1A]" : "text-muted hover:text-ink")}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+
       {error && <p className="mb-4 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p>}
 
+      {view === "all" ? (
+        everyone === null ? (
+          <div className="space-y-2">{[0, 1, 2].map((i) => <CardSkeleton key={i} />)}</div>
+        ) : everyone.users.length === 0 ? (
+          <EmptyState icon="user" title="No users yet" subtitle="People who sign up will show up here." />
+        ) : (
+          <div className="space-y-2">
+            {everyone.users
+              .filter((u) => !search || [u.full_name, u.email, u.phone].some((v) => String(v || "").toLowerCase().includes(search)))
+              .map((u) => (
+                <Card key={u.id} className="flex flex-wrap items-center justify-between gap-3">
+                  <div className="min-w-0">
+                    <div className="font-semibold text-ink">{u.full_name || u.email || u.phone}</div>
+                    <div className="text-sm text-muted">{[u.email, u.phone].filter(Boolean).join(" · ")}</div>
+                    <div className="mt-0.5 text-xs text-muted">
+                      Joined {u.created_at ? new Date(u.created_at).toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" }) : "—"}
+                      {u.email && !u.is_email_verified ? " · email not verified" : ""}
+                    </div>
+                  </div>
+                  <div className="flex shrink-0 items-center gap-2 text-xs font-bold">
+                    <span className="rounded-full bg-sunken px-2.5 py-1 capitalize text-ink/80">{u.role}</span>
+                    <span className={"rounded-full px-2.5 py-1 capitalize " + (u.status === "active" ? "bg-brand-green/10 text-brand-green" : "bg-amber-50 text-amber-700")}>{u.status}</span>
+                  </div>
+                </Card>
+              ))}
+          </div>
+        )
+      ) : (
+        <>
       {users === null ? (
         <div className="space-y-2">{[0, 1, 2].map((i) => <CardSkeleton key={i} />)}</div>
       ) : users.length === 0 ? (
@@ -102,6 +148,8 @@ function AdminUsers() {
             </Card>
           ))}
         </div>
+      )}
+        </>
       )}
     </div>
   );

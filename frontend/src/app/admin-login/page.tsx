@@ -18,11 +18,15 @@ function AdminLoginPageInner() {
   const searchParams = useSearchParams();
   const next = safeNext(searchParams.get("next"));
 
+  // Only an admin session leaves this page. Anyone else (say, the customer
+  // account you signed up with in this same browser) stays on the form -
+  // redirecting them to their own home is what made this page bounce away.
+  const isAdmin = (user?.role || "").toUpperCase() === "ADMIN";
   useEffect(() => {
-    if (!loading && token && user) {
+    if (!loading && token && user && isAdmin) {
       router.replace(next || homePath);
     }
-  }, [loading, token, user, homePath, router, next]);
+  }, [loading, token, user, isAdmin, homePath, router, next]);
 
   return (
     <AuthShell size="sm">
