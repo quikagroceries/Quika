@@ -140,6 +140,8 @@ async def test_email_code_is_sent_through_resend(client, email_provider):
     assert body["from"] == settings.email_from
     code = r.json()["dev_otp"]
     assert code in body["subject"] and code in body["text"] and code in body["html"]
+    assert "expires in 2 minutes" in body["text"] and "2 minutes" in body["html"]
+    assert "<img" not in body["html"]  # nothing remote to be blocked by a mail client
 
 
 @pytest.mark.asyncio

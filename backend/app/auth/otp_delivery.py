@@ -17,6 +17,7 @@ import logging
 
 import httpx
 
+from app.auth.email_templates import otp_email
 from app.core.config import settings
 
 logger = logging.getLogger(__name__)
@@ -105,25 +106,8 @@ async def deliver_email_otp(email: str, code: str) -> bool:
     if not email_configured():
         return False
 
-    minutes = settings.otp_expire_minutes
-    expiry = f"{minutes} minute{'s' if minutes != 1 else ''}"
-    payload = {
-        "from": settings.email_from,
-        "to": [email],
-        "subject": f"Your Qyka verification code is {code}",
-        "text": (
-            f"Your Qyka verification code is {code}. It expires in {expiry}. "
-            "Never share this code with anyone."
-        ),
-        "html": (
-            '<div style="font-family:Arial,sans-serif;max-width:420px;margin:0 auto;padding:24px;color:#1A1A1A">'
-            '<p style="font-size:16px;margin:0 0 16px">Your Qyka verification code is:</p>'
-            f'<p style="font-size:34px;font-weight:700;letter-spacing:6px;margin:0 0 16px">{code}</p>'
-            f'<p style="font-size:14px;color:#555;margin:0">It expires in {expiry}. '
-            "Never share this code with anyone. If you didn't ask for it, you can ignore this email.</p>"
-            "</div>"
-        ),
-    }
+    subject, text, html = otp_email(code, settings.otp_expire_minutes)
+    payload = {"from": settings.email_from, "to": [email], "subject": subject, "text": text, "html": html}
     headers = {"Authorization": f"Bearer {settings.email_api_key}"}
 
     try:
