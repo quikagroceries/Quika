@@ -545,3 +545,20 @@ async def test_admin_can_list_every_registered_user_however_they_signed_up(clien
     # Customers can't read the user list.
     cust_h = {"Authorization": f"Bearer {await _login(client, '+2348050000002')}"}
     assert (await client.get("/admin/users", headers=cust_h)).status_code == 403
+
+
+@pytest.mark.asyncio
+async def test_admin_tokens_are_short_lived_but_customer_tokens_are_not(client, db_session_factory):
+    import time
+
+    from jose import jwt
+
+    admin_token = await _login_admin(client, db_session_factory, "admin-ttl@qyka.com")
+    cust_token = await _login(client, "+2348060000001")
+
+    def minutes_left(token):
+        exp = jwt.get_unverified_claims(token)["exp"]
+        return (exp - time.time()) / 60
+
+    assert 55 < minutes_left(admin_token) <= 60          # one hour
+    assert minutes_left(cust_token) > 60 * 23            # a day

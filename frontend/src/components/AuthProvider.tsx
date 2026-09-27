@@ -4,9 +4,9 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useState } 
 import { usePathname, useRouter } from "next/navigation";
 import { api, setUnauthorizedHandler } from "@/lib/api";
 import { clearShared } from "@/lib/sharedQuery";
+import { clearToken, getToken, isAdminPath, saveToken, type Realm } from "@/lib/session";
 
 const DUTY_KEY = "qyka_agent_on_duty";
-const TOKEN_KEY = "qyka_token";
 
 const AuthContext = createContext<any>(null);
 
@@ -20,48 +20,57 @@ export function AuthProvider({ children }: any) {
   const [dutyBusy, setDutyBusy] = useState(false);
   const [dutyError, setDutyError] = useState("");
   const [hydrated, setHydrated] = useState(false);
+  // The main app and the admin portal are two separate worlds with their own
+  // session (see lib/session.ts). Which one this provider is serving is decided
+  // by the page: the token, the user and every redirect below follow it.
+  const realm: Realm = isAdminPath(pathname) ? "admin" : "customer";
+  const [tokenRealm, setTokenRealm] = useState<Realm | null>(null);
 
   const handleLogout = useCallback(() => {
     clearShared(); // never show the next person the last one's cached data
-    localStorage.removeItem(TOKEN_KEY);
-    localStorage.removeItem(DUTY_KEY);
+    clearToken(realm);
+    if (realm === "customer") localStorage.removeItem(DUTY_KEY);
     setToken(null);
     setUser(null);
     setLoading(false);
-    // Stay on guest-capable surfaces; otherwise bounce to login
-    if (pathname === "/shop" || pathname === "/") {
+    if (realm === "admin") {
+      // Never bounce someone off the hidden sign-in page itself. Elsewhere in
+      // the admin, a signed-out visitor goes to the public homepage - not to a
+      // login page - so /admin doesn't reveal where the real sign-in lives.
+      if (!pathname.startsWith("/admin")) return;
+      router.replace("/");
       return;
     }
-    // The hidden admin sign-in page is any single 64-character alphanumeric
-    // path; never bounce someone off it (its name is deliberately not written
-    // down in the code shipped to every visitor).
-    if (/^\/[A-Za-z0-9]{64}$/.test(pathname)) return;
-    // Admin routes send signed-out visitors to the homepage, not to a login
-    // page, so /admin doesn't reveal where the real sign-in lives.
-    if (pathname.startsWith("/admin")) {
-      router.replace("/");
+    // Stay on guest-capable surfaces; otherwise bounce to login
+    if (pathname === "/shop" || pathname === "/") {
       return;
     }
     if (pathname !== "/login") {
       router.replace("/login");
     }
-  }, [pathname, router]);
+  }, [pathname, router, realm]);
 
+  // (Re)load the session whenever the realm changes - e.g. moving from the
+  // main app into the admin portal starts from that portal's own session.
   useEffect(() => {
-    const stored = localStorage.getItem(TOKEN_KEY);
-    const dutyStored = localStorage.getItem(DUTY_KEY);
+    const stored = getToken(realm);
     setToken(stored);
-    setOnDuty(dutyStored === null ? true : dutyStored === "true");
+    setTokenRealm(realm);
+    setUser(null);
+    if (realm === "customer") {
+      const dutyStored = localStorage.getItem(DUTY_KEY);
+      setOnDuty(dutyStored === null ? true : dutyStored === "true");
+    }
+    setLoading(!!stored);
     setHydrated(true);
-    if (!stored) setLoading(false);
-  }, []);
+  }, [realm]);
 
   useEffect(() => {
     setUnauthorizedHandler(handleLogout);
   }, [handleLogout]);
 
   useEffect(() => {
-    if (!hydrated) return;
+    if (!hydrated || tokenRealm !== realm) return;
     if (!token) {
       setUser(null);
       setLoading(false);
@@ -69,10 +78,23 @@ export function AuthProvider({ children }: any) {
     }
     setLoading(true);
     api.me()
-      .then(setUser)
+      .then((u) => {
+        // A session only counts in its own world: an admin account is never
+        // signed in on the main app, and nobody else is ever signed in to the
+        // admin portal (this also retires any old admin token left in the
+        // main app's storage).
+        const isAdminAccount = (u?.role || "").toUpperCase() === "ADMIN";
+        if (isAdminAccount !== (realm === "admin")) {
+          clearToken(realm);
+          setToken(null);
+          setUser(null);
+          return;
+        }
+        setUser(u);
+      })
       .catch(() => handleLogout())
       .finally(() => setLoading(false));
-  }, [token, hydrated, handleLogout]);
+  }, [token, hydrated, tokenRealm, realm, handleLogout]);
 
   useEffect(() => {
     if (!user || (user.role || "").toUpperCase() !== "AGENT") return;
@@ -85,9 +107,10 @@ export function AuthProvider({ children }: any) {
   }, [user]);
 
   const handleLoggedIn = useCallback((t) => {
-    localStorage.setItem(TOKEN_KEY, t);
+    saveToken(realm, t);
+    setTokenRealm(realm);
     setToken(t);
-  }, []);
+  }, [realm]);
 
   const handleToggleDuty = useCallback(async (nextMode) => {
     setDutyError("");

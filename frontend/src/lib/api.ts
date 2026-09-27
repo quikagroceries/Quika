@@ -1,3 +1,4 @@
+import { getToken } from "@/lib/session";
 // Falls back to localhost so local dev keeps working even without a .env
 // (see .env.example) - but any real deployment must set NEXT_PUBLIC_API_BASE_URL,
 // or every request silently targets a dev machine that isn't there.
@@ -20,7 +21,7 @@ export function setUnauthorizedHandler(fn) {
 
 // Every request goes through here so the token is attached in ONE place.
 async function request(path: string, { method = "GET", body }: { method?: string; body?: unknown } = {}) {
-  const token = typeof window !== "undefined" ? localStorage.getItem("qyka_token") : null;
+  const token = getToken();
   const res = await fetch(BASE + path, {
     method,
     headers: {

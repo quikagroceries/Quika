@@ -29,6 +29,9 @@ class Settings(BaseSettings):
     jwt_secret: str = _DEFAULT_JWT_SECRET
     jwt_algorithm: str = "HS256"
     access_token_expire_minutes: int = 60 * 24
+    # Admin sessions are deliberately short: the sign-in is re-asked after this
+    # long, however busy the admin is (customers/agents keep the 24h token above).
+    admin_token_expire_minutes: int = 60
 
     # Admin bootstrap — on every startup, ensures a single admin account
     # exists with this email/password (role=admin). Leave both unset if you

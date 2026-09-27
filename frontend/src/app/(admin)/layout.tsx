@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect } from "react";
 import { usePathname } from "next/navigation";
 import RequireAuth from "@/components/RequireAuth";
 import AppShell from "@/components/AppShell";
@@ -44,9 +45,32 @@ function FirstPasswordGate({ onDone, onLogout }) {
   );
 }
 
+// The admin portal signs itself out after this long without any activity, on
+// top of the backend expiring its session after an hour.
+const ADMIN_IDLE_MS = 30 * 60 * 1000;
+
+function useIdleLogout(active: boolean, onIdle: () => void) {
+  useEffect(() => {
+    if (!active) return;
+    let timer: ReturnType<typeof setTimeout>;
+    const reset = () => {
+      clearTimeout(timer);
+      timer = setTimeout(onIdle, ADMIN_IDLE_MS);
+    };
+    const events = ["mousemove", "mousedown", "keydown", "scroll", "touchstart"];
+    events.forEach((e) => window.addEventListener(e, reset, { passive: true }));
+    reset();
+    return () => {
+      clearTimeout(timer);
+      events.forEach((e) => window.removeEventListener(e, reset));
+    };
+  }, [active, onIdle]);
+}
+
 export default function AdminLayout({ children }: any) {
   const { user, setUser, handleLogout } = useAuth();
   const pathname = usePathname();
+  useIdleLogout(!!user, handleLogout);
 
   return (
     <RequireAuth roles={["ADMIN"]}>

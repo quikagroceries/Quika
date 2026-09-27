@@ -19,7 +19,6 @@ function AdminLogin({ onLoggedIn }: any) {
     setBusy(true);
     try {
       const data = await api.adminLogin(email, password);
-      localStorage.setItem("qyka_token", data.access_token);
       onLoggedIn(data.access_token);
     } catch {
       setError("Invalid email or password.");
